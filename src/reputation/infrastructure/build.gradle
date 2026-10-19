@@ -1,0 +1,4 @@
+dependencies {
+    implementation project(':reputation-domain')
+    implementation project(':reputation-application')
+}

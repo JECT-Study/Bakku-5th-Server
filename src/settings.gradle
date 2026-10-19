@@ -1,0 +1,14 @@
+rootProject.name = 'bakku-5th-server'
+
+include 'app'
+include 'common'
+
+def domains = ['chat', 'exchange', 'notification', 'post', 'reputation', 'user', 'example']
+def layers = ['api', 'application', 'domain', 'infrastructure']
+
+domains.each { domain ->
+    layers.each { layer ->
+        include "${domain}-${layer}"
+        project(":${domain}-${layer}").projectDir = file("${domain}/${layer}")
+    }
+}
