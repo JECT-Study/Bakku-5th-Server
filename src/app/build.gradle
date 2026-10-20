@@ -1,0 +1,33 @@
+plugins {
+    id 'org.springframework.boot'
+}
+
+tasks.named('jar') {
+    enabled = false
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+    implementation 'org.springframework.boot:spring-boot-starter-flyway'
+    runtimeOnly 'org.flywaydb:flyway-database-postgresql'
+    runtimeOnly 'org.postgresql:postgresql'
+
+    implementation project(':chat-api')
+    runtimeOnly project(':chat-infrastructure')
+    implementation project(':exchange-api')
+    runtimeOnly project(':exchange-infrastructure')
+    implementation project(':notification-api')
+    runtimeOnly project(':notification-infrastructure')
+    implementation project(':post-api')
+    runtimeOnly project(':post-infrastructure')
+    implementation project(':reputation-api')
+    runtimeOnly project(':reputation-infrastructure')
+    implementation project(':user-api')
+    runtimeOnly project(':user-infrastructure')
+    implementation project(':example-api')
+    runtimeOnly project(':example-infrastructure')
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
