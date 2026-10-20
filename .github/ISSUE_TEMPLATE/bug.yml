@@ -1,0 +1,86 @@
+name: "🐛 Bug"
+description: 버그 제보 및 수정
+title: "🐛 [Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: 🐛 버그 설명
+      description: 어떤 문제가 발생하는지 적어주세요.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: 🚦 심각도
+      options:
+        - 🔴 긴급 — 운영 서비스 장애, hotfix 필요
+        - 🟠 높음 — 주요 기능 사용 불가
+        - 🟡 보통 — 우회 가능한 기능 오류
+        - 🟢 낮음 — 사용에 지장 없는 오류
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: 🌐 발생 환경
+      options:
+        - dev
+        - staging
+        - prod
+        - local
+    validations:
+      required: true
+
+  - type: input
+    id: revision
+    attributes:
+      label: 브랜치 · 커밋
+      placeholder: "예) develop @ 8f4f5b3"
+
+  - type: input
+    id: occurred-at
+    attributes:
+      label: 발생 시각
+      placeholder: "예) 2026-10-21 14:30"
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 🔁 재현 절차
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 🤔 기대 동작
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 😵 실제 동작
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 📋 로그 · 에러 응답
+      description: 에러 응답 JSON이나 서버 로그를 붙여주세요. 토큰 · 개인정보는 가려주세요.
+      render: shell
+
+  - type: textarea
+    id: cause
+    attributes:
+      label: 🔧 원인 · 수정 방향
+      description: 담당자가 분석 후 작성합니다.

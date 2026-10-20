@@ -1,0 +1,64 @@
+name: "✨ Feature"
+description: 새로운 기능 개발
+title: "✨ [Feature] "
+labels: ["feature"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: 📌 기능 설명
+      description: 어떤 기능인지 한두 문장으로 적어주세요.
+    validations:
+      required: true
+
+  - type: textarea
+    id: background
+    attributes:
+      label: 🎯 배경 · 목적
+      description: 왜 필요한 기능인지 적어주세요.
+
+  - type: input
+    id: spec
+    attributes:
+      label: 기획서
+      placeholder: 링크
+
+  - type: input
+    id: design
+    attributes:
+      label: 디자인
+      placeholder: 링크
+
+  - type: textarea
+    id: tasks
+    attributes:
+      label: ✅ 작업 목록
+      value: |
+        - [ ] 
+        - [ ] 
+
+  - type: textarea
+    id: done
+    attributes:
+      label: 🏁 완료 조건
+      description: 무엇이 되면 이 이슈를 닫을 수 있는지 적어주세요.
+      value: |
+        - [ ] 
+
+  - type: dropdown
+    id: api-impact
+    attributes:
+      label: 🔀 API 영향
+      options:
+        - 없음
+        - 신규 API
+        - 기존 API 변경 (FE 공유 필요)
+        - 신규 + 기존 API 변경 (FE 공유 필요)
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: 📎 참고 사항
+      description: 선택

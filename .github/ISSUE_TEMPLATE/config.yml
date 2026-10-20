@@ -1,0 +1,2 @@
+# 템플릿 없이 빈 이슈를 만들지 못하게 한다 (bug / feature / chore 중 하나를 골라야 함)
+blank_issues_enabled: false
