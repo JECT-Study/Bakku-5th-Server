@@ -1,2 +1,18 @@
 # dev: 미니 PC. DB_URL, DB_USERNAME, DB_PASSWORD는 환경 변수로 주입한다.
 # 공통 설정(application.yml)과 다른 값이 필요할 때 여기에 추가한다.
+
+management:
+  # actuator는 Ingress로 공개되지 않는 별도 포트에서만 연다 (Prometheus는 클러스터 내부에서 이 포트로 수집)
+  server:
+    port: 19080
+  endpoints:
+    web:
+      exposure:
+        include: health, prometheus
+  endpoint:
+    health:
+      probes:
+        add-additional-paths: true
+  metrics:
+    tags:
+      env: dev

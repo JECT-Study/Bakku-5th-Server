@@ -2,7 +2,6 @@ plugins {
     id 'org.springframework.boot'
 }
 
-// 실행 가능한 bootJar만 생성한다 (plain jar가 함께 생기면 Docker 이미지에 jar를 복사할 때 대상이 둘이 됨)
 tasks.named('jar') {
     enabled = false
 }
@@ -10,6 +9,7 @@ tasks.named('jar') {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
     implementation 'org.springframework.boot:spring-boot-starter-flyway'
     runtimeOnly 'org.flywaydb:flyway-database-postgresql'
     runtimeOnly 'org.postgresql:postgresql'
