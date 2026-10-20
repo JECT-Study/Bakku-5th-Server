@@ -1,0 +1,4 @@
+dependencies {
+    implementation project(':notification-domain')
+    implementation project(':notification-application')
+}

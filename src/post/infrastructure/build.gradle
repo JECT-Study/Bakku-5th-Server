@@ -1,0 +1,4 @@
+dependencies {
+    implementation project(':post-domain')
+    implementation project(':post-application')
+}
