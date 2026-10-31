@@ -1,7 +1,6 @@
-# local: 개인 PC에서 dev DB에 접속해 개발
 spring:
   config:
-    import: "optional:file:.env[.properties],optional:file:../.env[.properties]"
+    import: "optional:file:.env[.properties],optional:file:../.env[.properties],optional:file:src/.env[.properties]"
   flyway:
     enabled: false
   elasticsearch:
