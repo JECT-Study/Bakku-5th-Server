@@ -1,0 +1,11 @@
+package com.ject.chat.api.dto.enums;
+
+public enum CardType {
+    EXCHANGE_ITEMS,
+    APPOINTMENT_PROPOSAL,
+    APPOINTMENT_CONFIRMED,
+    APPOINTMENT_CHANGE,
+    CANCELLATION_REQUEST,
+    EXCHANGE_CONFIRMATION,
+    EXCHANGE_COMPLETED
+}
