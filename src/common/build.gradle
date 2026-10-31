@@ -1,2 +1,10 @@
 dependencies {
+    // ApiResponse · BaseExceptionHandler가 Spring Web 타입을 쓴다. 실행 시에는 각 도메인 api 모듈의 webmvc가 제공하므로,
+    // common을 api로 노출하는 domain 모듈에 Spring이 따라 들어가지 않도록 compileOnly로 둔다
+    compileOnly 'org.springframework:spring-web'
+    compileOnly 'org.springframework:spring-context'
+    compileOnly 'org.slf4j:slf4j-api'
+    compileOnly 'jakarta.servlet:jakarta.servlet-api'
+    // ApiResponse의 @JsonInclude용. 직렬화 자체는 api 모듈의 Jackson이 담당한다
+    implementation 'com.fasterxml.jackson.core:jackson-annotations'
 }
