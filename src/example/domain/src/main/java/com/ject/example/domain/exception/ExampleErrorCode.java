@@ -1,6 +1,6 @@
 package com.ject.example.domain.exception;
 
-import com.ject.common.exception.ErrorCode;
+import com.ject.common.core.exception.ErrorCode;
 
 /**
  * example 도메인 에러 코드. 도메인마다 이처럼 enum 하나에 code · HTTP 상태 · 기본 문구를 모은다

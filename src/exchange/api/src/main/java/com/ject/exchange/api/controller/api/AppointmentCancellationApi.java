@@ -1,6 +1,6 @@
 package com.ject.exchange.api.controller.api;
 
-import com.ject.common.response.ApiResponse;
+import com.ject.common.web.response.ApiResponse;
 import com.ject.exchange.api.dto.response.CancellationResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

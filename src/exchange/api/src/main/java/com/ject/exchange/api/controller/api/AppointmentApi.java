@@ -1,6 +1,6 @@
 package com.ject.exchange.api.controller.api;
 
-import com.ject.common.response.ApiResponse;
+import com.ject.common.web.response.ApiResponse;
 import com.ject.exchange.api.dto.request.AcceptAppointmentRequest;
 import com.ject.exchange.api.dto.request.ConfirmationRequest;
 import com.ject.exchange.api.dto.request.ProposeAppointmentRequest;

@@ -1,7 +1,10 @@
-package com.ject.common.exception;
+package com.ject.common.web.exception;
 
-import com.ject.common.response.ApiResponse;
-import com.ject.common.response.ApiResponse.FieldError;
+import com.ject.common.core.exception.CommonErrorCode;
+import com.ject.common.core.exception.DomainException;
+import com.ject.common.core.exception.ErrorCode;
+import com.ject.common.web.response.ApiResponse;
+import com.ject.common.web.response.ApiResponse.FieldError;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.converter.HttpMessageNotReadableException;

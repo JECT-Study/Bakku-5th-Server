@@ -16,7 +16,7 @@ import com.ject.chat.api.dto.response.CursorPageResponse;
 import com.ject.chat.api.dto.response.LastMessageResponse;
 import com.ject.chat.api.dto.response.LeaveChatRoomResponse;
 import com.ject.chat.api.dto.response.ReadMessagesResponse;
-import com.ject.common.response.ApiResponse;
+import com.ject.common.web.response.ApiResponse;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;

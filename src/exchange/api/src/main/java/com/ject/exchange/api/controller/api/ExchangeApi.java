@@ -1,6 +1,6 @@
 package com.ject.exchange.api.controller.api;
 
-import com.ject.common.response.ApiResponse;
+import com.ject.common.web.response.ApiResponse;
 import com.ject.exchange.api.dto.request.CreateExchangeRequest;
 import com.ject.exchange.api.dto.request.NewItemRequest;
 import com.ject.exchange.api.dto.response.ExchangeResponse;

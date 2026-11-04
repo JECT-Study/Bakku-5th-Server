@@ -1,6 +1,6 @@
 package com.ject.chat.domain.exception;
 
-import com.ject.common.exception.ErrorCode;
+import com.ject.common.core.exception.ErrorCode;
 
 public enum ChatErrorCode implements ErrorCode {
 

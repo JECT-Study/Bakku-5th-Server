@@ -1,4 +1,4 @@
-package com.ject.common.exception;
+package com.ject.common.core.exception;
 
 public interface ErrorCode {
 

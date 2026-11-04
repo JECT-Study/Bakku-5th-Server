@@ -1,6 +1,6 @@
 dependencies {
     implementation project(':exchange-application')
-    implementation project(':common')
+    implementation project(':common-web')
 
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-validation'

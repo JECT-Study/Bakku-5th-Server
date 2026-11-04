@@ -12,7 +12,7 @@ import com.ject.chat.api.dto.response.MessageResponse;
 import com.ject.chat.api.dto.response.SystemMessageContent;
 import com.ject.chat.api.dto.response.SystemMessageLink;
 import com.ject.chat.api.dto.response.TextMessageContent;
-import com.ject.common.response.ApiResponse;
+import com.ject.common.web.response.ApiResponse;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;

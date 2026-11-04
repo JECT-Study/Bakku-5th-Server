@@ -1,7 +1,7 @@
-package com.ject.common.response;
+package com.ject.common.web.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.ject.common.exception.ErrorCode;
+import com.ject.common.core.exception.ErrorCode;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;

@@ -7,7 +7,7 @@ import com.ject.chat.api.dto.response.ChatRoomSummaryResponse;
 import com.ject.chat.api.dto.response.CursorPageResponse;
 import com.ject.chat.api.dto.response.LeaveChatRoomResponse;
 import com.ject.chat.api.dto.response.ReadMessagesResponse;
-import com.ject.common.response.ApiResponse;
+import com.ject.common.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;

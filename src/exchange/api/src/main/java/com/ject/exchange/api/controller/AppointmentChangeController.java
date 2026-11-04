@@ -1,6 +1,6 @@
 package com.ject.exchange.api.controller;
 
-import com.ject.common.response.ApiResponse;
+import com.ject.common.web.response.ApiResponse;
 import com.ject.exchange.api.controller.api.AppointmentChangeApi;
 import com.ject.exchange.api.dto.enums.AppointmentChangeStatus;
 import com.ject.exchange.api.dto.enums.AppointmentStatus;

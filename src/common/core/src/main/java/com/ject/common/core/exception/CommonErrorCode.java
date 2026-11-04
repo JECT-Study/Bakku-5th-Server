@@ -1,4 +1,4 @@
-package com.ject.common.exception;
+package com.ject.common.core.exception;
 
 public enum CommonErrorCode implements ErrorCode {
 
@@ -7,7 +7,7 @@ public enum CommonErrorCode implements ErrorCode {
     TOKEN_MISSING("AUTH_001", 401, "인증 토큰이 없습니다."),
     TOKEN_EXPIRED("AUTH_002", 401, "인증 토큰이 만료되었습니다."),
     TOKEN_INVALID("AUTH_003", 401, "유효하지 않은 인증 토큰입니다."),
-    INTERNAL_ERROR("COMMON_500", 500, "서버 내부 오류가 발생했습니다.");
+    INTERNAL_ERROR("INTERNAL_001", 500, "서버 내부 오류가 발생했습니다.");
 
     private final String code;
     private final int status;

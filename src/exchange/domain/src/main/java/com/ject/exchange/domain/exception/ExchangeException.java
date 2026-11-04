@@ -1,6 +1,6 @@
 package com.ject.exchange.domain.exception;
 
-import com.ject.common.exception.DomainException;
+import com.ject.common.core.exception.DomainException;
 
 public class ExchangeException extends DomainException {
 
