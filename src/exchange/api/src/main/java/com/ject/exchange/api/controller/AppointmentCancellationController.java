@@ -1,6 +1,6 @@
 package com.ject.exchange.api.controller;
 
-import com.ject.common.response.ApiResponse;
+import com.ject.common.web.response.ApiResponse;
 import com.ject.exchange.api.controller.api.AppointmentCancellationApi;
 import com.ject.exchange.api.dto.enums.CancellationStatus;
 import com.ject.exchange.api.dto.enums.CancellationType;

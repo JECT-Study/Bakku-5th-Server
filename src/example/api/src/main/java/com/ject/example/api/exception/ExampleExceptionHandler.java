@@ -1,6 +1,6 @@
 package com.ject.example.api.exception;
 
-import com.ject.common.exception.BaseExceptionHandler;
+import com.ject.common.web.exception.BaseExceptionHandler;
 import com.ject.example.api.controller.FooController;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
