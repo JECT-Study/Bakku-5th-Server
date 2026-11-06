@@ -1,11 +1,10 @@
 package com.ject.example.domain.exception;
 
-import com.ject.common.exception.DomainException;
-import com.ject.common.exception.ErrorType;
+import com.ject.common.core.exception.DomainException;
 
 public class InvalidFooNameException extends DomainException {
 
     public InvalidFooNameException(String message) {
-        super(ErrorType.INVALID_INPUT, message);
+        super(ExampleErrorCode.INVALID_FOO_NAME, message);
     }
 }

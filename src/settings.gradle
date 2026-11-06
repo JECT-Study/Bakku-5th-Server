@@ -1,8 +1,8 @@
 rootProject.name = 'bakku-5th-server'
 
 include 'app'
-include 'common'
 
+def commons = ['core', 'web', 'jpa']
 def domains = ['chat', 'exchange', 'notification', 'post', 'reputation', 'user', 'example']
 def layers = ['api', 'application', 'domain', 'infrastructure']
 
@@ -11,4 +11,9 @@ domains.each { domain ->
         include "${domain}-${layer}"
         project(":${domain}-${layer}").projectDir = file("${domain}/${layer}")
     }
+}
+
+commons.each { common ->
+    include "common-${common}"
+    project(":common-${common}").projectDir = file("common/${common}")
 }
