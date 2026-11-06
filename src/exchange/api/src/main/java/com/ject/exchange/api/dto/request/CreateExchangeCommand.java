@@ -9,7 +9,7 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 
 @Schema(description = "교환 요청")
-public record CreateExchangeRequest(
+public record CreateExchangeCommand(
         @Schema(description = "요청할 교환글 ID", example = "10")
         @NotNull
         Long postId,

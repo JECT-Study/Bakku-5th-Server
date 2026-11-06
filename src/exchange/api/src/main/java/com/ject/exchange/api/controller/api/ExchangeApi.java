@@ -1,7 +1,7 @@
 package com.ject.exchange.api.controller.api;
 
 import com.ject.common.web.response.ApiResponse;
-import com.ject.exchange.api.dto.request.CreateExchangeRequest;
+import com.ject.exchange.api.dto.request.CreateExchangeCommand;
 import com.ject.exchange.api.dto.request.NewItemRequest;
 import com.ject.exchange.api.dto.response.ExchangeResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,7 +23,7 @@ public interface ExchangeApi {
     @Operation(summary = "E-1 교환 요청", description = "교환 요청 저장과 채팅방 생성을 한 번에 처리합니다. 응답의 chatRoomId로 바로 채팅방에 들어갑니다.")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    ApiResponse<ExchangeResponse> createExchange(@Valid @RequestBody CreateExchangeRequest request);
+    ApiResponse<ExchangeResponse> createExchange(@Valid @RequestBody CreateExchangeCommand request);
 
     @Operation(summary = "E-2 교환 상세", description = "채팅방 상단 고정 카드, 첫 메시지 아이템 카드, 아이템 상세, 입력창 위 버튼 상태에 사용합니다.")
     @GetMapping("/{exchangeId}")

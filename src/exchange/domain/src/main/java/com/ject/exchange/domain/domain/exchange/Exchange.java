@@ -2,7 +2,7 @@ package com.ject.exchange.domain.domain.exchange;
 
 import lombok.Getter;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Getter
 public class Exchange {
@@ -13,11 +13,11 @@ public class Exchange {
     private final Long ownerId;
     private final OfferType offerType;
     private final ExchangeStatus status;
-    private final LocalDateTime createdAt;
-    private final LocalDateTime updatedAt;
-    private final LocalDateTime completedAt;
+    private final Instant createdAt;
+    private final Instant updatedAt;
+    private final Instant completedAt;
 
-    private Exchange(Long id, Long postId, Long requestUserId, Long ownerId, OfferType offerType, ExchangeStatus status, LocalDateTime completedAt, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    private Exchange(Long id, Long postId, Long requestUserId, Long ownerId, OfferType offerType, ExchangeStatus status, Instant completedAt, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.postId = postId;
         this.requestUserId = requestUserId;
@@ -38,7 +38,7 @@ public class Exchange {
      * @return
      */
     public static Exchange create(Long postId, Long requestUserId, Long ownerId, OfferType offerType) {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         return new Exchange(null, postId, requestUserId, ownerId, offerType, ExchangeStatus.ACTIVE, null, now, now);
     }
 
