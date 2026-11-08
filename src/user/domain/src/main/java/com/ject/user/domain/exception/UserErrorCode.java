@@ -18,7 +18,8 @@ public enum UserErrorCode implements ErrorCode {
     INVALID_NICKNAME("MEMBER_101", 400, "닉네임 형식이 올바르지 않습니다."),
     DUPLICATE_NICKNAME("MEMBER_102", 409, "이미 사용 중인 닉네임입니다."),
     MEMBER_NOT_FOUND("MEMBER_201", 404, "회원을 찾을 수 없습니다."),
-    MEMBER_WITHDRAWN("MEMBER_202", 404, "탈퇴한 회원입니다.");
+    MEMBER_WITHDRAWN("MEMBER_202", 404, "탈퇴한 회원입니다."),
+    SELF_BLOCK("MEMBER_401", 400, "자기 자신은 차단할 수 없습니다.");
 
     private final String code;
     private final int status;

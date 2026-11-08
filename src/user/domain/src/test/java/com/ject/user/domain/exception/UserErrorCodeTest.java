@@ -25,7 +25,8 @@ class UserErrorCodeTest {
                 () -> assertCode(UserErrorCode.INVALID_NICKNAME, "MEMBER_101", 400),
                 () -> assertCode(UserErrorCode.DUPLICATE_NICKNAME, "MEMBER_102", 409),
                 () -> assertCode(UserErrorCode.MEMBER_NOT_FOUND, "MEMBER_201", 404),
-                () -> assertCode(UserErrorCode.MEMBER_WITHDRAWN, "MEMBER_202", 404));
+                () -> assertCode(UserErrorCode.MEMBER_WITHDRAWN, "MEMBER_202", 404),
+                () -> assertCode(UserErrorCode.SELF_BLOCK, "MEMBER_401", 400));
     }
 
     @Test
