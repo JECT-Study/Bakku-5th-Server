@@ -1,5 +1,6 @@
 package com.ject.exchange.api.controller;
 
+import com.ject.common.web.cqrs.SpringCommandBus;
 import com.ject.common.web.response.ApiResponse;
 import com.ject.exchange.api.controller.api.ExchangeApi;
 import com.ject.exchange.api.dto.enums.AppointmentButton;
@@ -8,12 +9,14 @@ import com.ject.exchange.api.dto.enums.ItemAvailability;
 import com.ject.exchange.api.dto.enums.ItemCondition;
 import com.ject.exchange.api.dto.enums.OfferType;
 import com.ject.exchange.api.dto.enums.PostStatus;
+import com.ject.exchange.api.dto.request.CreateExchangeCommand;
 import com.ject.exchange.api.dto.request.CreateExchangeRequest;
 import com.ject.exchange.api.dto.request.NewItemRequest;
 import com.ject.exchange.api.dto.response.ExchangeResponse;
 import com.ject.exchange.api.dto.response.OfferedItemResponse;
 import com.ject.exchange.api.dto.response.ParticipantResponse;
 import com.ject.exchange.api.dto.response.PostSummaryResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -26,11 +29,15 @@ import static com.ject.exchange.api.controller.ExchangeStubData.POST_ID;
 import static com.ject.exchange.api.controller.ExchangeStubData.REQUESTER_ID;
 
 @RestController
+@RequiredArgsConstructor
 public class ExchangeController implements ExchangeApi {
 
+    private final SpringCommandBus commandBus;
+
     @Override
-    public ApiResponse<ExchangeResponse> createExchange(CreateExchangeRequest request) {
-        return ApiResponse.created(postOfferExchange(EXCHANGE_ID, request.postId()));
+    public ApiResponse<ExchangeResponse> createExchange(CreateExchangeCommand command) {
+        commandBus.send(command);
+        return ApiResponse.created(postOfferExchange(EXCHANGE_ID, command.postId()));
     }
 
     @Override
