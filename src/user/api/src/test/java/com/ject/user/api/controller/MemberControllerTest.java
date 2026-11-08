@@ -17,6 +17,7 @@ import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -125,5 +126,44 @@ class MemberControllerTest {
                         .content("{}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("COMMON_001"));
+    }
+
+    @Test
+    @DisplayName("MB-3 닉네임을 바꾸면 다음 변경 가능 시각은 30일 뒤다")
+    void updateNickname() throws Exception {
+        mockMvc.perform(patch("/api/v1/members/me/nickname")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nickname\": \"하치와레러버\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.nickname").value("하치와레러버"))
+                .andExpect(jsonPath("$.data.nicknameChangeableAt").value("2026-12-27T14:30:00+09:00"));
+    }
+
+    @Test
+    @DisplayName("MB-4 다른 회원 프로필은 isMe=false, 내 ID면 isMe=true")
+    void getProfile() throws Exception {
+        mockMvc.perform(get("/api/v1/members/202"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.userId").value(202))
+                .andExpect(jsonPath("$.data.isMe").value(false));
+        mockMvc.perform(get("/api/v1/members/101"))
+                .andExpect(jsonPath("$.data.isMe").value(true));
+    }
+
+    @Test
+    @DisplayName("MB-4 /members/me는 다른 회원 프로필이 아니라 내 정보로 간다")
+    void getMe_notMatchedAsProfile() throws Exception {
+        mockMvc.perform(get("/api/v1/members/me"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.birthDate").value("2001-03-15"));
+    }
+
+    @Test
+    @DisplayName("MB-8 노쇼 기록을 커서 형식으로 반환한다")
+    void getNoShows() throws Exception {
+        mockMvc.perform(get("/api/v1/members/me/no-shows"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].status").value("PENDING"))
+                .andExpect(jsonPath("$.data.hasNext").value(false));
     }
 }

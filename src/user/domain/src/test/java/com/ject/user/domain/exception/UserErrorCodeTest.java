@@ -24,9 +24,15 @@ class UserErrorCodeTest {
                 () -> assertCode(UserErrorCode.ALREADY_SIGNED_UP, "MEMBER_014", 409),
                 () -> assertCode(UserErrorCode.INVALID_NICKNAME, "MEMBER_101", 400),
                 () -> assertCode(UserErrorCode.DUPLICATE_NICKNAME, "MEMBER_102", 409),
+                () -> assertCode(UserErrorCode.NICKNAME_CHANGE_TOO_SOON, "MEMBER_103", 409),
+                () -> assertCode(UserErrorCode.SAME_NICKNAME, "MEMBER_104", 400),
                 () -> assertCode(UserErrorCode.MEMBER_NOT_FOUND, "MEMBER_201", 404),
                 () -> assertCode(UserErrorCode.MEMBER_WITHDRAWN, "MEMBER_202", 404),
-                () -> assertCode(UserErrorCode.SELF_BLOCK, "MEMBER_401", 400));
+                () -> assertCode(UserErrorCode.BLOCKED_MEMBER, "MEMBER_203", 403),
+                () -> assertCode(UserErrorCode.SELF_BLOCK, "MEMBER_401", 400),
+                () -> assertCode(UserErrorCode.WISHLIST_KEYWORD_LIMIT, "MEMBER_501", 409),
+                () -> assertCode(UserErrorCode.DUPLICATE_WISHLIST_KEYWORD, "MEMBER_502", 409),
+                () -> assertCode(UserErrorCode.WISHLIST_KEYWORD_NOT_FOUND, "MEMBER_503", 404));
     }
 
     @Test
