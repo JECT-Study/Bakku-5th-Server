@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class MemberTest {
 
     private static final Instant NOW = Instant.parse("2026-11-06T03:00:00Z");
+    private static final LocalDate TODAY = LocalDate.of(2026, 11, 6);
 
     @Test
     @DisplayName("가입하면 ACTIVE 상태이고 완료 횟수는 0, 닉네임 변경 시각은 비어 있다")
@@ -56,15 +57,16 @@ class MemberTest {
     }
 
     @Test
-    @DisplayName("만 14세 판정은 UTC가 아니라 한국 시간 날짜 기준이다")
-    void ageUsesKoreanDate() {
-        // given: UTC로는 11/5 15:00이지만 한국 시간으로는 11/6 00:00 (14번째 생일 당일)
-        Instant koreanMidnight = Instant.parse("2026-11-05T15:00:00Z");
+    @DisplayName("만 14세 판정은 전달받은 오늘 날짜 기준이다")
+    void ageUsesGivenDate() {
+        // given: 14번째 생일이 11/6
         BirthDate birthDate = new BirthDate(LocalDate.of(2012, 11, 6));
 
         // when & then
+        assertThrows(UnderAgeException.class, () -> Member.create(SocialProvider.KAKAO, "hash", new Nickname("바꾸"),
+                birthDate, null, false, null, NOW, LocalDate.of(2026, 11, 5)));
         assertDoesNotThrow(() -> Member.create(SocialProvider.KAKAO, "hash", new Nickname("바꾸"), birthDate,
-                null, false, null, koreanMidnight));
+                null, false, null, NOW, LocalDate.of(2026, 11, 6)));
     }
 
     @Test
@@ -126,7 +128,7 @@ class MemberTest {
 
     private static Member signup(LocalDate birthDate, Gender gender) {
         return Member.create(SocialProvider.KAKAO, "hash", new Nickname("바꾸"), new BirthDate(birthDate),
-                gender, true, null, NOW);
+                gender, true, null, NOW, TODAY);
     }
 
     private static Member restoreWithStatus(MemberStatus status) {

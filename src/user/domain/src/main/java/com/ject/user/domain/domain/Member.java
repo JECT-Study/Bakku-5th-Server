@@ -4,7 +4,6 @@ import com.ject.user.domain.exception.MemberAlreadyWithdrawnException;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.Objects;
 
 /**
@@ -12,8 +11,6 @@ import java.util.Objects;
  * 탈퇴해도 행은 남기고 개인정보만 비운다 (결정 A4-2). 소셜 식별값은 HMAC 해시로만 갖는다 (결정 A4-1 · C9).
  */
 public class Member {
-
-    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     private final Long id;
     private final SocialProvider provider;
@@ -58,12 +55,14 @@ public class Member {
      *
      * @param gender           선택 입력, null 가능
      * @param previousMemberId 탈퇴 후 재가입이면 이전 회원 id, 아니면 null (결정 A4-3)
+     * @param today            서비스 시간대 기준 오늘 날짜 (결정 A6-1)
      */
     public static Member create(SocialProvider provider, String socialIdHash, Nickname nickname, BirthDate birthDate,
-                                Gender gender, boolean marketingAgreed, Long previousMemberId, Instant now) {
+                                Gender gender, boolean marketingAgreed, Long previousMemberId, Instant now,
+                                LocalDate today) {
         Objects.requireNonNull(nickname);
         Objects.requireNonNull(birthDate);
-        birthDate.ensureSignupAge(LocalDate.ofInstant(now, KST));
+        birthDate.ensureSignupAge(today);
         return new Member(null, provider, socialIdHash, nickname, birthDate, gender, MemberStatus.ACTIVE, null, 0,
                 marketingAgreed, now, null, previousMemberId, now, null);
     }

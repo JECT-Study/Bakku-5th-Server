@@ -1,6 +1,6 @@
 package com.ject.notification.api.dto.response;
 
-import com.ject.notification.api.dto.enums.NotificationTargetType;
+import com.ject.common.event.notification.NotificationTargetType;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "알림을 누르면 이동할 대상")

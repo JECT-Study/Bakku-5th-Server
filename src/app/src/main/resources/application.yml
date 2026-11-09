@@ -12,6 +12,9 @@ spring:
   lifecycle:
     timeout-per-shutdown-phase: 30s
 
+app:
+  time-zone: ${APP_TIME_ZONE:Asia/Seoul}
+
 server:
   shutdown: graceful
 

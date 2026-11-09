@@ -1,6 +1,6 @@
 package com.ject.notification.api.dto.response;
 
-import com.ject.notification.api.dto.enums.NotificationType;
+import com.ject.common.event.notification.NotificationType;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.OffsetDateTime;

@@ -1,4 +1,4 @@
-package com.ject.notification.api.dto.enums;
+package com.ject.common.event.notification;
 
 /**
  * 알림 종류. 1차는 위에서 9개, 나머지는 2차.
