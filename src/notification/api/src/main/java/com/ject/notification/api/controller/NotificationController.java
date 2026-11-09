@@ -2,8 +2,8 @@ package com.ject.notification.api.controller;
 
 import com.ject.common.web.response.ApiResponse;
 import com.ject.notification.api.controller.api.NotificationApi;
-import com.ject.notification.api.dto.enums.NotificationTargetType;
-import com.ject.notification.api.dto.enums.NotificationType;
+import com.ject.common.event.notification.NotificationTargetType;
+import com.ject.common.event.notification.NotificationType;
 import com.ject.notification.api.dto.response.CursorPageResponse;
 import com.ject.notification.api.dto.response.NotificationReadResponse;
 import com.ject.notification.api.dto.response.NotificationResponse;

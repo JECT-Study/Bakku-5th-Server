@@ -2,6 +2,7 @@ dependencies {
     // 모듈: 유스케이스 · 공통 응답/예외
     implementation project(':notification-application')
     implementation project(':common-web')
+    implementation project(':common-event')
 
     // Web · 요청 검증 · Swagger
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'

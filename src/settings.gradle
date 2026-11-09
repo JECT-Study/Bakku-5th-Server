@@ -2,7 +2,7 @@ rootProject.name = 'bakku-5th-server'
 
 include 'app'
 
-def commons = ['core', 'web', 'jpa']
+def commons = ['core', 'web', 'jpa', 'event']
 def domains = ['chat', 'exchange', 'notification', 'post', 'reputation', 'user', 'example']
 def layers = ['api', 'application', 'domain', 'infrastructure']
 
