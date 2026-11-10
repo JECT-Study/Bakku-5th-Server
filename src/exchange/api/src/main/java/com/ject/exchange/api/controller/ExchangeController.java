@@ -36,7 +36,6 @@ public class ExchangeController implements ExchangeApi {
     private final CommandBus commandBus;
     private final QueryBus queryBus;
 
-    @Override
     public ApiResponse<ExchangeResponse> createExchange(CreateExchangeRequest request) {
         Long requesterId = 200L; // Todo: 인증된 사용자 ID 가져오기
         Long exchangeId = commandBus.send(request.toCommand(requesterId));
@@ -49,13 +48,16 @@ public class ExchangeController implements ExchangeApi {
         return ApiResponse.created(ExchangeResponse.from(result));
     }
 
-    @Override
     public ApiResponse<ExchangeResponse> getExchange(Long exchangeId) {
-        // Todo: GetExchangeQuery 연결
-        return ApiResponse.success(postOfferExchange(exchangeId, POST_ID));
+        Long viewerId = 200L; // Todo: 인증된 사용자 ID 가져오기
+        ExchangeResult result = queryBus.send(GetExchangeQuery.builder()
+                .exchangeId(exchangeId)
+                .viewerId(viewerId)
+                .build()
+        );
+        return ApiResponse.success(ExchangeResponse.from(result));
     }
 
-    @Override
     public ApiResponse<ExchangeResponse> updateNewItem(Long exchangeId, NewItemRequest request) {
         OfferedItemResponse newItem = new OfferedItemResponse(
                 33L, OfferType.NEW, ItemAvailability.AVAILABLE, true, null,
