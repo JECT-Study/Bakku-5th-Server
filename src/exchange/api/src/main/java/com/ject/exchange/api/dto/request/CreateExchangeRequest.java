@@ -1,6 +1,7 @@
 package com.ject.exchange.api.dto.request;
 
-import com.ject.exchange.api.dto.enums.OfferType;
+import com.ject.exchange.application.dto.command.CreateExchangeCommand;
+import com.ject.exchange.domain.domain.exchange.OfferType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -9,7 +10,7 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 
 @Schema(description = "교환 요청")
-public record CreateExchangeCommand (
+public record CreateExchangeRequest(
         @Schema(description = "요청할 교환글 ID", example = "10")
         @NotNull
         Long postId,
@@ -26,4 +27,9 @@ public record CreateExchangeCommand (
         @Valid
         NewItemRequest newItem
 ) {
+        public CreateExchangeCommand toCommand(Long requesterId) {
+                return new CreateExchangeCommand(
+                        requesterId, postId, offerType, offeredPostIds,
+                        newItem == null ? null : newItem.toCommand());
+        }
 }
