@@ -1,7 +1,11 @@
 package com.ject.exchange.infrastructure.mapper;
 
 import com.ject.exchange.domain.domain.exchange.Exchange;
+import com.ject.exchange.domain.domain.exchange.OfferedItem;
 import com.ject.exchange.infrastructure.entity.ExchangeEntity;
+import com.ject.exchange.infrastructure.entity.OfferedItemEntity;
+
+import java.util.List;
 
 public class ExchangeMapper {
 
@@ -17,12 +21,18 @@ public class ExchangeMapper {
                 .build();
     }
 
-    public static Exchange toDomain(ExchangeEntity entity) {
-        return Exchange.create(
+    public static Exchange toDomain(ExchangeEntity entity, List<OfferedItemEntity> offeredItems) {
+        return Exchange.of(
+                entity.getId(),
                 entity.getPostId(),
                 entity.getRequestUserId(),
                 entity.getOwnerId(),
-                entity.getOfferType()
+                entity.getOfferType(),
+                offeredItems.stream().map(OfferedItemMapper::toDomain).toList(),
+                entity.getStatus(),
+                entity.getCompletedAt(),
+                entity.getCreatedAt(),
+                entity.getUpdatedAt()
         );
     }
 }

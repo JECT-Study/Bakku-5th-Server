@@ -1,6 +1,7 @@
 dependencies {
     implementation project(':exchange-domain')
     implementation project(':exchange-application')
+    implementation project(':common-jpa')
 
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 }

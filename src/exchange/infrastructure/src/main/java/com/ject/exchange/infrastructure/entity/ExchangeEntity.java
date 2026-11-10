@@ -1,5 +1,6 @@
 package com.ject.exchange.infrastructure.entity;
 
+import com.ject.common.jpa.BaseEntity;
 import com.ject.exchange.domain.domain.exchange.ExchangeStatus;
 import com.ject.exchange.domain.domain.exchange.OfferType;
 import jakarta.persistence.*;
