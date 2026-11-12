@@ -16,7 +16,6 @@ import com.ject.exchange.api.dto.response.PostSummaryResponse;
 import com.ject.exchange.application.dto.dto.ExchangeResult;
 import com.ject.exchange.application.dto.query.GetExchangeQuery;
 import com.ject.exchange.domain.domain.exchange.ExchangeStatus;
-import com.ject.exchange.domain.domain.exchange.ItemCondition;
 import com.ject.exchange.domain.domain.exchange.OfferType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RestController;
@@ -36,7 +35,6 @@ public class ExchangeController implements ExchangeApi {
     private final CommandBus commandBus;
     private final QueryBus queryBus;
 
-    @Override
     public ApiResponse<ExchangeResponse> createExchange(CreateExchangeRequest request) {
         Long requesterId = 200L; // Todo: 인증된 사용자 ID 가져오기
         Long exchangeId = commandBus.send(request.toCommand(requesterId));
@@ -49,17 +47,20 @@ public class ExchangeController implements ExchangeApi {
         return ApiResponse.created(ExchangeResponse.from(result));
     }
 
-    @Override
     public ApiResponse<ExchangeResponse> getExchange(Long exchangeId) {
-        // Todo: GetExchangeQuery 연결
-        return ApiResponse.success(postOfferExchange(exchangeId, POST_ID));
+        Long viewerId = 200L; // Todo: 인증된 사용자 ID 가져오기
+        ExchangeResult result = queryBus.send(GetExchangeQuery.builder()
+                .exchangeId(exchangeId)
+                .viewerId(viewerId)
+                .build()
+        );
+        return ApiResponse.success(ExchangeResponse.from(result));
     }
 
-    @Override
     public ApiResponse<ExchangeResponse> updateNewItem(Long exchangeId, NewItemRequest request) {
         OfferedItemResponse newItem = new OfferedItemResponse(
                 33L, OfferType.NEW, ItemAvailability.AVAILABLE, true, null,
-                "치이카와 아크릴 스탠드", ItemCondition.OPENED, "한 번 꺼내봤어요",
+                "치이카와 아크릴 스탠드", true, "한 번 꺼내봤어요",
                 List.of("https://{cdn}/exchange/1/a.jpg"));
         return ApiResponse.success(new ExchangeResponse(
                 exchangeId, ExchangeStatus.ACTIVE, targetPost(POST_ID), requester(), owner(),

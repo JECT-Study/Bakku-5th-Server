@@ -52,7 +52,7 @@ public class CreateExchangeHandler implements CommandHandler<CreateExchangeComma
                             command.requesterId(),
                             post.ownerId(),
                             new ItemName(command.newItem().name()),
-                            command.newItem().condition(),
+                            command.newItem().opened(),
                             new ItemDescription(command.newItem().description())
                     );
                 };

@@ -24,13 +24,12 @@ CREATE TABLE exchange_offered_item
     type           VARCHAR(20) NOT NULL,
     source_post_id BIGINT,
     name           VARCHAR(40),
-    item_condition VARCHAR(20),
+    is_opened      BOOLEAN,
     description    VARCHAR(1000),
     sort_order     INT         NOT NULL,
     created_at     TIMESTAMPTZ NOT NULL,
     updated_at     TIMESTAMPTZ NOT NULL,
-    CONSTRAINT ck_exchange_offered_item_type CHECK (type IN ('POST', 'NEW')),
-    CONSTRAINT ck_exchange_offered_item_condition CHECK (item_condition IN ('UNOPENED', 'OPENED'))
+    CONSTRAINT ck_exchange_offered_item_type CHECK (type IN ('POST', 'NEW'))
 );
 
 CREATE INDEX idx_exchange_offered_item_exchange_id_sort_order ON exchange_offered_item (exchange_id, sort_order);

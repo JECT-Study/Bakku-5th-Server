@@ -2,7 +2,6 @@ package com.ject.exchange.api.dto.response;
 
 import com.ject.exchange.api.dto.enums.ItemAvailability;
 import com.ject.exchange.application.dto.dto.OfferedItemResult;
-import com.ject.exchange.domain.domain.exchange.ItemCondition;
 import com.ject.exchange.domain.domain.exchange.OfferType;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -28,8 +27,8 @@ public record OfferedItemResponse(
         @Schema(description = "NEW일 때 제품명. POST면 null", example = "치이카와 아크릴 스탠드")
         String name,
 
-        @Schema(description = "NEW일 때 상품 상태. POST면 null", example = "UNOPENED")
-        ItemCondition condition,
+        @Schema(description = "NEW일 때 개봉 여부 (true 개봉 / false 미개봉). POST면 null", example = "false")
+        Boolean opened,
 
         @Schema(description = "NEW일 때 자세한 설명. POST면 null", example = "가챠에서 두 개 나와서 하나 교환해요")
         String description,
@@ -45,7 +44,7 @@ public record OfferedItemResponse(
                 item.editable(),
                 PostSummaryResponse.from(item.post()),
                 item.name(),
-                EnumMapper.map(item.condition(), ItemCondition.class),
+                item.opened(),
                 item.description(),
                 item.imageUrls());
     }

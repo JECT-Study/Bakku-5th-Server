@@ -25,7 +25,7 @@ public class OfferedItemMapper {
                 .offerType(offerType)
                 .sourcePostId(item.getSourcePostId())
                 .name(item.getName() == null ? null : item.getName().value())
-                .itemCondition(item.getItemCondition())
+                .opened(item.getOpened())
                 .description(item.getDescription() == null ? null : item.getDescription().value())
                 .sortOrder(item.getSortOrder())
                 .build();
@@ -38,7 +38,7 @@ public class OfferedItemMapper {
                 entity.getId(),
                 entity.getSourcePostId(),
                 isNew ? new ItemName(entity.getName()) : null,
-                entity.getItemCondition(),
+                entity.getOpened(),
                 isNew ? new ItemDescription(entity.getDescription()) : null,
                 entity.getSortOrder()
         );
