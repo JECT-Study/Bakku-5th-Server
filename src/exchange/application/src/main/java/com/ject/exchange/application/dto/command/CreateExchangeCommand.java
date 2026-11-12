@@ -1,6 +1,7 @@
 package com.ject.exchange.application.dto.command;
 
 import com.ject.common.core.cqrs.command.Command;
+import com.ject.exchange.application.dto.dto.NewItem;
 import com.ject.exchange.domain.domain.exchange.OfferType;
 import com.ject.exchange.domain.exception.ExchangeErrorCode;
 import com.ject.exchange.domain.exception.ExchangeException;
@@ -29,8 +30,6 @@ public record CreateExchangeCommand(
          */
         NewItem newItem
 ) implements Command<Long> {
-
-    public record NewItem(String name, Boolean opened, String description) {}
 
     public CreateExchangeCommand {
         if(!isValidOfferType(offerType, offeredPostIds, newItem)) {

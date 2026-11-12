@@ -30,6 +30,6 @@ public record CreateExchangeRequest(
         public CreateExchangeCommand toCommand(Long requesterId) {
                 return new CreateExchangeCommand(
                         requesterId, postId, offerType, offeredPostIds,
-                        newItem == null ? null : newItem.toCommand());
+                        newItem == null ? null : newItem.toNewItem());
         }
 }
