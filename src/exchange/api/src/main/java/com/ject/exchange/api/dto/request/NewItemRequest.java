@@ -1,6 +1,7 @@
 package com.ject.exchange.api.dto.request;
 
 import com.ject.exchange.application.dto.command.CreateExchangeCommand;
+import com.ject.exchange.application.dto.dto.NewItem;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -26,7 +27,7 @@ public record NewItemRequest(
         String description
 ) {
         // Todo: 이미지 모듈 업로드 후 수정
-        public CreateExchangeCommand.NewItem toCommand() {
-                return new CreateExchangeCommand.NewItem(name, opened, description);
+        public NewItem toNewItem() {
+                return new NewItem(name, opened, description);
         }
 }

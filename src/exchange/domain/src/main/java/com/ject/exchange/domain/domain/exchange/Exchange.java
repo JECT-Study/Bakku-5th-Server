@@ -95,9 +95,30 @@ public class Exchange {
         return requestUserId.equals(userId) || ownerId.equals(userId);
     }
 
+    public Exchange updateNewItem(Long requesterId, ItemName name, Boolean opened, ItemDescription description) {
+        if (!this.requestUserId.equals(requesterId)) {
+            throw new ExchangeException(ExchangeErrorCode.NOT_REQUESTER);
+        }
+        if (offerType != OfferType.NEW) {
+            throw new ExchangeException(ExchangeErrorCode.NOT_NEW_ITEM_OFFER);
+        }
+        if (this.status != ExchangeStatus.ACTIVE) {
+            throw new ExchangeException(ExchangeErrorCode.EXCHANGE_CLOSED);
+        }
+        // Todo: 확정 약속이 있으면 NEW_ITEM_LOCKED
+        OfferedItem item = newItem();
+        OfferedItem updatedItem = item.updateNew(name, opened, description);
+        return new Exchange(id, postId, requestUserId, ownerId, offerType,
+                List.of(updatedItem), status, completedAt, createdAt, updatedAt);
+    }
+
     private static void validateNotOwnPost(Long requesterId, Long ownerId) {
         if (requesterId.equals(ownerId)) {
             throw new ExchangeException(ExchangeErrorCode.OWN_POST_REQUEST);
         }
+    }
+
+    private OfferedItem newItem() {
+        return offeredItems.get(0);   // NEW 방식은 아이템이 항상 1개
     }
 }
