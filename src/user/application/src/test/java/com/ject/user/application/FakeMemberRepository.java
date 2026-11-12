@@ -2,6 +2,7 @@ package com.ject.user.application;
 
 import com.ject.user.application.port.MemberRepository;
 import com.ject.user.domain.domain.Member;
+import com.ject.user.domain.domain.Nickname;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -29,6 +30,14 @@ class FakeMemberRepository implements MemberRepository {
     @Override
     public Optional<Member> findById(Long id) {
         return Optional.ofNullable(store.get(id));
+    }
+
+    @Override
+    public Optional<Member> findByNickname(Nickname nickname) {
+        return store.values().stream()
+                .filter(member -> member.getNickname() != null)
+                .filter(member -> member.getNickname().normalized().equals(nickname.normalized()))
+                .findFirst();
     }
 
     @Override

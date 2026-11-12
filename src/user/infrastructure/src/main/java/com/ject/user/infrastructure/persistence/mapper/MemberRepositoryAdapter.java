@@ -2,6 +2,7 @@ package com.ject.user.infrastructure.persistence.mapper;
 
 import com.ject.user.application.port.MemberRepository;
 import com.ject.user.domain.domain.Member;
+import com.ject.user.domain.domain.Nickname;
 import com.ject.user.domain.exception.MemberNotFoundException;
 import com.ject.user.infrastructure.persistence.entity.MemberJpaEntity;
 import com.ject.user.infrastructure.persistence.repository.MemberJpaRepository;
@@ -44,6 +45,11 @@ public class MemberRepositoryAdapter implements MemberRepository {
     @Override
     public Optional<Member> findById(Long id) {
         return memberJpaRepository.findById(id).map(MemberMapper::toDomain);
+    }
+
+    @Override
+    public Optional<Member> findByNickname(Nickname nickname) {
+        return memberJpaRepository.findByNicknameIgnoreCase(nickname.value()).map(MemberMapper::toDomain);
     }
 
     @Override

@@ -8,8 +8,13 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.Collection;
+import java.util.Optional;
 
 public interface MemberJpaRepository extends JpaRepository<MemberJpaEntity, Long> {
+
+    // lower(nickname) 고유 인덱스를 타도록 칼럼 쪽도 lower로 비교한다
+    @Query("select m from MemberJpaEntity m where lower(m.nickname) = lower(:nickname)")
+    Optional<MemberJpaEntity> findByNicknameIgnoreCase(@Param("nickname") String nickname);
 
     @Modifying(clearAutomatically = true)
     @Query("update MemberJpaEntity m set m.completedCount = m.completedCount + 1, m.updatedAt = :now"
