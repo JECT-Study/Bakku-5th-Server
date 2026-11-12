@@ -1,8 +1,9 @@
 package com.ject.exchange.api.dto.response;
 
 import com.ject.exchange.api.dto.enums.ItemAvailability;
-import com.ject.exchange.api.dto.enums.ItemCondition;
-import com.ject.exchange.api.dto.enums.OfferType;
+import com.ject.exchange.application.dto.dto.OfferedItemResult;
+import com.ject.exchange.domain.domain.exchange.ItemCondition;
+import com.ject.exchange.domain.domain.exchange.OfferType;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.List;
@@ -36,4 +37,16 @@ public record OfferedItemResponse(
         @Schema(description = "NEW일 때 사진 (첫 장이 대표). POST면 null")
         List<String> imageUrls
 ) {
+    public static OfferedItemResponse from(OfferedItemResult item) {
+        return new OfferedItemResponse(
+                item.id(),
+                EnumMapper.map(item.type(), OfferType.class),
+                EnumMapper.map(item.availability(), ItemAvailability.class),
+                item.editable(),
+                PostSummaryResponse.from(item.post()),
+                item.name(),
+                EnumMapper.map(item.condition(), ItemCondition.class),
+                item.description(),
+                item.imageUrls());
+    }
 }

@@ -1,6 +1,7 @@
 package com.ject.exchange.api.dto.request;
 
-import com.ject.exchange.api.dto.enums.ItemCondition;
+import com.ject.exchange.application.dto.command.CreateExchangeCommand;
+import com.ject.exchange.domain.domain.exchange.ItemCondition;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -25,4 +26,8 @@ public record NewItemRequest(
         @Size(max = 1000)
         String description
 ) {
+        // Todo: 이미지 모듈 업로드 후 수정
+        public CreateExchangeCommand.NewItem toCommand() {
+                return new CreateExchangeCommand.NewItem(name, condition, description);
+        }
 }

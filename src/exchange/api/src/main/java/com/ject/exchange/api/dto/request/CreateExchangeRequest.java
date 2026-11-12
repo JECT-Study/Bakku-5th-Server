@@ -1,6 +1,7 @@
 package com.ject.exchange.api.dto.request;
 
-import com.ject.exchange.api.dto.enums.OfferType;
+import com.ject.exchange.application.dto.command.CreateExchangeCommand;
+import com.ject.exchange.domain.domain.exchange.OfferType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -26,4 +27,9 @@ public record CreateExchangeRequest(
         @Valid
         NewItemRequest newItem
 ) {
+        public CreateExchangeCommand toCommand(Long requesterId) {
+                return new CreateExchangeCommand(
+                        requesterId, postId, offerType, offeredPostIds,
+                        newItem == null ? null : newItem.toCommand());
+        }
 }

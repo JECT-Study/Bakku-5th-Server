@@ -1,12 +1,11 @@
 package com.ject.exchange.api.controller;
 
+import com.ject.common.core.cqrs.command.CommandBus;
+import com.ject.common.core.cqrs.query.QueryBus;
 import com.ject.common.web.response.ApiResponse;
 import com.ject.exchange.api.controller.api.ExchangeApi;
 import com.ject.exchange.api.dto.enums.AppointmentButton;
-import com.ject.exchange.api.dto.enums.ExchangeStatus;
 import com.ject.exchange.api.dto.enums.ItemAvailability;
-import com.ject.exchange.api.dto.enums.ItemCondition;
-import com.ject.exchange.api.dto.enums.OfferType;
 import com.ject.exchange.api.dto.enums.PostStatus;
 import com.ject.exchange.api.dto.request.CreateExchangeRequest;
 import com.ject.exchange.api.dto.request.NewItemRequest;
@@ -14,27 +13,45 @@ import com.ject.exchange.api.dto.response.ExchangeResponse;
 import com.ject.exchange.api.dto.response.OfferedItemResponse;
 import com.ject.exchange.api.dto.response.ParticipantResponse;
 import com.ject.exchange.api.dto.response.PostSummaryResponse;
+import com.ject.exchange.application.dto.dto.ExchangeResult;
+import com.ject.exchange.application.dto.query.GetExchangeQuery;
+import com.ject.exchange.domain.domain.exchange.ExchangeStatus;
+import com.ject.exchange.domain.domain.exchange.ItemCondition;
+import com.ject.exchange.domain.domain.exchange.OfferType;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 import static com.ject.exchange.api.controller.ExchangeStubData.CHAT_ROOM_ID;
 import static com.ject.exchange.api.controller.ExchangeStubData.EXCHANGE_CREATED_AT;
-import static com.ject.exchange.api.controller.ExchangeStubData.EXCHANGE_ID;
 import static com.ject.exchange.api.controller.ExchangeStubData.OWNER_ID;
 import static com.ject.exchange.api.controller.ExchangeStubData.POST_ID;
 import static com.ject.exchange.api.controller.ExchangeStubData.REQUESTER_ID;
 
 @RestController
+@RequiredArgsConstructor
 public class ExchangeController implements ExchangeApi {
+
+    private final CommandBus commandBus;
+    private final QueryBus queryBus;
 
     @Override
     public ApiResponse<ExchangeResponse> createExchange(CreateExchangeRequest request) {
-        return ApiResponse.created(postOfferExchange(EXCHANGE_ID, request.postId()));
+        Long requesterId = 200L; // Todo: 인증된 사용자 ID 가져오기
+        Long exchangeId = commandBus.send(request.toCommand(requesterId));
+
+        ExchangeResult result = queryBus.send(GetExchangeQuery.builder()
+                        .exchangeId(exchangeId)
+                        .viewerId(requesterId)
+                        .build()
+        );
+        return ApiResponse.created(ExchangeResponse.from(result));
     }
 
     @Override
     public ApiResponse<ExchangeResponse> getExchange(Long exchangeId) {
+        // Todo: GetExchangeQuery 연결
         return ApiResponse.success(postOfferExchange(exchangeId, POST_ID));
     }
 
