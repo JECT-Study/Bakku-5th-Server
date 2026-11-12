@@ -1,6 +1,7 @@
 package com.ject.user.application.port;
 
 import com.ject.user.domain.domain.Member;
+import com.ject.user.domain.domain.Nickname;
 
 import java.util.Collection;
 import java.util.List;
@@ -14,6 +15,11 @@ public interface MemberRepository {
     Member save(Member member);
 
     Optional<Member> findById(Long id);
+
+    /**
+     * 영문 대소문자를 구분하지 않고 찾는다 (결정 A5-2). 탈퇴 회원은 닉네임이 비어 있어 찾지 않는다.
+     */
+    Optional<Member> findByNickname(Nickname nickname);
 
     /**
      * 있는 회원만 반환하며 순서는 보장하지 않는다.
