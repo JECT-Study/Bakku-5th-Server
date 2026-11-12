@@ -1,7 +1,6 @@
 package com.ject.exchange.infrastructure.entity;
 
 import com.ject.common.jpa.BaseEntity;
-import com.ject.exchange.domain.domain.exchange.ItemCondition;
 import com.ject.exchange.domain.domain.exchange.OfferType;
 import jakarta.persistence.*;
 import lombok.Builder;
@@ -30,9 +29,8 @@ public class OfferedItemEntity extends BaseEntity {
     @Column(name = "name", length = 40)
     private String name;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "item_condition")
-    private ItemCondition itemCondition;
+    @Column(name = "is_opened")
+    private Boolean opened;
 
     @Column(name = "description", length = 1000)
     private String description;
@@ -43,13 +41,13 @@ public class OfferedItemEntity extends BaseEntity {
     protected OfferedItemEntity() {}
 
     @Builder
-    public OfferedItemEntity(Long id, ExchangeEntity exchange, OfferType offerType, Long sourcePostId, String name, ItemCondition itemCondition, String description, int sortOrder) {
+    public OfferedItemEntity(Long id, ExchangeEntity exchange, OfferType offerType, Long sourcePostId, String name, Boolean opened, String description, int sortOrder) {
         this.id = id;
         this.exchange = exchange;
         this.offerType = offerType;
         this.sourcePostId = sourcePostId;
         this.name = name;
-        this.itemCondition = itemCondition;
+        this.opened = opened;
         this.description = description;
         this.sortOrder = sortOrder;
     }

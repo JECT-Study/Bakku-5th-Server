@@ -16,7 +16,6 @@ import com.ject.exchange.api.dto.response.PostSummaryResponse;
 import com.ject.exchange.application.dto.dto.ExchangeResult;
 import com.ject.exchange.application.dto.query.GetExchangeQuery;
 import com.ject.exchange.domain.domain.exchange.ExchangeStatus;
-import com.ject.exchange.domain.domain.exchange.ItemCondition;
 import com.ject.exchange.domain.domain.exchange.OfferType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RestController;
@@ -61,7 +60,7 @@ public class ExchangeController implements ExchangeApi {
     public ApiResponse<ExchangeResponse> updateNewItem(Long exchangeId, NewItemRequest request) {
         OfferedItemResponse newItem = new OfferedItemResponse(
                 33L, OfferType.NEW, ItemAvailability.AVAILABLE, true, null,
-                "치이카와 아크릴 스탠드", ItemCondition.OPENED, "한 번 꺼내봤어요",
+                "치이카와 아크릴 스탠드", true, "한 번 꺼내봤어요",
                 List.of("https://{cdn}/exchange/1/a.jpg"));
         return ApiResponse.success(new ExchangeResponse(
                 exchangeId, ExchangeStatus.ACTIVE, targetPost(POST_ID), requester(), owner(),

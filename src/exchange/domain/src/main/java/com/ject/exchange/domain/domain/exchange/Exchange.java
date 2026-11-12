@@ -63,14 +63,14 @@ public class Exchange {
      * @param requesterId
      * @param ownerId
      * @param name
-     * @param condition
+     * @param opened
      * @param description
      * @return
      */
     public static Exchange createWithNewItem(Long postId, Long requesterId, Long ownerId,
-                                             ItemName name, ItemCondition condition, ItemDescription description) {
+                                             ItemName name, Boolean opened, ItemDescription description) {
         validateNotOwnPost(requesterId, ownerId);
-        List<OfferedItem> items = List.of(OfferedItem.ofNew(name, condition, description, 0));
+        List<OfferedItem> items = List.of(OfferedItem.ofNew(name, opened, description, 0));
         return new Exchange(null, postId, requesterId, ownerId, OfferType.NEW, items, ExchangeStatus.ACTIVE, null, null, null);
     }
 

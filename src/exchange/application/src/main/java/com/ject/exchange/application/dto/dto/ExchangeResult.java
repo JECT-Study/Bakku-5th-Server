@@ -48,7 +48,7 @@ public record ExchangeResult(
                             false, // Todo: 교환글 요청자만 수정 가능하도록 구현
                             itemPostSummary,
                             item.getName() == null ? null : item.getName().value(),
-                            item.getItemCondition(),
+                            item.getOpened(),
                             item.getDescription() == null ? null : item.getDescription().value(),
                             List.of() // Todo: 이미지 모듈 전까지 빈 리스트
                     );

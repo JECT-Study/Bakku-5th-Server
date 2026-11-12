@@ -12,21 +12,21 @@ public class OfferedItem {
     private final Long id;
     private final Long sourcePostId;
     private final ItemName name;
-    private final ItemCondition itemCondition;
+    private final Boolean opened;
     private final ItemDescription description;
     private final int sortOrder;
 
-    private OfferedItem(Long id, Long sourcePostId, ItemName name, ItemCondition itemCondition, ItemDescription description, int sortOrder) {
+    private OfferedItem(Long id, Long sourcePostId, ItemName name, Boolean opened, ItemDescription description, int sortOrder) {
         this.id = id;
         this.sourcePostId = sourcePostId;
         this.name = name;
-        this.itemCondition = itemCondition;
+        this.opened = opened;
         this.description = description;
         this.sortOrder = sortOrder;
     }
 
-    public static OfferedItem of(Long id, Long sourcePostId, ItemName name, ItemCondition itemCondition, ItemDescription description, int sortOrder) {
-        return new OfferedItem(id, sourcePostId, name, itemCondition, description, sortOrder);
+    public static OfferedItem of(Long id, Long sourcePostId, ItemName name, Boolean opened, ItemDescription description, int sortOrder) {
+        return new OfferedItem(id, sourcePostId, name, opened, description, sortOrder);
     }
 
     public static OfferedItem ofPost(Long sourcePostId, int sortOrder) {
@@ -38,10 +38,10 @@ public class OfferedItem {
         return new OfferedItem(null, sourcePostId, null, null, null, sortOrder);
     }
 
-    public static OfferedItem ofNew(ItemName name, ItemCondition itemCondition, ItemDescription description, int sortOrder) {
-        if (name == null || itemCondition == null || description == null) {
+    public static OfferedItem ofNew(ItemName name, Boolean opened, ItemDescription description, int sortOrder) {
+        if (name == null || opened == null || description == null) {
             throw new ExchangeException(ExchangeErrorCode.INVALID_OFFERED_ITEMS);
         }
-        return new OfferedItem(null, null, name, itemCondition, description, sortOrder);
+        return new OfferedItem(null, null, name, opened, description, sortOrder);
     }
 }
