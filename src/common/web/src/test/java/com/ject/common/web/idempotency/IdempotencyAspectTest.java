@@ -1,6 +1,7 @@
 package com.ject.common.web.idempotency;
 
 import com.ject.common.core.exception.CommonErrorCode;
+import com.ject.common.web.auth.LoginMember;
 import com.ject.common.web.response.ApiResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,12 +21,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class IdempotencyAspectTest {
 
     private static final String KEY = "550e8400-e29b-41d4-a716-446655440000";
-    private static final String STORE_KEY = "POST:/api/v1/posts:" + KEY;
+    private static final String STORE_KEY = "3:POST:/api/v1/posts:" + KEY;
 
     private final JsonMapper jsonMapper = JsonMapper.builder().build();
     private FakeIdempotencyStore store;
     private SampleController target;
     private SampleController proxy;
+    private MockHttpServletRequest request;
 
     @BeforeEach
     void setUp() {
@@ -35,8 +37,9 @@ class IdempotencyAspectTest {
         factory.addAspect(new IdempotencyAspect(store));
         proxy = factory.getProxy();
 
-        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/posts");
+        request = new MockHttpServletRequest("POST", "/api/v1/posts");
         request.addHeader("Idempotency-Key", KEY);
+        request.setAttribute(LoginMember.ATTRIBUTE, 3L);
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
     }
 
@@ -105,6 +108,34 @@ class IdempotencyAspectTest {
         // then
         assertEquals(400, response.getStatusCode().value());
         assertFalse(store.contains(STORE_KEY));
+    }
+
+    @Test
+    @DisplayName("다른 회원이 같은 키로 보내면 따로 실행한다")
+    void separatesByMember() {
+        // given
+        proxy.create();
+
+        // when
+        request.setAttribute(LoginMember.ATTRIBUTE, 4L);
+        proxy.create();
+
+        // then
+        assertEquals(2, target.calls);
+        assertTrue(store.contains("4:POST:/api/v1/posts:" + KEY));
+    }
+
+    @Test
+    @DisplayName("로그인 정보가 없으면 anonymous로 키를 만든다")
+    void usesAnonymousWithoutMember() {
+        // given
+        request.removeAttribute(LoginMember.ATTRIBUTE);
+
+        // when
+        proxy.create();
+
+        // then
+        assertTrue(store.contains("anonymous:POST:/api/v1/posts:" + KEY));
     }
 
     static class SampleController {

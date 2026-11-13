@@ -1,5 +1,6 @@
 package com.ject.common.web.idempotency;
 
+import com.ject.common.web.auth.LoginMember;
 import com.ject.common.web.response.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import java.time.Duration;
 public class IdempotencyAspect {
 
     private static final String HEADER = "Idempotency-Key";
+    private static final String ANONYMOUS = "anonymous";
 
     private final IdempotencyStore store;
 
@@ -28,7 +30,9 @@ public class IdempotencyAspect {
         if (idempotencyKey == null || idempotencyKey.isBlank()) {
             return joinPoint.proceed();
         }
-        String key = request.getMethod() + ":" + request.getRequestURI() + ":" + idempotencyKey;
+        Object memberId = request.getAttribute(LoginMember.ATTRIBUTE);
+        String owner = memberId == null ? ANONYMOUS : memberId.toString();
+        String key = owner + ":" + request.getMethod() + ":" + request.getRequestURI() + ":" + idempotencyKey;
 
         if (!store.tryLock(key)) {
             return store.findResponse(key)
