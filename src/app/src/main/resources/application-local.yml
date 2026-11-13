@@ -1,10 +1,14 @@
 spring:
   config:
     import: "optional:file:.env[.properties],optional:file:../.env[.properties],optional:file:src/.env[.properties]"
-  flyway:
-    enabled: false
   elasticsearch:
     uris: ${ES_URIS}
+
+app:
+  auth:
+    jwt:
+      # 로컬 · dev 전용 기본 키. 공개되어 있으므로 staging · 운영에서는 쓰지 않는다
+      secret: ${JWT_SECRET:bakku-local-dev-only-jwt-secret-key-0001}
 
 logging:
   level:
