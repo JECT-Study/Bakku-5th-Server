@@ -5,6 +5,7 @@ public enum CommonErrorCode implements ErrorCode {
     INVALID_INPUT("COMMON_001", 400, "입력값이 올바르지 않습니다."),
     UNREADABLE_BODY("COMMON_002", 400, "요청 본문을 읽을 수 없습니다."),
     TOO_MANY_REQUESTS("COMMON_003", 429, "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요."),
+    IDEMPOTENCY_IN_PROGRESS("COMMON_004", 409, "같은 요청을 처리하고 있습니다. 잠시 후 다시 시도해 주세요."),
     TOKEN_MISSING("AUTH_001", 401, "인증 토큰이 없습니다."),
     TOKEN_EXPIRED("AUTH_002", 401, "인증 토큰이 만료되었습니다."),
     TOKEN_INVALID("AUTH_003", 401, "유효하지 않은 인증 토큰입니다."),
