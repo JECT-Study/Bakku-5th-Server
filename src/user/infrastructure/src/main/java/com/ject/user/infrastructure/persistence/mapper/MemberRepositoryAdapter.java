@@ -2,7 +2,9 @@ package com.ject.user.infrastructure.persistence.mapper;
 
 import com.ject.user.application.port.MemberRepository;
 import com.ject.user.domain.domain.Member;
+import com.ject.user.domain.domain.MemberStatus;
 import com.ject.user.domain.domain.Nickname;
+import com.ject.user.domain.domain.SocialProvider;
 import com.ject.user.domain.exception.MemberNotFoundException;
 import com.ject.user.infrastructure.persistence.entity.MemberJpaEntity;
 import com.ject.user.infrastructure.persistence.repository.MemberJpaRepository;
@@ -50,6 +52,17 @@ public class MemberRepositoryAdapter implements MemberRepository {
     @Override
     public Optional<Member> findByNickname(Nickname nickname) {
         return memberJpaRepository.findByNicknameIgnoreCase(nickname.value()).map(MemberMapper::toDomain);
+    }
+
+    @Override
+    public Optional<Member> findActiveBySocialIdHash(SocialProvider provider, String socialIdHash) {
+        return memberJpaRepository.findActiveBySocialIdHash(provider, socialIdHash).map(MemberMapper::toDomain);
+    }
+
+    @Override
+    public Optional<Member> findLatestWithdrawnBySocialIdHash(SocialProvider provider, String socialIdHash) {
+        return memberJpaRepository.findFirstByProviderAndSocialIdHashAndStatusOrderByWithdrawnAtDesc(
+                provider, socialIdHash, MemberStatus.WITHDRAWN).map(MemberMapper::toDomain);
     }
 
     @Override

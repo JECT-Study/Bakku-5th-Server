@@ -27,6 +27,8 @@ app:
       # HS256 서명 키, 32바이트 이상. staging · 운영은 기본값이 없어 반드시 환경변수로 넣는다
       secret: ${JWT_SECRET}
       access-token-validity: PT1H
+      # 가입 도중 앱을 꺼도 이어서 가입할 수 있게 7일 (결정 A2-1)
+      signup-token-validity: P7D
     # 소셜 회원번호 HMAC 키, 32바이트 이상. 바꾸면 기존 회원을 찾지 못하므로 한 번 정하면 유지한다
     social-id-hash-secret: ${SOCIAL_ID_HASH_SECRET}
     kakao:

@@ -26,7 +26,7 @@ public interface AuthApi {
 
     @Operation(summary = "AU-1 소셜 로그인",
             description = "소셜 인증 결과로 회원인지 확인합니다. 기존 회원이면 토큰을 발급하고(LOGIN), 처음이면 가입 토큰을 돌려줍니다(SIGNUP_REQUIRED). "
-                    + "stub은 토큰 값이 new로 시작하면 SIGNUP_REQUIRED, 아니면 LOGIN을 응답합니다. 인증 없이 호출합니다. "
+                    + "Apple은 아직 지원하지 않아 MEMBER_001을 응답합니다. 인증 없이 호출합니다. "
                     + "에러: MEMBER_001 소셜 토큰 검증 실패 · MEMBER_002 탈퇴 후 7일 안 (rejoinAvailableAt) · MEMBER_003 영구 정지")
     @SecurityRequirements
     @PostMapping("/{provider}/login")
