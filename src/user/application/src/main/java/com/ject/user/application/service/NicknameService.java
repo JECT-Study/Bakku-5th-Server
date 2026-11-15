@@ -1,7 +1,6 @@
 package com.ject.user.application.service;
 
 import com.ject.user.application.dto.NicknameAvailability;
-import com.ject.user.application.dto.NicknameAvailability.UnavailableReason;
 import com.ject.user.application.port.MemberRepository;
 import com.ject.user.domain.domain.Nickname;
 import com.ject.user.domain.domain.NicknameViolation;
@@ -27,18 +26,11 @@ public class NicknameService {
     public NicknameAvailability checkAvailability(String value) {
         Optional<NicknameViolation> violation = Nickname.validate(value);
         if (violation.isPresent()) {
-            return NicknameAvailability.unusable(reasonOf(violation.get()));
+            return NicknameAvailability.unusable(violation.get().name());
         }
         if (memberRepository.findByNickname(new Nickname(value)).isPresent()) {
-            return NicknameAvailability.unusable(UnavailableReason.DUPLICATE);
+            return NicknameAvailability.unusable(NicknameAvailability.DUPLICATE);
         }
         return NicknameAvailability.usable();
-    }
-
-    private static UnavailableReason reasonOf(NicknameViolation violation) {
-        return switch (violation) {
-            case INVALID_LENGTH -> UnavailableReason.INVALID_LENGTH;
-            case INVALID_FORMAT -> UnavailableReason.INVALID_FORMAT;
-        };
     }
 }

@@ -5,7 +5,6 @@ import com.ject.user.api.exception.UserExceptionHandler;
 import com.ject.user.api.ratelimit.IpRateLimiter;
 import com.ject.user.api.ratelimit.RateLimitInterceptor;
 import com.ject.user.application.dto.NicknameAvailability;
-import com.ject.user.application.dto.NicknameAvailability.UnavailableReason;
 import com.ject.user.application.service.NicknameService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -207,13 +206,13 @@ class MemberControllerTest {
         @Override
         public NicknameAvailability checkAvailability(String value) {
             if (value.length() < 2) {
-                return NicknameAvailability.unusable(UnavailableReason.INVALID_LENGTH);
+                return NicknameAvailability.unusable("INVALID_LENGTH");
             }
             if (value.contains(" ")) {
-                return NicknameAvailability.unusable(UnavailableReason.INVALID_FORMAT);
+                return NicknameAvailability.unusable("INVALID_FORMAT");
             }
             if (value.equals("쿠로미덕후")) {
-                return NicknameAvailability.unusable(UnavailableReason.DUPLICATE);
+                return NicknameAvailability.unusable("DUPLICATE");
             }
             return NicknameAvailability.usable();
         }

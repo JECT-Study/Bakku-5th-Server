@@ -1,7 +1,6 @@
 package com.ject.user.application;
 
 import com.ject.user.application.dto.NicknameAvailability;
-import com.ject.user.application.dto.NicknameAvailability.UnavailableReason;
 import com.ject.user.application.service.NicknameService;
 import com.ject.user.domain.domain.BirthDate;
 import com.ject.user.domain.domain.Member;
@@ -44,9 +43,9 @@ class NicknameServiceTest {
     @DisplayName("글자 수 · 형식 오류는 이유를 나눠서 준다")
     void ruleViolation() {
         // when & then
-        assertEquals(NicknameAvailability.unusable(UnavailableReason.INVALID_LENGTH),
+        assertEquals(NicknameAvailability.unusable("INVALID_LENGTH"),
                 nicknameService.checkAvailability("가"));
-        assertEquals(NicknameAvailability.unusable(UnavailableReason.INVALID_FORMAT),
+        assertEquals(NicknameAvailability.unusable("INVALID_FORMAT"),
                 nicknameService.checkAvailability("닉 네임"));
     }
 
@@ -60,7 +59,7 @@ class NicknameServiceTest {
         NicknameAvailability result = nicknameService.checkAvailability("bAKKU");
 
         // then
-        assertEquals(NicknameAvailability.unusable(UnavailableReason.DUPLICATE), result);
+        assertEquals(NicknameAvailability.unusable("DUPLICATE"), result);
     }
 
     @Test

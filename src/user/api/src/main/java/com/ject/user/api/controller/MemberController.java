@@ -41,7 +41,7 @@ public class MemberController implements MemberApi {
         NicknameAvailability result = nicknameService.checkAvailability(nickname);
         NicknameUnavailableReason reason = result.unavailableReason() == null
                 ? null
-                : NicknameUnavailableReason.valueOf(result.unavailableReason().name());
+                : NicknameUnavailableReason.valueOf(result.unavailableReason());
         // 금지어 경고는 2차 (A-05-2)
         return ApiResponse.success(new NicknameAvailabilityResponse(result.available(), reason, false));
     }
