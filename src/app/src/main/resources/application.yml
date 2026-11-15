@@ -32,8 +32,8 @@ app:
     # 소셜 회원번호 HMAC 키, 32바이트 이상. 바꾸면 기존 회원을 찾지 못하므로 한 번 정하면 유지한다
     social-id-hash-secret: ${SOCIAL_ID_HASH_SECRET}
     kakao:
-      # 카카오 디벨로퍼스 앱 ID(숫자). 비우면 토큰의 발급 앱을 확인하지 않는다
-      app-id: ${KAKAO_APP_ID:}
+      # 카카오 디벨로퍼스 앱 ID(숫자, 공개 값). 다른 앱에서 발급된 토큰을 막는다. 비우면 확인하지 않는다
+      app-id: ${KAKAO_APP_ID:1624939}
     # 로그인 없이 부르는 /api/ 경로 (Ant 패턴). 그 밖의 /api/ 경로는 Authorization: Bearer 토큰이 필요하다
     public-paths:
       - /api/v1/auth/*/login
