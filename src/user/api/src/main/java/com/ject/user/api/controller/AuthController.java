@@ -16,7 +16,9 @@ import com.ject.user.api.dto.response.LoginResponse;
 import com.ject.user.api.dto.response.SignupPrefillResponse;
 import com.ject.user.api.dto.response.TokenResponse;
 import com.ject.user.application.dto.LoginTokens;
+import com.ject.user.application.dto.SignupCommand;
 import com.ject.user.application.dto.SocialLoginResult;
+import com.ject.user.application.service.SignupService;
 import com.ject.user.application.service.SocialLoginService;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -27,10 +29,13 @@ import java.util.List;
 public class AuthController implements AuthApi {
 
     private final SocialLoginService socialLoginService;
+    private final SignupService signupService;
     private final ServiceTime serviceTime;
 
-    public AuthController(SocialLoginService socialLoginService, ServiceTime serviceTime) {
+    public AuthController(SocialLoginService socialLoginService, SignupService signupService,
+                          ServiceTime serviceTime) {
         this.socialLoginService = socialLoginService;
+        this.signupService = signupService;
         this.serviceTime = serviceTime;
     }
 
@@ -51,17 +56,24 @@ public class AuthController implements AuthApi {
                     result.signupToken().value(), serviceTime.toOffset(result.signupToken().expiresAt()), prefill));
         }
 
-        LoginTokens tokens = result.tokens();
-        return ApiResponse.success(new LoginResponse(LoginResult.LOGIN, tokens.accessToken().value(),
-                serviceTime.toOffset(tokens.accessToken().expiresAt()), tokens.refreshToken(),
-                new LoginMemberResponse(tokens.memberId(), tokens.nickname()), null, null, null));
+        TokenResponse tokens = toTokenResponse(result.tokens());
+        return ApiResponse.success(new LoginResponse(LoginResult.LOGIN, tokens.accessToken(),
+                tokens.accessTokenExpiresAt(), tokens.refreshToken(), tokens.member(), null, null, null));
     }
 
     @Override
     public ApiResponse<TokenResponse> signup(SignupRequest request) {
-        TokenResponse token = UserStubData.token();
-        return ApiResponse.created(new TokenResponse(token.accessToken(), token.accessTokenExpiresAt(), token.refreshToken(),
-                new LoginMemberResponse(UserStubData.MY_ID, request.nickname())));
+        LoginTokens tokens = signupService.signup(new SignupCommand(
+                request.signupToken(),
+                request.agreements().stream()
+                        .map(agreement -> new SignupCommand.Agreement(agreement.termsType().name(),
+                                agreement.version(), agreement.agreed()))
+                        .toList(),
+                request.nickname(),
+                request.birthDate(),
+                request.gender() == null ? null : request.gender().name(),
+                request.deviceId()));
+        return ApiResponse.created(toTokenResponse(tokens));
     }
 
     @Override
@@ -72,6 +84,11 @@ public class AuthController implements AuthApi {
     @Override
     public ApiResponse<Void> logout(LogoutRequest request) {
         return ApiResponse.success(null);
+    }
+
+    private TokenResponse toTokenResponse(LoginTokens tokens) {
+        return new TokenResponse(tokens.accessToken().value(), serviceTime.toOffset(tokens.accessToken().expiresAt()),
+                tokens.refreshToken(), new LoginMemberResponse(tokens.memberId(), tokens.nickname()));
     }
 
     private static List<FieldError> missingTokenFields(String provider, SocialLoginRequest request) {

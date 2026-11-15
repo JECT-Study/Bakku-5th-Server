@@ -38,7 +38,8 @@ public interface AuthApi {
     @Operation(summary = "AU-2 회원 가입 완료",
             description = "약관 동의와 프로필(닉네임 · 생년월일 · 성별)을 한 번에 받아 회원을 만들고 토큰을 발급합니다. 인증 대신 Body의 가입 토큰을 씁니다. "
                     + "에러: MEMBER_010 가입 토큰 만료 · MEMBER_011 필수 약관 미동의 · MEMBER_012 약관 버전 오래됨 · MEMBER_013 만 14세 미만 · "
-                    + "MEMBER_014 이미 가입됨 · MEMBER_101 닉네임 형식 · MEMBER_102 닉네임 중복")
+                    + "MEMBER_014 이미 가입됨 · MEMBER_101 닉네임 형식 · MEMBER_102 닉네임 중복 · "
+                    + "MEMBER_002 가입 토큰을 받은 뒤 탈퇴해 7일이 안 지남 (data.rejoinAvailableAt)")
     @SecurityRequirements
     @PostMapping("/signup")
     @ResponseStatus(HttpStatus.CREATED)

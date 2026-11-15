@@ -4,9 +4,11 @@ import com.ject.common.core.time.ServiceTime;
 import com.ject.user.api.exception.UserExceptionHandler;
 import com.ject.user.application.dto.AccessToken;
 import com.ject.user.application.dto.LoginTokens;
+import com.ject.user.application.dto.SignupCommand;
 import com.ject.user.application.dto.SignupToken;
 import com.ject.user.application.dto.SocialLoginResult;
 import com.ject.user.application.exception.RejoinNotAvailableException;
+import com.ject.user.application.service.SignupService;
 import com.ject.user.application.service.SocialLoginService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -57,7 +59,8 @@ class AuthControllerTest {
     @BeforeEach
     void setUp() {
         ServiceTime serviceTime = new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul")));
-        mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(new StubSocialLoginService(), serviceTime))
+        mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(new StubSocialLoginService(), new StubSignupService(),
+                        serviceTime))
                 .setControllerAdvice(new UserExceptionHandler())
                 .defaultResponseCharacterEncoding(StandardCharsets.UTF_8)
                 .build();
@@ -122,7 +125,8 @@ class AuthControllerTest {
     void signup_returns201WithTokens() throws Exception {
         post("/api/v1/auth/signup", SIGNUP_BODY)
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.refreshToken").value("eyJhbGciOiJIUzI1NiJ9.refresh"))
+                .andExpect(jsonPath("$.data.accessToken").value("access-token"))
+                .andExpect(jsonPath("$.data.refreshToken").value("refresh-token"))
                 .andExpect(jsonPath("$.data.member.nickname").value("쿠로미덕후"));
     }
 
@@ -182,6 +186,22 @@ class AuthControllerTest {
             }
             return SocialLoginResult.login(new LoginTokens(new AccessToken("access-token", NOW.plusSeconds(3600)),
                     "refresh-token", 101L, "쿠로미덕후"));
+        }
+    }
+
+    /**
+     * 받은 닉네임으로 101번 회원을 만든 것처럼 토큰을 주는 가입 서비스.
+     */
+    private static class StubSignupService extends SignupService {
+
+        StubSignupService() {
+            super(null, null, null, null, null);
+        }
+
+        @Override
+        public LoginTokens signup(SignupCommand command) {
+            return new LoginTokens(new AccessToken("access-token", NOW.plusSeconds(3600)), "refresh-token", 101L,
+                    command.nickname());
         }
     }
 }
