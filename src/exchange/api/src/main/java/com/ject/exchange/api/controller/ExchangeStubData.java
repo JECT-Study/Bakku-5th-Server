@@ -2,12 +2,12 @@ package com.ject.exchange.api.controller;
 
 import com.ject.exchange.api.dto.enums.AppointmentStatus;
 import com.ject.exchange.api.dto.enums.AppointmentTimeType;
-import com.ject.exchange.api.dto.enums.OfferType;
 import com.ject.exchange.api.dto.response.AppointmentChangeResponse;
 import com.ject.exchange.api.dto.response.AppointmentItemResponse;
 import com.ject.exchange.api.dto.response.AppointmentResponse;
 import com.ject.exchange.api.dto.response.ConfirmationResponse;
 import com.ject.exchange.api.dto.response.PlaceResponse;
+import com.ject.exchange.domain.domain.exchange.OfferType;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;

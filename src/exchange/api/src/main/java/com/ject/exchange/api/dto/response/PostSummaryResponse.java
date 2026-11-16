@@ -1,6 +1,7 @@
 package com.ject.exchange.api.dto.response;
 
 import com.ject.exchange.api.dto.enums.PostStatus;
+import com.ject.exchange.application.dto.dto.PostSummary;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "교환글의 현재 정보")
@@ -17,4 +18,14 @@ public record PostSummaryResponse(
         @Schema(description = "교환글 상태", example = "AVAILABLE")
         PostStatus status
 ) {
+    public static PostSummaryResponse from(PostSummary summary) {
+        if (summary == null) {
+            return null;
+        }
+        return new PostSummaryResponse(
+                summary.id(),
+                summary.title(),
+                summary.thumbnailUrl(),
+                EnumMapper.map(summary.status(), PostStatus.class));
+    }
 }

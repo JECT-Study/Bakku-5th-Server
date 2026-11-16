@@ -1,6 +1,6 @@
 package com.ject.exchange.api.dto.response;
 
-import com.ject.exchange.api.dto.enums.OfferType;
+import com.ject.exchange.domain.domain.exchange.OfferType;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "약속에서 교환할 물건")
