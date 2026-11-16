@@ -1,8 +1,11 @@
 package com.ject.post.api.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.ject.common.web.image.ImageUrlResolver;
 import com.ject.post.api.dto.enums.PostCategory;
 import com.ject.post.api.dto.enums.PostStatus;
+import com.ject.post.application.dto.AuthorInfo;
+import com.ject.post.application.dto.PostResult;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.OffsetDateTime;
@@ -68,4 +71,31 @@ public record PostResponse(
         @Schema(description = "작성 시각. 상대 시간은 FE 계산", example = "2026-11-02T14:30:00+09:00")
         OffsetDateTime createdAt
 ) {
+
+    public static PostResponse from(PostResult result, ImageUrlResolver imageUrlResolver) {
+        PostResult.PlaceResult place = result.place();
+        AuthorInfo author = result.author();
+        return new PostResponse(
+                result.id(),
+                PostStatus.valueOf(result.status()),
+                result.imageKeys().stream()
+                        .map(key -> new ImageResponse(key, imageUrlResolver.resolve(key)))
+                        .toList(),
+                result.title(),
+                PostCategory.valueOf(result.category()),
+                result.opened(),
+                result.tags(),
+                result.description(),
+                result.wantedItem(),
+                new PlaceResponse(place.lat(), place.lng(), place.name(), place.regionName(), place.memo()),
+                result.nowExchange(),
+                result.nowExchangeEndsAt(),
+                result.requestCount(),
+                result.viewCount(),
+                new AuthorResponse(author.userId(), author.nickname(), author.completedCount()),
+                result.isMine(),
+                result.chatRoomId(),
+                null,
+                result.createdAt());
+    }
 }
