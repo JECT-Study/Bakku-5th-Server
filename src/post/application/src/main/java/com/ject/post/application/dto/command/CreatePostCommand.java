@@ -16,5 +16,6 @@ public record CreatePostCommand(
         PlaceCommand place,
         Integer nowExchangeMinutes
 ) implements Command<Long> {
-    public record PlaceCommand(double lat, double lng, String name, String regionName, String memo) {}
+    public record PlaceCommand(double lat, double lng, String name, String regionName, String memo) {
+    }
 }
