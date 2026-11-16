@@ -7,22 +7,27 @@ import com.ject.image.api.dto.response.ImageUploadResponse;
 import com.ject.image.api.dto.response.UploadedImageResponse;
 import com.ject.image.application.dto.ImageFileInfo;
 import com.ject.image.application.service.ImageFileValidator;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Duration;
 import java.util.List;
 
 @RestController
-@RequiredArgsConstructor
 public class ImageController implements ImageApi {
 
-    private static final String CACHE_CONTROL = "private, max-age=86400";
-
     private final ImageFileValidator imageFileValidator;
+    private final CacheControl cacheControl;
+
+    public ImageController(ImageFileValidator imageFileValidator,
+                           @Value("${app.image.cache-max-age}") Duration cacheMaxAge) {
+        this.imageFileValidator = imageFileValidator;
+        this.cacheControl = CacheControl.maxAge(cacheMaxAge).cachePrivate();
+    }
 
     @Override
     public ApiResponse<ImageUploadResponse> uploadImages(ImageUploadRequest request) {
@@ -42,7 +47,7 @@ public class ImageController implements ImageApi {
     public ResponseEntity<byte[]> getImage(String key) {
         return ResponseEntity.ok()
                 .contentType(MediaType.IMAGE_PNG)
-                .header(HttpHeaders.CACHE_CONTROL, CACHE_CONTROL)
+                .cacheControl(cacheControl)
                 .body(ImageStubData.SAMPLE_PNG);
     }
 }

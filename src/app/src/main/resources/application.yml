@@ -37,6 +37,8 @@ app:
       - /api/v1/terms
       - /api/v1/app/version
       - /api/v1/dev/**
+  image:
+    cache-max-age: ${IMAGE_CACHE_MAX_AGE:1d}
 
 server:
   shutdown: graceful

@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequ
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -29,7 +30,11 @@ class ImageControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new ImageController(new ImageFileValidator()))
+        mockMvc = mockMvcWithCacheMaxAge(Duration.ofDays(1));
+    }
+
+    private static MockMvc mockMvcWithCacheMaxAge(Duration cacheMaxAge) {
+        return MockMvcBuilders.standaloneSetup(new ImageController(new ImageFileValidator(), cacheMaxAge))
                 .setControllerAdvice(new ImageExceptionHandler())
                 .defaultResponseCharacterEncoding(StandardCharsets.UTF_8)
                 .build();
@@ -115,12 +120,21 @@ class ImageControllerTest {
         mockMvc.perform(get("/api/v1/images/post/10/8f14e45f.jpg"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.IMAGE_PNG))
-                .andExpect(header().string("Cache-Control", "private, max-age=86400"))
+                .andExpect(header().string("Cache-Control", "max-age=86400, private"))
                 .andExpect(result -> {
                     if (result.getResponse().getContentAsByteArray().length == 0) {
                         throw new AssertionError("이미지 본문이 비어 있습니다.");
                     }
                 });
+    }
+
+    @Test
+    @DisplayName("IMG-2 설정한 저장 시간이 max-age에 반영된다")
+    void getImage_usesConfiguredCacheMaxAge() throws Exception {
+        mockMvcWithCacheMaxAge(Duration.ofHours(1))
+                .perform(get("/api/v1/images/post/10/8f14e45f.jpg"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "max-age=3600, private"));
     }
 
     private ResultActions upload(String purpose, MockMultipartFile... files) throws Exception {
