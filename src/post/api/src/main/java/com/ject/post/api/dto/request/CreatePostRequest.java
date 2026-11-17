@@ -1,6 +1,7 @@
 package com.ject.post.api.dto.request;
 
 import com.ject.post.api.dto.enums.PostCategory;
+import com.ject.post.application.dto.command.CreatePostCommand;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
@@ -31,7 +32,7 @@ public record CreatePostRequest(
         @NotNull
         Boolean opened,
 
-        @Schema(description = "태그 최대 5개, 1개당 1~20자, 중복 불가, # 제외. 태그는 2차라 1차에는 보내지 않거나 빈 배열", example = "[\"치이카와\", \"하치와레\"]")
+        @Schema(description = "태그 최대 5개, 1개당 1~20자, 중복 불가, # 제외. 공백을 지우고 소문자로 저장하며, 공백 · 대소문자만 다른 태그는 하나로 합침", example = "[\"치이카와\", \"하치와레\"]")
         @Size(max = 5)
         List<@NotBlank @Size(max = 20) @Pattern(regexp = "^[^#]+$", message = "#은 넣을 수 없습니다.") String> tags,
 
@@ -69,5 +70,10 @@ public record CreatePostRequest(
     @Schema(hidden = true)
     public boolean isNowExchangeMinutesAllowed() {
         return nowExchangeMinutes == null || NOW_EXCHANGE_MINUTES.contains(nowExchangeMinutes);
+    }
+
+    public CreatePostCommand toCommand(Long authorId) {
+        return new CreatePostCommand(authorId, imageKeys, title, category.name(), opened, tags,
+                description, wantedItem, place.toCommand(), nowExchangeMinutes);
     }
 }

@@ -1,5 +1,6 @@
 package com.ject.post.api.dto.request;
 
+import com.ject.post.application.dto.command.CreatePostCommand;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -29,4 +30,8 @@ public record PlaceRequest(
         @Size(min = 2, max = 30)
         String memo
 ) {
+
+    public CreatePostCommand.PlaceCommand toCommand() {
+        return new CreatePostCommand.PlaceCommand(lat, lng, name, regionName, memo);
+    }
 }
