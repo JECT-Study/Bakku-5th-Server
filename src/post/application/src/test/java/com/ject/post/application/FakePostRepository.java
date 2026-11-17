@@ -45,4 +45,25 @@ public class FakePostRepository implements PostRepository {
     public Optional<Post> findById(Long id) {
         return Optional.ofNullable(posts.get(id));
     }
+
+    @Override
+    public void increaseViewCount(Long id) {
+        Post post = posts.get(id);
+        posts.put(id, Post.builder()
+                .id(post.getId())
+                .authorId(post.getAuthorId())
+                .status(post.getStatus())
+                .imageKeys(post.getImageKeys())
+                .tags(post.getTags())
+                .title(post.getTitle())
+                .category(post.getCategory())
+                .opened(post.isOpened())
+                .description(post.getDescription())
+                .wantedItem(post.getWantedItem())
+                .place(post.getPlace())
+                .nowExchangeEndsAt(post.getNowExchangeEndsAt())
+                .viewCount(post.getViewCount() + 1)
+                .createdAt(post.getCreatedAt())
+                .build());
+    }
 }

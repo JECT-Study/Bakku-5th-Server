@@ -54,8 +54,9 @@ public class GetPostHandler implements QueryHandler<GetPostQuery, PostResult> {
                 0,
                 post.getViewCount(),
                 author,
-                post.getAuthorId().equals(viewerId),
+                post.isWrittenBy(viewerId),
                 null,
+                post.canBeRequestedBy(viewerId),
                 serviceTime.toOffset(post.getCreatedAt()));
     }
 }
