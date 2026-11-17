@@ -11,6 +11,8 @@ import com.ject.post.api.exception.PostExceptionHandler;
 import com.ject.post.application.dto.AuthorInfo;
 import com.ject.post.application.dto.PostResult;
 import com.ject.post.application.dto.command.CreatePostCommand;
+import com.ject.post.application.dto.command.IncreaseViewCountCommand;
+import com.ject.post.application.dto.query.GetPostQuery;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,6 +24,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -79,6 +82,7 @@ class PostControllerTest {
             }
             """;
 
+    private final List<Object> sent = new ArrayList<>();
     private final FakeCommandBus commandBus = new FakeCommandBus();
     private final FakeQueryBus queryBus = new FakeQueryBus();
     private MockMvc mockMvc;
@@ -185,19 +189,47 @@ class PostControllerTest {
     }
 
     @Test
-    @DisplayName("PO-3 상세는 canRequest를 포함한다")
+    @DisplayName("PO-3 상세는 조회 결과에 canRequest를 포함하고, 사진 URL은 IMG-2 주소다")
     void getPost_includesCanRequest() throws Exception {
-        mockMvc.perform(get("/api/v1/posts/10"))
+        queryBus.mine = false;
+
+        getPost("10", 99L)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.id").value(10))
                 .andExpect(jsonPath("$.data.isMine").value(false))
-                .andExpect(jsonPath("$.data.canRequest").value(true));
+                .andExpect(jsonPath("$.data.canRequest").value(true))
+                .andExpect(jsonPath("$.data.images[0].url")
+                        .value("http://localhost:8080/api/v1/images/post/10/8f14e45f.jpg"));
+    }
+
+    @Test
+    @DisplayName("PO-3 조회 수를 먼저 올리고 조회한다. 보는 사람은 토큰의 회원이다")
+    void getPost_increasesViewCountBeforeQuery() throws Exception {
+        getPost("10", 99L);
+
+        assertEquals(List.of(new IncreaseViewCountCommand(10L, 99L), new GetPostQuery(10L, 99L)), sent);
+    }
+
+    @Test
+    @DisplayName("PO-3 내 글이면 canRequest는 false다")
+    void getPost_myPost_cannotRequest() throws Exception {
+        getPost("10", 3L)
+                .andExpect(jsonPath("$.data.isMine").value(true))
+                .andExpect(jsonPath("$.data.canRequest").value(false));
+    }
+
+    @Test
+    @DisplayName("PO-3 로그인 정보가 없으면 AUTH_001")
+    void getPost_withoutLogin_returnsAuth001() throws Exception {
+        mockMvc.perform(get("/api/v1/posts/10"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTH_001"));
     }
 
     @Test
     @DisplayName("PO-3 postId 형식이 틀리면 COMMON_001")
     void getPost_invalidId_returnsCommon001() throws Exception {
-        expectCommon001(mockMvc.perform(get("/api/v1/posts/abc")));
+        expectCommon001(getPost("abc", 3L));
     }
 
     @Test
@@ -251,13 +283,18 @@ class PostControllerTest {
                 .content(body));
     }
 
+    private ResultActions getPost(String postId, Long memberId) throws Exception {
+        return mockMvc.perform(get("/api/v1/posts/" + postId)
+                .requestAttr(LoginMember.ATTRIBUTE, memberId));
+    }
+
     private static void expectCommon001(ResultActions result) throws Exception {
         result.andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("COMMON_001"));
     }
 
-    static class FakeCommandBus implements CommandBus {
+    class FakeCommandBus implements CommandBus {
 
         Command<?> received;
 
@@ -265,22 +302,26 @@ class PostControllerTest {
         @SuppressWarnings("unchecked")
         public <R> R send(Command<R> command) {
             received = command;
-            return (R) Long.valueOf(10L);
+            sent.add(command);
+            return command instanceof CreatePostCommand ? (R) Long.valueOf(10L) : null;
         }
     }
 
-    static class FakeQueryBus implements QueryBus {
+    class FakeQueryBus implements QueryBus {
+
+        boolean mine = true;
 
         @Override
         @SuppressWarnings("unchecked")
         public <R> R send(Query<R> query) {
+            sent.add(query);
             return (R) new PostResult(10L, "AVAILABLE",
                     List.of("post/10/8f14e45f.jpg", "post/10/c9f0f895.jpg"),
                     "치이카와 하치와레 가챠 키링", "CHARACTER", false, List.of("치이카와", "하치와레"),
                     "치이카와 가챠 3탄에서 뽑았어요.", "치이카와 가챠 키링",
                     new PostResult.PlaceResult(37.5563, 126.9236, "스타벅스 홍대동교점", "마포구 동교동", "AK플라자 주변"),
                     true, OffsetDateTime.parse("2026-11-02T15:30:00+09:00"), 0, 0,
-                    new AuthorInfo(3L, "하치와레러버", 12), true, null,
+                    new AuthorInfo(3L, "하치와레러버", 12), mine, null, !mine,
                     OffsetDateTime.parse("2026-11-02T14:30:00+09:00"));
         }
     }

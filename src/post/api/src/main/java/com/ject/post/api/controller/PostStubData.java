@@ -1,12 +1,9 @@
 package com.ject.post.api.controller;
 
-import com.ject.post.api.dto.enums.PostCategory;
-import com.ject.post.api.dto.enums.PostStatus;
 import com.ject.post.api.dto.request.PlaceRequest;
 import com.ject.post.api.dto.response.AuthorResponse;
 import com.ject.post.api.dto.response.ImageResponse;
 import com.ject.post.api.dto.response.PlaceResponse;
-import com.ject.post.api.dto.response.PostResponse;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -46,16 +43,5 @@ final class PostStubData {
         int firstSpace = regionName.indexOf(' ');
         String withoutProvince = firstSpace < 0 ? regionName : regionName.substring(firstSpace + 1);
         return new PlaceResponse(place.lat(), place.lng(), place.name(), withoutProvince, place.memo());
-    }
-
-    static PostResponse post(Long postId, boolean isMine, Boolean canRequest) {
-        return new PostResponse(
-                postId, PostStatus.AVAILABLE,
-                List.of(image(postId, "8f14e45f.jpg")),
-                "치이카와 하치와레 가챠 키링", PostCategory.CHARACTER, false,
-                List.of("치이카와", "하치와레"), "치이카와 가챠 3탄에서 뽑았어요.",
-                "치이카와 가챠 키링 (하치와레, 모몽가 제외)",
-                new PlaceResponse(37.5563, 126.9236, "스타벅스 홍대동교점", "마포구 동교동", "AK플라자 주변"),
-                true, NOW_EXCHANGE_ENDS_AT, 3, 41, author(), isMine, null, canRequest, CREATED_AT);
     }
 }

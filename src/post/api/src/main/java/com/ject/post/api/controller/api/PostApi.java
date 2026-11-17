@@ -38,7 +38,7 @@ public interface PostApi {
 
     @Operation(summary = "PO-3 교환글 상세", description = "글 정보, 요청 · 조회 수, 하단 버튼 판단 정보를 보여줍니다. 조회 수는 다른 사람 글일 때 계정 + 날짜당 1회 오릅니다.")
     @GetMapping("/{postId}")
-    ApiResponse<PostResponse> getPost(@PathVariable("postId") Long postId);
+    ApiResponse<PostResponse> getPost(@LoginMember Long memberId, @PathVariable("postId") Long postId);
 
     @Operation(summary = "PO-4 교환글 수정", description = "교환 가능 글만 수정합니다. 전체 교체라 보내지 않은 tags · description · wantedItem · place.memo는 지워집니다.")
     @PutMapping("/{postId}")

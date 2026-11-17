@@ -13,6 +13,7 @@ import com.ject.post.api.dto.request.UpdatePostRequest;
 import com.ject.post.api.dto.response.PostResponse;
 import com.ject.post.api.dto.response.RelatedChatResponse;
 import com.ject.post.application.dto.PostResult;
+import com.ject.post.application.dto.command.IncreaseViewCountCommand;
 import com.ject.post.application.dto.query.GetPostQuery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RestController;
@@ -41,8 +42,10 @@ public class PostController implements PostApi {
     }
 
     @Override
-    public ApiResponse<PostResponse> getPost(Long postId) {
-        return ApiResponse.success(PostStubData.post(postId, false, true));
+    public ApiResponse<PostResponse> getPost(Long memberId, Long postId) {
+        commandBus.send(new IncreaseViewCountCommand(postId, memberId));
+        PostResult result = queryBus.send(new GetPostQuery(postId, memberId));
+        return ApiResponse.success(PostResponse.fromDetail(result, imageUrlResolver));
     }
 
     @Override
