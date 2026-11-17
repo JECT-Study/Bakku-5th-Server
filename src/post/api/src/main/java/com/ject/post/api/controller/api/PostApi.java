@@ -1,5 +1,6 @@
 package com.ject.post.api.controller.api;
 
+import com.ject.common.web.auth.LoginMember;
 import com.ject.common.web.response.ApiResponse;
 import com.ject.post.api.dto.request.CreatePostRequest;
 import com.ject.post.api.dto.request.UpdatePostRequest;
@@ -30,6 +31,7 @@ public interface PostApi {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     ApiResponse<PostResponse> createPost(
+            @LoginMember Long memberId,
             @Parameter(description = "UUID. 재시도할 때 같은 값, 입력을 바꾸면 새 값")
             @RequestHeader("Idempotency-Key") UUID idempotencyKey,
             @Valid @RequestBody CreatePostRequest request);

@@ -10,7 +10,7 @@ public record PostSummaryResponse(
         @Schema(description = "교환글 ID", example = "10")
         Long id,
 
-        @Schema(description = "대표 사진 URL", example = "https://{cdn}/post/10/8f14e45f.jpg")
+        @Schema(description = "대표 사진 URL", example = "https://{api}/api/v1/images/post/10/8f14e45f.jpg")
         String thumbnailUrl,
 
         @Schema(description = "제품명", example = "치이카와 하치와레 가챠 키링")
