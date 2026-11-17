@@ -9,30 +9,22 @@ import org.springframework.web.servlet.HandlerInterceptor;
  */
 public class RateLimitInterceptor implements HandlerInterceptor {
 
-    private static final String FORWARDED_FOR = "X-Forwarded-For";
-
     private final IpRateLimiter rateLimiter;
 
     public RateLimitInterceptor(IpRateLimiter rateLimiter) {
         this.rateLimiter = rateLimiter;
     }
 
+    /**
+     * 클라이언트 IP는 getRemoteAddr()로 읽는다. 프록시 뒤에서는 Tomcat이 X-Forwarded-For를 오른쪽부터 읽어
+     * 내부 프록시가 아닌 첫 주소로 바꿔 둔다 (server.forward-headers-strategy=native). 헤더 왼쪽은 클라이언트가
+     * 마음대로 넣을 수 있어서 직접 읽지 않는다.
+     */
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        if (!rateLimiter.tryAcquire(clientIp(request))) {
+        if (!rateLimiter.tryAcquire(request.getRemoteAddr())) {
             throw new TooManyRequestsException();
         }
         return true;
-    }
-
-    /**
-     * 로드 밸런서 뒤에서는 X-Forwarded-For의 첫 값이 클라이언트 IP다 (결정 C7).
-     */
-    private static String clientIp(HttpServletRequest request) {
-        String forwardedFor = request.getHeader(FORWARDED_FOR);
-        if (forwardedFor != null && !forwardedFor.isBlank()) {
-            return forwardedFor.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
     }
 }

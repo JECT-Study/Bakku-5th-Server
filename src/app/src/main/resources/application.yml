@@ -46,6 +46,9 @@ app:
 
 server:
   shutdown: graceful
+  # 프록시 뒤에서 클라이언트 IP · 스킴을 X-Forwarded-* 로 복원한다. Tomcat은 X-Forwarded-For를 오른쪽부터 읽어
+  # 내부 프록시(사설 · 루프백 대역, server.tomcat.remoteip.internal-proxies 기본값)를 건너뛴 첫 주소를 쓴다
+  forward-headers-strategy: native
 
 management:
   endpoints:

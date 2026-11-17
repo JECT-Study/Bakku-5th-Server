@@ -84,6 +84,20 @@ class MemberControllerTest {
     }
 
     @Test
+    @DisplayName("MB-1 X-Forwarded-For를 매번 바꿔 보내도 접속 IP 기준으로 센다")
+    void checkNickname_forgedForwardedFor_countedByRemoteAddr() throws Exception {
+        // given
+        for (int i = 0; i < 30; i++) {
+            mockMvc.perform(nicknameCheckFrom("203.0.113.1").header("X-Forwarded-For", "198.51.100." + i))
+                    .andExpect(status().isOk());
+        }
+
+        // when & then
+        mockMvc.perform(nicknameCheckFrom("203.0.113.1").header("X-Forwarded-For", "198.51.100.99"))
+                .andExpect(status().isTooManyRequests());
+    }
+
+    @Test
     @DisplayName("MB-1 nickname이 없으면 COMMON_001")
     void checkNickname_missing_returnsCommon001() throws Exception {
         mockMvc.perform(get("/api/v1/members/nickname-availability"))
@@ -191,7 +205,10 @@ class MemberControllerTest {
 
     private static MockHttpServletRequestBuilder nicknameCheckFrom(String ip) {
         return get("/api/v1/members/nickname-availability").param("nickname", "하치와레러버")
-                .header("X-Forwarded-For", ip + ", 10.0.0.1");
+                .with(request -> {
+                    request.setRemoteAddr(ip);
+                    return request;
+                });
     }
 
     /**
