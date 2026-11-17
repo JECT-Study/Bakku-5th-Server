@@ -1,6 +1,16 @@
 package com.ject.post.api.controller;
 
+import com.ject.common.core.cqrs.command.Command;
+import com.ject.common.core.cqrs.command.CommandBus;
+import com.ject.common.core.cqrs.query.Query;
+import com.ject.common.core.cqrs.query.QueryBus;
+import com.ject.common.web.auth.LoginMember;
+import com.ject.common.web.auth.LoginMemberArgumentResolver;
+import com.ject.common.web.image.ImageUrlResolver;
 import com.ject.post.api.exception.PostExceptionHandler;
+import com.ject.post.application.dto.AuthorInfo;
+import com.ject.post.application.dto.PostResult;
+import com.ject.post.application.dto.command.CreatePostCommand;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -11,11 +21,15 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.nio.charset.StandardCharsets;
+import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -65,26 +79,34 @@ class PostControllerTest {
             }
             """;
 
+    private final FakeCommandBus commandBus = new FakeCommandBus();
+    private final FakeQueryBus queryBus = new FakeQueryBus();
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new PostController())
+        PostController controller = new PostController(commandBus, queryBus,
+                new ImageUrlResolver("http://localhost:8080"));
+        mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new PostExceptionHandler())
+                .setCustomArgumentResolvers(new LoginMemberArgumentResolver())
                 .defaultResponseCharacterEncoding(StandardCharsets.UTF_8)
                 .build();
     }
 
     @Test
-    @DisplayName("PO-1 작성하면 201과 작성한 글을 반환하고, canRequest는 응답에 없다")
+    @DisplayName("PO-1 작성하면 201과 조회 결과를 반환하고, 사진 URL은 IMG-2 주소다")
     void createPost_returns201WithPost() throws Exception {
         createPost(CREATE_BODY)
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.id").value(10))
                 .andExpect(jsonPath("$.data.status").value("AVAILABLE"))
-                .andExpect(jsonPath("$.data.isMine").value(true))
+                .andExpect(jsonPath("$.data.images[0].key").value("post/10/8f14e45f.jpg"))
+                .andExpect(jsonPath("$.data.images[0].url")
+                        .value("http://localhost:8080/api/v1/images/post/10/8f14e45f.jpg"))
                 .andExpect(jsonPath("$.data.place.regionName").value("마포구 동교동"))
+                .andExpect(jsonPath("$.data.isMine").value(true))
                 .andExpect(jsonPath("$.data.nowExchangeEndsAt").value("2026-11-02T15:30:00+09:00"))
                 .andExpect(jsonPath("$.data.author.completedCount").value(12))
                 .andExpect(jsonPath("$.data", hasEntry(equalTo("chatRoomId"), nullValue())))
@@ -92,26 +114,42 @@ class PostControllerTest {
     }
 
     @Test
-    @DisplayName("PO-1 업로드 tmp key는 글 경로 key로 바뀐다")
-    void createPost_movesTmpImageKey() throws Exception {
-        createPost(CREATE_BODY)
-                .andExpect(jsonPath("$.data.images[0].key").value("post/10/8f14e45f.jpg"))
-                .andExpect(jsonPath("$.data.images[0].url").value("https://{cdn}/post/10/8f14e45f.jpg"));
+    @DisplayName("PO-1 작성자는 토큰의 회원이고, 요청 값을 그대로 Command로 넘긴다")
+    void createPost_sendsCommandWithLoginMember() throws Exception {
+        createPost(CREATE_BODY);
+
+        CreatePostCommand command = (CreatePostCommand) commandBus.received;
+        assertEquals(3L, command.authorId());
+        assertEquals("CHARACTER", command.category());
+        assertEquals("서울특별시 마포구 동교동", command.place().regionName());
+        assertEquals(List.of("치이카와", "하치와레"), command.tags());
+        assertEquals(60, command.nowExchangeMinutes());
     }
 
     @Test
-    @DisplayName("PO-1 wantedItem을 생략하면 null(아무거나)로 응답하고 wantedAny 필드는 없다")
-    void createPost_withoutWantedItem_returnsNullWantedItem() throws Exception {
-        createPost(CREATE_BODY.replace("\"wantedItem\": \"치이카와 가챠 키링\",", ""))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data", hasEntry(equalTo("wantedItem"), nullValue())))
-                .andExpect(jsonPath("$.data.wantedAny").doesNotExist());
+    @DisplayName("PO-1 wantedItem을 생략하면 null(아무거나)로 넘긴다")
+    void createPost_withoutWantedItem_sendsNull() throws Exception {
+        createPost(CREATE_BODY.replace("\"wantedItem\": \"치이카와 가챠 키링\",", ""));
+
+        assertNull(((CreatePostCommand) commandBus.received).wantedItem());
+    }
+
+    @Test
+    @DisplayName("PO-1 로그인 정보가 없으면 AUTH_001")
+    void createPost_withoutLogin_returnsAuth001() throws Exception {
+        mockMvc.perform(post("/api/v1/posts")
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(CREATE_BODY))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTH_001"));
     }
 
     @Test
     @DisplayName("PO-1 Idempotency-Key 헤더가 없으면 COMMON_001")
     void createPost_withoutIdempotencyKey_returnsCommon001() throws Exception {
         mockMvc.perform(post("/api/v1/posts")
+                        .requestAttr(LoginMember.ATTRIBUTE, 3L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(CREATE_BODY))
                 .andExpect(status().isBadRequest())
@@ -207,6 +245,7 @@ class PostControllerTest {
 
     private ResultActions createPost(String body) throws Exception {
         return mockMvc.perform(post("/api/v1/posts")
+                .requestAttr(LoginMember.ATTRIBUTE, 3L)
                 .header("Idempotency-Key", UUID.randomUUID().toString())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body));
@@ -216,5 +255,33 @@ class PostControllerTest {
         result.andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("COMMON_001"));
+    }
+
+    static class FakeCommandBus implements CommandBus {
+
+        Command<?> received;
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public <R> R send(Command<R> command) {
+            received = command;
+            return (R) Long.valueOf(10L);
+        }
+    }
+
+    static class FakeQueryBus implements QueryBus {
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public <R> R send(Query<R> query) {
+            return (R) new PostResult(10L, "AVAILABLE",
+                    List.of("post/10/8f14e45f.jpg", "post/10/c9f0f895.jpg"),
+                    "치이카와 하치와레 가챠 키링", "CHARACTER", false, List.of("치이카와", "하치와레"),
+                    "치이카와 가챠 3탄에서 뽑았어요.", "치이카와 가챠 키링",
+                    new PostResult.PlaceResult(37.5563, 126.9236, "스타벅스 홍대동교점", "마포구 동교동", "AK플라자 주변"),
+                    true, OffsetDateTime.parse("2026-11-02T15:30:00+09:00"), 0, 0,
+                    new AuthorInfo(3L, "하치와레러버", 12), true, null,
+                    OffsetDateTime.parse("2026-11-02T14:30:00+09:00"));
+        }
     }
 }
