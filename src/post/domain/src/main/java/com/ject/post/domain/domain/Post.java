@@ -89,6 +89,14 @@ public class Post {
         this.imageKeys = List.copyOf(moved);
     }
 
+    public boolean isWrittenBy(Long memberId) {
+        return authorId.equals(memberId);
+    }
+
+    public boolean canBeRequestedBy(Long memberId) {
+        return !isWrittenBy(memberId) && status == PostStatus.AVAILABLE;
+    }
+
     public boolean isNowExchange(Instant now) {
         return status == PostStatus.AVAILABLE
                 && nowExchangeEndsAt != null
