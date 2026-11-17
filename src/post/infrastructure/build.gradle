@@ -9,5 +9,8 @@ dependencies {
     // 작성자 조회 (user 도메인 조회 계약)
     implementation project(':user-application')
 
+    // 조회 수 하루 1회 기록
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
     implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
 }

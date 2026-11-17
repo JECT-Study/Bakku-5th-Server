@@ -50,6 +50,12 @@ public class JpaPostRepository implements PostRepository {
                         postTagLinkEntityRepository.findTagNamesByPostId(id)));
     }
 
+    @Override
+    @Transactional
+    public void increaseViewCount(Long id) {
+        postEntityRepository.increaseViewCount(id);
+    }
+
     private PostEntity update(Post post) {
         PostEntity entity = postEntityRepository.findById(post.getId())
                 .orElseThrow(() -> new PostNotFoundException(post.getId()));
