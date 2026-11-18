@@ -47,7 +47,7 @@ class SocialLoginServiceTest {
         refreshTokenRepository = new FakeRefreshTokenRepository();
         ServiceTime serviceTime = new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul")));
         LoginTokenIssuer issuer = new LoginTokenIssuer(new FakeAccessTokenProvider(), refreshTokenRepository,
-                serviceTime);
+                new FakePushDeviceRepository(), serviceTime);
         // 소셜 토큰 "{provider}-{회원번호}"를 그 회원번호로 보고, 네이버만 생년월일 · 성별을 준다. 해시는 "hash-{회원번호}"
         socialLoginService = new SocialLoginService(
                 (provider, token) -> {
