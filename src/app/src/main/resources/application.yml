@@ -23,6 +23,9 @@ spring:
 
 app:
   time-zone: ${APP_TIME_ZONE:Asia/Seoul}
+  terms:
+    # 약관 본문 웹뷰 주소 앞부분. 도메인이 정해지면 바꾼다
+    document-base-url: "https://{도메인}"
   auth:
     jwt:
       # HS256 서명 키, 32바이트 이상. staging · 운영은 기본값이 없어 반드시 환경변수로 넣는다
