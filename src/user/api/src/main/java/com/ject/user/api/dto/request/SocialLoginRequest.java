@@ -2,6 +2,7 @@ package com.ject.user.api.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 @Schema(description = "소셜 로그인. 카카오 · 네이버는 socialAccessToken, Apple은 identityToken + authorizationCode")
 public record SocialLoginRequest(
@@ -16,6 +17,7 @@ public record SocialLoginRequest(
 
         @Schema(description = "기기 ID (DV-1과 같은 값). 리프레시 토큰을 기기마다 1개로 관리", example = "6f1c9a7e-5b1d-4c0e-9e8f-0a1b2c3d4e5f")
         @NotBlank
+        @Size(max = 100)
         String deviceId
 ) {
 }
