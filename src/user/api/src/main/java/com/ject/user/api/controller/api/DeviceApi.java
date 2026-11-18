@@ -1,5 +1,6 @@
 package com.ject.user.api.controller.api;
 
+import com.ject.common.web.auth.LoginMember;
 import com.ject.common.web.response.ApiResponse;
 import com.ject.user.api.dto.request.DeviceRequest;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,5 +18,5 @@ public interface DeviceApi {
             description = "로그인 · 가입 직후, 앱 실행 때, 푸시 토큰이 바뀌었을 때 부릅니다. 기기 ID 기준으로 등록 · 갱신하고, 같은 푸시 토큰이 다른 회원에게 있으면 그쪽을 지웁니다. "
                     + "실패해도 사용자에게 알리지 않고 다음 실행 때 다시 부릅니다.")
     @PutMapping
-    ApiResponse<Void> registerDevice(@Valid @RequestBody DeviceRequest request);
+    ApiResponse<Void> registerDevice(@LoginMember Long memberId, @Valid @RequestBody DeviceRequest request);
 }
