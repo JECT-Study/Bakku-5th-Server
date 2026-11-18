@@ -1,5 +1,6 @@
 package com.ject.user.api.controller.api;
 
+import com.ject.common.web.auth.LoginMember;
 import com.ject.common.web.response.ApiResponse;
 import com.ject.user.api.dto.request.LogoutRequest;
 import com.ject.user.api.dto.request.SignupRequest;
@@ -53,7 +54,8 @@ public interface AuthApi {
     ApiResponse<TokenResponse> refresh(@Valid @RequestBody TokenRefreshRequest request);
 
     @Operation(summary = "AU-4 로그아웃",
-            description = "리프레시 토큰과 이 기기의 푸시 토큰을 지웁니다. 서버 요청이 실패해도 FE는 기기 로그인 정보를 지우고 로그인 화면으로 갑니다.")
+            description = "리프레시 토큰과 이 기기의 푸시 토큰을 지웁니다. 이미 지워졌어도 성공을 응답합니다. 서버 요청이 실패해도 FE는 기기 로그인 정보를 지우고 로그인 화면으로 갑니다. "
+                    + "에러: AUTH_001 · AUTH_002 · AUTH_003 액세스 토큰 없음 · 만료 · 위조 → 무시하고 로그아웃 진행")
     @PostMapping("/logout")
-    ApiResponse<Void> logout(@Valid @RequestBody LogoutRequest request);
+    ApiResponse<Void> logout(@LoginMember Long memberId, @Valid @RequestBody LogoutRequest request);
 }

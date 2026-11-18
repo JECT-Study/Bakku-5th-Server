@@ -18,6 +18,7 @@ import com.ject.user.api.dto.response.TokenResponse;
 import com.ject.user.application.dto.LoginTokens;
 import com.ject.user.application.dto.SignupCommand;
 import com.ject.user.application.dto.SocialLoginResult;
+import com.ject.user.application.service.LogoutService;
 import com.ject.user.application.service.SignupService;
 import com.ject.user.application.service.SocialLoginService;
 import com.ject.user.application.service.TokenRefreshService;
@@ -32,13 +33,16 @@ public class AuthController implements AuthApi {
     private final SocialLoginService socialLoginService;
     private final SignupService signupService;
     private final TokenRefreshService tokenRefreshService;
+    private final LogoutService logoutService;
     private final ServiceTime serviceTime;
 
     public AuthController(SocialLoginService socialLoginService, SignupService signupService,
-                          TokenRefreshService tokenRefreshService, ServiceTime serviceTime) {
+                          TokenRefreshService tokenRefreshService, LogoutService logoutService,
+                          ServiceTime serviceTime) {
         this.socialLoginService = socialLoginService;
         this.signupService = signupService;
         this.tokenRefreshService = tokenRefreshService;
+        this.logoutService = logoutService;
         this.serviceTime = serviceTime;
     }
 
@@ -85,7 +89,8 @@ public class AuthController implements AuthApi {
     }
 
     @Override
-    public ApiResponse<Void> logout(LogoutRequest request) {
+    public ApiResponse<Void> logout(Long memberId, LogoutRequest request) {
+        logoutService.logout(memberId, request.refreshToken(), request.deviceId());
         return ApiResponse.success(null);
     }
 

@@ -1,6 +1,8 @@
 package com.ject.user.api.controller;
 
 import com.ject.common.core.time.ServiceTime;
+import com.ject.common.web.auth.LoginMember;
+import com.ject.common.web.auth.LoginMemberArgumentResolver;
 import com.ject.user.api.exception.UserExceptionHandler;
 import com.ject.user.application.dto.AccessToken;
 import com.ject.user.application.dto.LoginTokens;
@@ -9,6 +11,7 @@ import com.ject.user.application.dto.SignupToken;
 import com.ject.user.application.dto.SocialLoginResult;
 import com.ject.user.application.exception.InvalidRefreshTokenException;
 import com.ject.user.application.exception.RejoinNotAvailableException;
+import com.ject.user.application.service.LogoutService;
 import com.ject.user.application.service.SignupService;
 import com.ject.user.application.service.SocialLoginService;
 import com.ject.user.application.service.TokenRefreshService;
@@ -28,10 +31,13 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -57,13 +63,16 @@ class AuthControllerTest {
             """.formatted(DEVICE_ID);
 
     private MockMvc mockMvc;
+    private StubLogoutService logoutService;
 
     @BeforeEach
     void setUp() {
         ServiceTime serviceTime = new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul")));
+        logoutService = new StubLogoutService();
         mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(new StubSocialLoginService(), new StubSignupService(),
-                        new StubTokenRefreshService(), serviceTime))
+                        new StubTokenRefreshService(), logoutService, serviceTime))
                 .setControllerAdvice(new UserExceptionHandler())
+                .setCustomArgumentResolvers(new LoginMemberArgumentResolver())
                 .defaultResponseCharacterEncoding(StandardCharsets.UTF_8)
                 .build();
     }
@@ -177,14 +186,17 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.errors[0].field").value("refreshToken"));
     }
 
-
     @Test
-    @DisplayName("AU-4 로그아웃하면 성공만 반환한다")
+    @DisplayName("AU-4 로그인한 회원 · 리프레시 토큰 · 기기 ID로 로그아웃하고 성공만 반환한다")
     void logout_returnsSuccess() throws Exception {
-        post("/api/v1/auth/logout", "{\"refreshToken\": \"eyJhbGciOiJIUzI1NiJ9.refresh\", \"deviceId\": \"%s\"}".formatted(DEVICE_ID))
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/auth/logout")
+                        .requestAttr(LoginMember.ATTRIBUTE, 101L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\": \"refresh-token\", \"deviceId\": \"%s\"}".formatted(DEVICE_ID)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$", hasEntry(equalTo("data"), nullValue())));
+        assertEquals(List.of("101:refresh-token:" + DEVICE_ID), logoutService.calls);
     }
 
     private ResultActions login(String provider, String body) throws Exception {
@@ -239,6 +251,23 @@ class AuthControllerTest {
             }
             return new LoginTokens(new AccessToken("access-token", NOW.plusSeconds(3600)), "new-refresh-token", 101L,
                     "쿠로미덕후");
+        }
+    }
+
+    /**
+     * 받은 값을 "{회원 id}:{리프레시 토큰}:{기기 ID}"로 남기는 로그아웃 서비스.
+     */
+    private static class StubLogoutService extends LogoutService {
+
+        private final List<String> calls = new ArrayList<>();
+
+        StubLogoutService() {
+            super(null, null);
+        }
+
+        @Override
+        public void logout(Long memberId, String refreshToken, String deviceId) {
+            calls.add(memberId + ":" + refreshToken + ":" + deviceId);
         }
     }
 
