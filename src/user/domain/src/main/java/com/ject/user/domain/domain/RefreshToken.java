@@ -1,5 +1,6 @@
 package com.ject.user.domain.domain;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 
@@ -8,6 +9,11 @@ import java.util.Objects;
  * 시간으로는 만료되지 않고, 로그아웃 · 탈퇴 · 정지 · 재사용 감지 때만 무효가 된다 (결정 A1).
  */
 public class RefreshToken {
+
+    /**
+     * 직전 토큰이 회전 후 이 시간 안에 다시 오면 동시 재발급으로 보고, 지나서 오면 재사용(탈취)으로 본다 (결정 C3)
+     */
+    private static final Duration CONCURRENT_REFRESH_WINDOW = Duration.ofSeconds(10);
 
     private final Long id;
     private Long memberId;
@@ -45,6 +51,22 @@ public class RefreshToken {
         this.tokenHash = Objects.requireNonNull(tokenHash);
         this.previousTokenHash = null;
         this.rotatedAt = Objects.requireNonNull(now);
+    }
+
+    /**
+     * 재발급(AU-3). 받은 토큰은 직전 토큰으로 남겨 동시 요청 · 재사용을 가려낸다 (결정 C3).
+     */
+    public void rotate(String newTokenHash, Instant now) {
+        this.previousTokenHash = this.tokenHash;
+        this.tokenHash = Objects.requireNonNull(newTokenHash);
+        this.rotatedAt = Objects.requireNonNull(now);
+    }
+
+    /**
+     * 직전 토큰이 왔을 때, 회전한 지 10초 안이면 동시 재발급이다. 10초가 지났으면 재사용으로 본다 (결정 C3).
+     */
+    public boolean isConcurrentRefresh(Instant now) {
+        return !now.isAfter(rotatedAt.plus(CONCURRENT_REFRESH_WINDOW));
     }
 
     public Long getId() {

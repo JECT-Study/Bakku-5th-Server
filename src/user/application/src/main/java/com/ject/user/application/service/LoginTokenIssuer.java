@@ -2,6 +2,7 @@ package com.ject.user.application.service;
 
 import com.ject.common.core.time.ServiceTime;
 import com.ject.user.application.dto.LoginTokens;
+import com.ject.user.application.exception.InvalidRefreshTokenException;
 import com.ject.user.application.port.AccessTokenProvider;
 import com.ject.user.application.port.PushDeviceRepository;
 import com.ject.user.application.port.RefreshTokenRepository;
@@ -19,7 +20,7 @@ import java.util.Base64;
 import java.util.HexFormat;
 
 /**
- * 로그인 · 가입한 회원에게 액세스 토큰과 이 기기의 리프레시 토큰을 발급한다.
+ * 로그인 · 가입 · 재발급한 회원에게 액세스 토큰과 이 기기의 리프레시 토큰을 발급한다.
  * 리프레시 토큰은 추측할 수 없는 난수이고, 서버에는 SHA-256 해시만 저장한다 (결정 C2).
  */
 @Component
@@ -58,8 +59,22 @@ public class LoginTokenIssuer {
                 })
                 .orElseGet(() -> RefreshToken.issue(member.getId(), deviceId, tokenHash, now));
         refreshTokenRepository.save(stored);
-        return new LoginTokens(accessTokenProvider.issue(member.getId()), refreshToken, member.getId(),
-                member.getNickname().value());
+        return toLoginTokens(member, refreshToken);
+    }
+
+    /**
+     * 저장된 토큰을 새 토큰으로 회전한다 (AU-3). 재발급 서비스의 트랜잭션 안에서 부른다.
+     * 여기에 트랜잭션을 따로 걸면 AUTH_005를 던질 때 바깥 트랜잭션까지 롤백 표시가 되어 500이 나므로 걸지 않는다.
+     *
+     * @throws InvalidRefreshTokenException 다른 요청이 먼저 회전함 (AUTH_005, 결정 C3)
+     */
+    public LoginTokens rotate(Member member, RefreshToken stored) {
+        String refreshToken = newRefreshToken();
+        stored.rotate(hash(refreshToken), serviceTime.now());
+        if (!refreshTokenRepository.saveRotation(stored)) {
+            throw InvalidRefreshTokenException.alreadyReissued();
+        }
+        return toLoginTokens(member, refreshToken);
     }
 
     /**
@@ -72,6 +87,11 @@ public class LoginTokenIssuer {
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("SHA-256을 쓸 수 없습니다.", e);
         }
+    }
+
+    private LoginTokens toLoginTokens(Member member, String refreshToken) {
+        return new LoginTokens(accessTokenProvider.issue(member.getId()), refreshToken, member.getId(),
+                member.getNickname().value());
     }
 
     private String newRefreshToken() {

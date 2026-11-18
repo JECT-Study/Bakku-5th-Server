@@ -20,6 +20,7 @@ import com.ject.user.application.dto.SignupCommand;
 import com.ject.user.application.dto.SocialLoginResult;
 import com.ject.user.application.service.SignupService;
 import com.ject.user.application.service.SocialLoginService;
+import com.ject.user.application.service.TokenRefreshService;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
@@ -30,12 +31,14 @@ public class AuthController implements AuthApi {
 
     private final SocialLoginService socialLoginService;
     private final SignupService signupService;
+    private final TokenRefreshService tokenRefreshService;
     private final ServiceTime serviceTime;
 
     public AuthController(SocialLoginService socialLoginService, SignupService signupService,
-                          ServiceTime serviceTime) {
+                          TokenRefreshService tokenRefreshService, ServiceTime serviceTime) {
         this.socialLoginService = socialLoginService;
         this.signupService = signupService;
+        this.tokenRefreshService = tokenRefreshService;
         this.serviceTime = serviceTime;
     }
 
@@ -78,7 +81,7 @@ public class AuthController implements AuthApi {
 
     @Override
     public ApiResponse<TokenResponse> refresh(TokenRefreshRequest request) {
-        return ApiResponse.success(UserStubData.token());
+        return ApiResponse.success(toTokenResponse(tokenRefreshService.refresh(request.refreshToken())));
     }
 
     @Override
