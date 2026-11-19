@@ -23,5 +23,6 @@ class PlaceTest {
         Place place = new Place(37.5, 127.0, "장소", regionName, null);
 
         assertEquals(expected, place.displayRegionName());
+        assertEquals(expected, Place.displayRegionName(regionName));
     }
 }
