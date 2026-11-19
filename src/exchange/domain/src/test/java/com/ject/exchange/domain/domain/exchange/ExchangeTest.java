@@ -5,7 +5,6 @@ import com.ject.exchange.domain.domain.exchange.vo.ItemName;
 import com.ject.exchange.domain.exception.ExchangeErrorCode;
 import com.ject.exchange.domain.exception.ExchangeException;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -16,8 +15,6 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-
-@Tag("exchange-update-new-item")
 class ExchangeTest {
 
     private static final Instant NOW = Instant.parse("2026-11-20T05:30:00Z");
@@ -31,7 +28,6 @@ class ExchangeTest {
     private static final String ORIGINAL_DESCRIPTION = "가챠에서 두 개 나와서 하나 교환해요";
 
     @Test
-    @Tag("AC:exchange-update-new-item:AC-1")
     @DisplayName("요청자가 NEW · ACTIVE 교환의 아이템을 수정하면 아이템 id는 그대로이고 값만 바뀐다")
     void updateNewItem_byRequester_changesValues() {
         // given
@@ -53,7 +49,6 @@ class ExchangeTest {
     }
 
     @Test
-    @Tag("AC:exchange-update-new-item:AC-2")
     @DisplayName("설명 없이 수정하면 아이템 설명이 비어 있다")
     void updateNewItem_withoutDescription_clearsDescription() {
         Exchange exchange = newItemExchange(ExchangeStatus.ACTIVE);
@@ -65,7 +60,6 @@ class ExchangeTest {
     }
 
     @Test
-    @Tag("AC:exchange-update-new-item:AC-15")
     @DisplayName("수정은 새 객체를 반환하고 원본 교환의 아이템은 바뀌지 않는다")
     void updateNewItem_keepsOriginalUnchanged() {
         Exchange exchange = newItemExchange(ExchangeStatus.ACTIVE);
@@ -76,7 +70,6 @@ class ExchangeTest {
     }
 
     @Test
-    @Tag("AC:exchange-update-new-item:AC-6")
     @DisplayName("게시자가 수정하면 NOT_REQUESTER")
     void updateNewItem_byOwner_throwsNotRequester() {
         Exchange exchange = newItemExchange(ExchangeStatus.ACTIVE);
@@ -89,7 +82,6 @@ class ExchangeTest {
     }
 
     @Test
-    @Tag("AC:exchange-update-new-item:AC-7")
     @DisplayName("교환 참여자가 아닌 회원이 수정하면 NOT_REQUESTER")
     void updateNewItem_byThirdParty_throwsNotRequester() {
         Exchange exchange = newItemExchange(ExchangeStatus.ACTIVE);
@@ -102,7 +94,6 @@ class ExchangeTest {
     }
 
     @Test
-    @Tag("AC:exchange-update-new-item:AC-8")
     @DisplayName("POST 방식 교환을 요청자가 수정하면 NOT_NEW_ITEM_OFFER")
     void updateNewItem_postOffer_throwsNotNewItemOffer() {
         Exchange exchange = Exchange.of(EXCHANGE_ID, POST_ID, REQUESTER_ID, OWNER_ID, OfferType.POST,
@@ -118,7 +109,6 @@ class ExchangeTest {
 
     @ParameterizedTest
     @EnumSource(value = ExchangeStatus.class, names = {"COMPLETED", "CLOSED", "LEFT"})
-    @Tag("AC:exchange-update-new-item:AC-9")
     @DisplayName("종료된(COMPLETED · CLOSED · LEFT) 교환을 요청자가 수정하면 EXCHANGE_CLOSED")
     void updateNewItem_notActive_throwsExchangeClosed(ExchangeStatus status) {
         Exchange exchange = newItemExchange(status);
@@ -131,7 +121,6 @@ class ExchangeTest {
     }
 
     @Test
-    @Tag("AC:exchange-update-new-item:AC-6")
     @DisplayName("게시자가 종료된 교환을 수정해도 요청자 판정이 먼저라 NOT_REQUESTER")
     void updateNewItem_byOwnerOnClosed_throwsNotRequesterFirst() {
         Exchange exchange = newItemExchange(ExchangeStatus.CLOSED);
@@ -143,7 +132,6 @@ class ExchangeTest {
     }
 
     @Test
-    @Tag("AC:exchange-update-new-item:AC-8")
     @DisplayName("POST 방식이면서 종료된 교환은 방식 판정이 먼저라 NOT_NEW_ITEM_OFFER")
     void updateNewItem_postOfferOnClosed_throwsNotNewItemOfferFirst() {
         Exchange exchange = Exchange.of(EXCHANGE_ID, POST_ID, REQUESTER_ID, OWNER_ID, OfferType.POST,

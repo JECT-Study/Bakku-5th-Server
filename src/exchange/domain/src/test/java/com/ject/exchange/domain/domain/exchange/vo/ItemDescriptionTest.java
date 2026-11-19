@@ -3,18 +3,14 @@ package com.ject.exchange.domain.domain.exchange.vo;
 import com.ject.exchange.domain.exception.ExchangeErrorCode;
 import com.ject.exchange.domain.exception.ExchangeException;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-
-@Tag("exchange-update-new-item")
 class ItemDescriptionTest {
 
     @Test
-    @Tag("AC:exchange-update-new-item:AC-2")
     @DisplayName("설명이 null이면 비어 있는 설명으로 만든다")
     void create_null() {
         ItemDescription description = new ItemDescription(null);
@@ -23,7 +19,6 @@ class ItemDescriptionTest {
     }
 
     @Test
-    @Tag("AC:exchange-update-new-item:AC-3")
     @DisplayName("설명이 1,000자면 그대로 만든다")
     void create_thousandCharacters() {
         String thousandCharacters = "가".repeat(1000);
@@ -34,7 +29,6 @@ class ItemDescriptionTest {
     }
 
     @Test
-    @Tag("AC:exchange-update-new-item:AC-11")
     @DisplayName("설명이 1,001자면 INVALID_OFFERED_ITEMS")
     void create_thousandOneCharacters_throwsInvalidOfferedItems() {
         String thousandOneCharacters = "가".repeat(1001);

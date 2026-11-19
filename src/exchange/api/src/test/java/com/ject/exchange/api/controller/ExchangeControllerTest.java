@@ -14,7 +14,6 @@ import com.ject.exchange.domain.domain.exchange.vo.ItemDescription;
 import com.ject.exchange.domain.domain.exchange.vo.ItemName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -45,8 +44,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-@Tag("exchange-update-new-item")
 class ExchangeControllerTest {
 
     private static final Instant NOW = Instant.parse("2026-11-20T05:30:00Z");
@@ -83,7 +80,6 @@ class ExchangeControllerTest {
     // ---- 정상 흐름 ----
 
     @Test
-    @Tag("AC:exchange-update-new-item:AC-1")
     @DisplayName("E-3 요청자가 수정하면 200과 수정된 교환 상세를 반환한다")
     void updateNewItem_byRequester_returns200WithUpdatedItem() throws Exception {
         // given
@@ -116,7 +112,6 @@ class ExchangeControllerTest {
     }
 
     @Test
-    @Tag("AC:exchange-update-new-item:AC-1")
     @DisplayName("E-3 수정 후 E-2로 다시 조회하면 같은 값이 저장돼 있다")
     void updateNewItem_thenGetExchange_returnsSavedValues() throws Exception {
         exchangeRepository.save(newItemExchange(ExchangeStatus.ACTIVE));
@@ -135,7 +130,6 @@ class ExchangeControllerTest {
     }
 
     @Test
-    @Tag("AC:exchange-update-new-item:AC-2")
     @DisplayName("E-3 설명 없이 수정하면 200이고 아이템 설명은 null이다")
     void updateNewItem_withoutDescription_returns200WithNullDescription() throws Exception {
         exchangeRepository.save(newItemExchange(ExchangeStatus.ACTIVE));
@@ -150,7 +144,6 @@ class ExchangeControllerTest {
     }
 
     @Test
-    @Tag("AC:exchange-update-new-item:AC-3")
     @DisplayName("E-3 설명 1,000자로 수정하면 200이고 설명 길이는 1,000이다")
     void updateNewItem_thousandCharacterDescription_returns200() throws Exception {
         exchangeRepository.save(newItemExchange(ExchangeStatus.ACTIVE));
@@ -164,7 +157,6 @@ class ExchangeControllerTest {
 
     @ParameterizedTest
     @ValueSource(ints = {2, 40})
-    @Tag("AC:exchange-update-new-item:AC-4")
     @DisplayName("E-3 제품명 2자 · 40자로 수정하면 200이고 제품명이 입력과 같다")
     void updateNewItem_boundaryNameLength_returns200(int length) throws Exception {
         exchangeRepository.save(newItemExchange(ExchangeStatus.ACTIVE));
@@ -178,7 +170,6 @@ class ExchangeControllerTest {
 
     @ParameterizedTest
     @ValueSource(ints = {1, 5})
-    @Tag("AC:exchange-update-new-item:AC-13")
     @DisplayName("E-3 사진 키가 1장 · 5장이면 200")
     void updateNewItem_boundaryImageKeyCount_returns200(int count) throws Exception {
         exchangeRepository.save(newItemExchange(ExchangeStatus.ACTIVE));
@@ -191,7 +182,6 @@ class ExchangeControllerTest {
     // ---- 존재 · 권한 · 상태 실패 ----
 
     @Test
-    @Tag("AC:exchange-update-new-item:AC-5")
     @DisplayName("E-3 없는 교환이면 404 EXCHANGE_001")
     void updateNewItem_missingExchange_returnsExchange001() throws Exception {
         mockMvc.perform(updateRequest(MISSING_EXCHANGE_ID, REQUESTER_ID, validBody()))
@@ -201,8 +191,6 @@ class ExchangeControllerTest {
     }
 
     @Test
-    @Tag("AC:exchange-update-new-item:AC-6")
-    @Tag("AC:exchange-update-new-item:AC-15")
     @DisplayName("E-3 게시자가 수정하면 403 EXCHANGE_012이고 아이템은 바뀌지 않는다")
     void updateNewItem_byOwner_returnsExchange012() throws Exception {
         exchangeRepository.save(newItemExchange(ExchangeStatus.ACTIVE));
@@ -216,8 +204,6 @@ class ExchangeControllerTest {
     }
 
     @Test
-    @Tag("AC:exchange-update-new-item:AC-7")
-    @Tag("AC:exchange-update-new-item:AC-15")
     @DisplayName("E-3 교환 참여자가 아닌 회원이 수정하면 403 EXCHANGE_012이고 아이템은 바뀌지 않는다")
     void updateNewItem_byThirdParty_returnsExchange012() throws Exception {
         exchangeRepository.save(newItemExchange(ExchangeStatus.ACTIVE));
@@ -230,8 +216,6 @@ class ExchangeControllerTest {
     }
 
     @Test
-    @Tag("AC:exchange-update-new-item:AC-8")
-    @Tag("AC:exchange-update-new-item:AC-15")
     @DisplayName("E-3 POST 방식 교환이면 409 EXCHANGE_013이고 아이템은 바뀌지 않는다")
     void updateNewItem_postOffer_returnsExchange013() throws Exception {
         exchangeRepository.save(Exchange.of(EXCHANGE_ID, POST_ID, REQUESTER_ID, OWNER_ID, OfferType.POST,
@@ -249,8 +233,6 @@ class ExchangeControllerTest {
 
     @ParameterizedTest
     @EnumSource(value = ExchangeStatus.class, names = {"COMPLETED", "CLOSED", "LEFT"})
-    @Tag("AC:exchange-update-new-item:AC-9")
-    @Tag("AC:exchange-update-new-item:AC-15")
     @DisplayName("E-3 종료된(COMPLETED · CLOSED · LEFT) 교환이면 409 EXCHANGE_010이고 아이템은 바뀌지 않는다")
     void updateNewItem_notActive_returnsExchange010(ExchangeStatus status) throws Exception {
         exchangeRepository.save(newItemExchange(status));
@@ -270,8 +252,6 @@ class ExchangeControllerTest {
 
     @ParameterizedTest
     @MethodSource("invalidNames")
-    @Tag("AC:exchange-update-new-item:AC-10")
-    @Tag("AC:exchange-update-new-item:AC-15")
     @DisplayName("E-3 제품명이 누락 · 빈 문자열 · 공백만 · 1자 · 41자 · null이면 400 COMMON_001, field=name")
     void updateNewItem_invalidName_returnsCommon001(String nameJson) throws Exception {
         exchangeRepository.save(newItemExchange(ExchangeStatus.ACTIVE));
@@ -288,8 +268,6 @@ class ExchangeControllerTest {
     }
 
     @Test
-    @Tag("AC:exchange-update-new-item:AC-11")
-    @Tag("AC:exchange-update-new-item:AC-15")
     @DisplayName("E-3 설명이 1,001자면 400 COMMON_001, field=description")
     void updateNewItem_tooLongDescription_returnsCommon001() throws Exception {
         exchangeRepository.save(newItemExchange(ExchangeStatus.ACTIVE));
@@ -306,8 +284,6 @@ class ExchangeControllerTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"omit", "null"})
-    @Tag("AC:exchange-update-new-item:AC-12")
-    @Tag("AC:exchange-update-new-item:AC-15")
     @DisplayName("E-3 상품 상태(opened)가 누락 · null이면 400 COMMON_001, field=opened")
     void updateNewItem_missingOpened_returnsCommon001(String openedCase) throws Exception {
         exchangeRepository.save(newItemExchange(ExchangeStatus.ACTIVE));
@@ -329,8 +305,6 @@ class ExchangeControllerTest {
 
     @ParameterizedTest
     @MethodSource("invalidImageKeys")
-    @Tag("AC:exchange-update-new-item:AC-13")
-    @Tag("AC:exchange-update-new-item:AC-15")
     @DisplayName("E-3 사진 키가 누락 · 0개 · 6개 · 빈 문자열 원소 포함이면 400 COMMON_001, field가 imageKeys로 시작")
     void updateNewItem_invalidImageKeys_returnsCommon001(String imageKeysJson) throws Exception {
         exchangeRepository.save(newItemExchange(ExchangeStatus.ACTIVE));
@@ -348,8 +322,6 @@ class ExchangeControllerTest {
     // ---- 인증 ----
 
     @Test
-    @Tag("AC:exchange-update-new-item:AC-14")
-    @Tag("AC:exchange-update-new-item:AC-15")
     @DisplayName("E-3 로그인 회원 id가 없으면 401 AUTH_001")
     void updateNewItem_withoutLoginMember_returnsAuth001() throws Exception {
         exchangeRepository.save(newItemExchange(ExchangeStatus.ACTIVE));
@@ -369,7 +341,6 @@ class ExchangeControllerTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"omit", "null"})
-    @Tag("AC:exchange-update-new-item:AC-16")
     @DisplayName("E-1 NEW 방식에서 newItem.opened가 누락 · null이면 400 COMMON_001, field=newItem.opened이고 교환이 저장되지 않는다")
     void createExchange_newItemMissingOpened_returnsCommon001(String openedCase) throws Exception {
         String openedJson = openedCase.equals("omit") ? null : "null";
