@@ -7,6 +7,8 @@ allprojects {
     group = 'com.ject'
     version = '1.0-SNAPSHOT'
 
+    ext.querydslVersion = '7.7'
+
     repositories {
         mavenCentral()
     }
@@ -43,5 +45,13 @@ subprojects {
 
     tasks.named('test') {
         useJUnitPlatform()
+    }
+}
+
+// QueryDSL Q클래스 생성 (엔티티가 있는 모듈)
+configure(subprojects.findAll { it.name == 'common-jpa' || it.name.endsWith('-infrastructure') }) {
+    dependencies {
+        annotationProcessor "io.github.openfeign.querydsl:querydsl-apt:${querydslVersion}:jpa"
+        annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
     }
 }
