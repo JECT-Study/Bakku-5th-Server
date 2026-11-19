@@ -1,21 +1,23 @@
 package com.ject.post.infrastructure.repository;
 
 import com.ject.post.application.port.PostSummaryReader;
+import com.ject.post.domain.domain.PostCategory;
+import com.ject.post.domain.domain.PostStatus;
 import com.ject.post.infrastructure.entity.PostEntity;
 import com.ject.post.infrastructure.entity.PostImageEntity;
-import com.ject.post.infrastructure.jpa.PostEntityRepository;
-import com.ject.post.infrastructure.jpa.PostHomeSpecifications;
 import com.ject.post.infrastructure.jpa.PostImageEntityRepository;
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import static com.ject.post.infrastructure.entity.QPostEntity.postEntity;
 
 @Repository
 @RequiredArgsConstructor
@@ -23,35 +25,47 @@ public class JpaPostSummaryReader implements PostSummaryReader {
 
     private static final int THUMBNAIL_SORT_ORDER = 1;
 
-    private final PostEntityRepository postEntityRepository;
+    private final JPAQueryFactory queryFactory;
     private final PostImageEntityRepository postImageEntityRepository;
 
     @Override
     @Transactional(readOnly = true)
     public List<Row> findHomePage(Condition condition, Long cursorId, int limit) {
-        List<PostEntity> posts = postEntityRepository.findBy(homeSpecification(condition, cursorId),
-                query -> query.sortBy(Sort.by(Sort.Direction.DESC, "id")).limit(limit).all());
+        List<PostEntity> posts = queryFactory
+                .selectFrom(postEntity)
+                .where(
+                        postEntity.status.in(PostStatus.AVAILABLE, PostStatus.RESERVED),
+                        exchangeType(condition.nowExchange(), condition.now()),
+                        categoryEq(condition.category()),
+                        idBefore(cursorId))
+                .orderBy(postEntity.id.desc())
+                .limit(limit)
+                .fetch();
         Map<Long, String> thumbnails = findThumbnails(posts);
         return posts.stream()
                 .map(post -> toRow(post, thumbnails.get(post.getId())))
                 .toList();
     }
 
-    private static Specification<PostEntity> homeSpecification(Condition condition, Long cursorId) {
-        List<Specification<PostEntity>> specifications = new ArrayList<>();
-        specifications.add(PostHomeSpecifications.shownOnHome());
-        if (Boolean.TRUE.equals(condition.nowExchange())) {
-            specifications.add(PostHomeSpecifications.nowExchange(condition.now()));
-        } else if (Boolean.FALSE.equals(condition.nowExchange())) {
-            specifications.add(PostHomeSpecifications.normalExchange(condition.now()));
+    private static BooleanExpression exchangeType(Boolean nowExchange, Instant now) {
+        if (nowExchange == null) {
+            return null;
         }
-        if (condition.category() != null) {
-            specifications.add(PostHomeSpecifications.category(condition.category()));
+        if (nowExchange) {
+            return postEntity.status.eq(PostStatus.AVAILABLE)
+                    .and(postEntity.nowExchangeEndsAt.gt(now));
         }
-        if (cursorId != null) {
-            specifications.add(PostHomeSpecifications.idBefore(cursorId));
-        }
-        return Specification.allOf(specifications);
+        return postEntity.status.ne(PostStatus.AVAILABLE)
+                .or(postEntity.nowExchangeEndsAt.isNull())
+                .or(postEntity.nowExchangeEndsAt.loe(now));
+    }
+
+    private static BooleanExpression categoryEq(PostCategory category) {
+        return category == null ? null : postEntity.category.eq(category);
+    }
+
+    private static BooleanExpression idBefore(Long cursorId) {
+        return cursorId == null ? null : postEntity.id.lt(cursorId);
     }
 
     private Map<Long, String> findThumbnails(List<PostEntity> posts) {
