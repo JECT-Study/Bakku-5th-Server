@@ -1,16 +1,26 @@
 package com.ject.user.api.controller;
 
+import com.ject.common.core.time.ServiceTime;
 import com.ject.user.api.exception.UserExceptionHandler;
+import com.ject.user.api.ratelimit.IpRateLimiter;
+import com.ject.user.api.ratelimit.RateLimitInterceptor;
+import com.ject.user.application.dto.NicknameAvailability;
+import com.ject.user.application.service.NicknameService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasEntry;
@@ -28,8 +38,11 @@ class MemberControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new MemberController())
+        Clock clock = Clock.fixed(Instant.parse("2026-11-14T03:00:00Z"), ZoneId.of("Asia/Seoul"));
+        mockMvc = MockMvcBuilders.standaloneSetup(new MemberController(new StubNicknameService()))
                 .setControllerAdvice(new UserExceptionHandler())
+                .addMappedInterceptors(new String[]{"/api/v1/members/nickname-availability"},
+                        new RateLimitInterceptor(new IpRateLimiter(30, Duration.ofMinutes(1), new ServiceTime(clock))))
                 .defaultResponseCharacterEncoding(StandardCharsets.UTF_8)
                 .build();
     }
@@ -45,20 +58,29 @@ class MemberControllerTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"가", "열한글자닉네임입니다요", "닉 네임", "닉네임!", "ㅋㅋ"})
-    @DisplayName("MB-1 형식이 틀리면 에러 대신 INVALID_FORMAT")
-    void checkNickname_invalidFormat(String nickname) throws Exception {
+    @CsvSource({"가, INVALID_LENGTH", "닉 네임, INVALID_FORMAT", "쿠로미덕후, DUPLICATE"})
+    @DisplayName("MB-1 사용할 수 없으면 에러 대신 available=false와 이유를 준다")
+    void checkNickname_unavailable(String nickname, String reason) throws Exception {
         mockMvc.perform(get("/api/v1/members/nickname-availability").param("nickname", nickname))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.available").value(false))
-                .andExpect(jsonPath("$.data.reason").value("INVALID_FORMAT"));
+                .andExpect(jsonPath("$.data.reason").value(reason));
     }
 
     @Test
-    @DisplayName("MB-1 중복은 영문 대소문자를 구분하지 않는다")
-    void checkNickname_duplicate() throws Exception {
-        mockMvc.perform(get("/api/v1/members/nickname-availability").param("nickname", "쿠로미덕후"))
-                .andExpect(jsonPath("$.data.reason").value("DUPLICATE"));
+    @DisplayName("MB-1 같은 IP에서 1분에 30회를 넘으면 COMMON_003")
+    void checkNickname_tooManyRequests_returnsCommon003() throws Exception {
+        // given
+        for (int i = 0; i < 30; i++) {
+            mockMvc.perform(nicknameCheckFrom("203.0.113.1")).andExpect(status().isOk());
+        }
+
+        // when & then
+        mockMvc.perform(nicknameCheckFrom("203.0.113.1"))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.code").value("COMMON_003"));
+        mockMvc.perform(nicknameCheckFrom("203.0.113.2"))
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -165,5 +187,34 @@ class MemberControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content[0].status").value("PENDING"))
                 .andExpect(jsonPath("$.data.hasNext").value(false));
+    }
+
+    private static MockHttpServletRequestBuilder nicknameCheckFrom(String ip) {
+        return get("/api/v1/members/nickname-availability").param("nickname", "하치와레러버")
+                .header("X-Forwarded-For", ip + ", 10.0.0.1");
+    }
+
+    /**
+     * "가"는 글자 수 오류, 공백이 있으면 형식 오류, "쿠로미덕후"는 중복으로 보는 닉네임 서비스.
+     */
+    private static class StubNicknameService extends NicknameService {
+
+        StubNicknameService() {
+            super(null);
+        }
+
+        @Override
+        public NicknameAvailability checkAvailability(String value) {
+            if (value.length() < 2) {
+                return NicknameAvailability.unusable("INVALID_LENGTH");
+            }
+            if (value.contains(" ")) {
+                return NicknameAvailability.unusable("INVALID_FORMAT");
+            }
+            if (value.equals("쿠로미덕후")) {
+                return NicknameAvailability.unusable("DUPLICATE");
+            }
+            return NicknameAvailability.usable();
+        }
     }
 }

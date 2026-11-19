@@ -3,6 +3,7 @@ package com.ject.user.domain.domain;
 import com.ject.user.domain.exception.InvalidNicknameException;
 
 import java.util.Locale;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 /**
@@ -11,12 +12,30 @@ import java.util.regex.Pattern;
  */
 public record Nickname(String value) {
 
-    private static final Pattern FORMAT = Pattern.compile("^[가-힣a-zA-Z0-9]{2,10}$");
+    private static final int MIN_LENGTH = 2;
+    private static final int MAX_LENGTH = 10;
+    private static final Pattern ALLOWED_CHARACTERS = Pattern.compile("^[가-힣a-zA-Z0-9]*$");
 
     public Nickname {
-        if (value == null || !FORMAT.matcher(value).matches()) {
-            throw new InvalidNicknameException("닉네임은 2~10자의 한글 · 영문 · 숫자만 사용할 수 있습니다.");
+        validate(value).ifPresent(violation -> {
+            throw new InvalidNicknameException(violation.getMessage());
+        });
+    }
+
+    /**
+     * 쓸 수 없는 글자가 있으면 글자 수와 관계없이 형식 오류로 본다. 글자 수만 맞춰서는 고칠 수 없어서다.
+     */
+    public static Optional<NicknameViolation> validate(String value) {
+        if (value == null) {
+            return Optional.of(NicknameViolation.INVALID_LENGTH);
         }
+        if (!ALLOWED_CHARACTERS.matcher(value).matches()) {
+            return Optional.of(NicknameViolation.INVALID_FORMAT);
+        }
+        if (value.length() < MIN_LENGTH || value.length() > MAX_LENGTH) {
+            return Optional.of(NicknameViolation.INVALID_LENGTH);
+        }
+        return Optional.empty();
     }
 
     /**

@@ -34,7 +34,7 @@ public interface MemberApi {
 
     @Operation(summary = "MB-1 닉네임 사용 가능 확인",
             description = "형식 · 중복을 검사합니다. 사용할 수 없으면 에러 대신 available=false와 이유를 줍니다. FE는 입력을 멈추고 0.5초 뒤에 호출합니다. "
-                    + "가입 중에도 쓰므로 인증 없이 호출하고 IP당 분당 30회로 제한합니다. stub은 '쿠로미덕후'(대소문자 무시)를 중복으로 봅니다. "
+                    + "가입 중에도 쓰므로 인증 없이 호출하고 IP당 분당 30회로 제한합니다. "
                     + "에러: COMMON_003 요청이 너무 많음")
     @SecurityRequirements
     @GetMapping("/nickname-availability")
