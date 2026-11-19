@@ -45,10 +45,9 @@ public class ExchangeController implements ExchangeApi {
     }
 
     @Override
-    public ApiResponse<ExchangeResponse> updateNewItem(Long exchangeId, NewItemRequest request) {
-        Long requesterId = 200L; // Todo: 인증된 사용자 ID 가져오기
-        Long id = commandBus.send(new UpdateNewItemCommand(exchangeId, requesterId, request.toNewItem()));
-        ExchangeResult result = queryBus.send(GetExchangeQuery.builder().exchangeId(id).viewerId(requesterId).build());
+    public ApiResponse<ExchangeResponse> updateNewItem(Long memberId, Long exchangeId, NewItemRequest request) {
+        Long id = commandBus.send(new UpdateNewItemCommand(exchangeId, memberId, request.toNewItem()));
+        ExchangeResult result = queryBus.send(GetExchangeQuery.builder().exchangeId(id).viewerId(memberId).build());
         return ApiResponse.success(ExchangeResponse.from(result));
     }
 }
