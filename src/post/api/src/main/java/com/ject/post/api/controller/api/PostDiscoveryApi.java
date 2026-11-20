@@ -1,5 +1,6 @@
 package com.ject.post.api.controller.api;
 
+import com.ject.common.web.auth.LoginMember;
 import com.ject.common.web.response.ApiResponse;
 import com.ject.post.api.dto.enums.PostCategory;
 import com.ject.post.api.dto.enums.PostSort;
@@ -27,6 +28,7 @@ public interface PostDiscoveryApi {
     @Operation(summary = "PO-2 홈 목록", description = "교환 방식 · 카테고리로 거른 글을 최신순으로 보여줍니다. 교환 가능 · 예약중 글만 나오고, 탐색 위치 1km 거르기는 2차입니다.")
     @GetMapping
     ApiResponse<CursorPageResponse<PostSummaryResponse>> getPosts(
+            @LoginMember Long memberId,
             @Parameter(description = "탐색 위치 위도. lng와 함께 보냄. 생략하면 모든 지역 (2차)")
             @RequestParam(value = "lat", required = false) @DecimalMin("-90") @DecimalMax("90") Double lat,
             @Parameter(description = "탐색 위치 경도 (2차)")
