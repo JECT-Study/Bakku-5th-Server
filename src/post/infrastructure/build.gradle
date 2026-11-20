@@ -2,5 +2,12 @@ dependencies {
     implementation project(':post-domain')
     implementation project(':post-application')
 
+    // 저장 (JPA · 공통 엔티티)
+    implementation project(':common-jpa')
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    // 작성자 조회 (user 도메인 조회 계약)
+    implementation project(':user-application')
+
     implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
 }
