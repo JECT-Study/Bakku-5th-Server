@@ -16,6 +16,10 @@ spring:
       ddl-auto: validate
   lifecycle:
     timeout-per-shutdown-phase: 30s
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
 
 app:
   time-zone: ${APP_TIME_ZONE:Asia/Seoul}
@@ -43,12 +47,23 @@ app:
       - /api/v1/terms
       - /api/v1/app/version
       - /api/v1/dev/**
+  image:
+    base-url: ${IMAGE_BASE_URL:http://localhost:8080}
+    cache-max-age: ${IMAGE_CACHE_MAX_AGE:1d}
+    storage:
+      endpoint: ${S3_ENDPOINT:}
+      bucket: ${S3_BUCKET:}
+      region: ${S3_REGION:garage}
+      access-key: ${S3_ACCESS_KEY:}
+      secret-key: ${S3_SECRET_KEY:}
 
 server:
   shutdown: graceful
   # 프록시 뒤에서 클라이언트 IP · 스킴을 X-Forwarded-* 로 복원한다. Tomcat은 X-Forwarded-For를 오른쪽부터 읽어
   # 내부 프록시(사설 · 루프백 대역, server.tomcat.remoteip.internal-proxies 기본값)를 건너뛴 첫 주소를 쓴다
   forward-headers-strategy: native
+  tomcat:
+    max-swallow-size: 60MB
 
 management:
   endpoints:

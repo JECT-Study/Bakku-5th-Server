@@ -18,6 +18,8 @@ dependencies {
     runtimeOnly project(':chat-infrastructure')
     implementation project(':exchange-api')
     runtimeOnly project(':exchange-infrastructure')
+    implementation project(':image-api')
+    runtimeOnly project(':image-infrastructure')
     implementation project(':notification-api')
     runtimeOnly project(':notification-infrastructure')
     implementation project(':post-api')

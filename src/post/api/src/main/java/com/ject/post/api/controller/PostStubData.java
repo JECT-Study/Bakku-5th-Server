@@ -15,7 +15,7 @@ import java.util.List;
 final class PostStubData {
 
     private static final ZoneOffset KST = ZoneOffset.ofHours(9);
-    private static final String CDN = "https://{cdn}/";
+    private static final String IMAGE_URL_PREFIX = "https://{api}/api/v1/images/";
 
     static final Long POST_ID = 10L;
     static final OffsetDateTime CREATED_AT = OffsetDateTime.of(2026, 11, 2, 14, 30, 0, 0, KST);
@@ -31,7 +31,7 @@ final class PostStubData {
     static ImageResponse image(Long postId, String uploadedKey) {
         String fileName = uploadedKey.substring(uploadedKey.lastIndexOf('/') + 1);
         String key = "post/" + postId + "/" + fileName;
-        return new ImageResponse(key, CDN + key);
+        return new ImageResponse(key, IMAGE_URL_PREFIX + key);
     }
 
     static List<ImageResponse> images(Long postId, List<String> uploadedKeys) {

@@ -1,0 +1,11 @@
+dependencies {
+    implementation project(':image-domain')
+    implementation project(':image-application')
+
+    // 설정 바인딩
+    implementation 'org.springframework.boot:spring-boot'
+
+    // 저장소 (S3 호환: dev · staging · 로컬 Garage, 운영 AWS S3)
+    implementation platform('software.amazon.awssdk:bom:2.57.5')
+    implementation 'software.amazon.awssdk:s3'
+}

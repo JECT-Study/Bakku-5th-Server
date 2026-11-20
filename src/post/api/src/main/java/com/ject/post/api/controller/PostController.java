@@ -1,5 +1,9 @@
 package com.ject.post.api.controller;
 
+import com.ject.common.core.cqrs.command.CommandBus;
+import com.ject.common.core.cqrs.query.QueryBus;
+import com.ject.common.web.idempotency.Idempotent;
+import com.ject.common.web.image.ImageUrlResolver;
 import com.ject.common.web.response.ApiResponse;
 import com.ject.post.api.controller.api.PostApi;
 import com.ject.post.api.dto.enums.PostStatus;
@@ -8,6 +12,9 @@ import com.ject.post.api.dto.request.PostContentRequest;
 import com.ject.post.api.dto.request.UpdatePostRequest;
 import com.ject.post.api.dto.response.PostResponse;
 import com.ject.post.api.dto.response.RelatedChatResponse;
+import com.ject.post.application.dto.PostResult;
+import com.ject.post.application.dto.query.GetPostQuery;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.OffsetDateTime;
@@ -16,16 +23,21 @@ import java.util.UUID;
 
 import static com.ject.post.api.controller.PostStubData.CREATED_AT;
 import static com.ject.post.api.controller.PostStubData.NOW_EXCHANGE_ENDS_AT;
-import static com.ject.post.api.controller.PostStubData.POST_ID;
 
 @RestController
+@RequiredArgsConstructor
 public class PostController implements PostApi {
 
+    private final CommandBus commandBus;
+    private final QueryBus queryBus;
+    private final ImageUrlResolver imageUrlResolver;
+
     @Override
-    public ApiResponse<PostResponse> createPost(UUID idempotencyKey, CreatePostRequest request) {
-        Integer minutes = request.nowExchangeMinutes();
-        OffsetDateTime nowExchangeEndsAt = minutes == null ? null : CREATED_AT.plusMinutes(minutes);
-        return ApiResponse.created(fromRequest(POST_ID, request, nowExchangeEndsAt, 0, 0));
+    @Idempotent(ttlHours = 12)
+    public ApiResponse<PostResponse> createPost(Long memberId, UUID idempotencyKey, CreatePostRequest request) {
+        Long postId = commandBus.send(request.toCommand(memberId));
+        PostResult result = queryBus.send(new GetPostQuery(postId, memberId));
+        return ApiResponse.created(PostResponse.from(result, imageUrlResolver));
     }
 
     @Override
