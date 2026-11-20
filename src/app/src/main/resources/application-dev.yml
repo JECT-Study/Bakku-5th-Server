@@ -3,6 +3,7 @@ app:
     jwt:
       # 로컬 · dev 전용 기본 키. 공개되어 있으므로 staging · 운영에서는 쓰지 않는다
       secret: ${JWT_SECRET:bakku-local-dev-only-jwt-secret-key-0001}
+    social-id-hash-secret: ${SOCIAL_ID_HASH_SECRET:bakku-local-dev-only-social-id-hash-key-01}
 
 logging:
   structured:

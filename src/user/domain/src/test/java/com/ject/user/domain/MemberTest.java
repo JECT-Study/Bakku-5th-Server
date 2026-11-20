@@ -11,6 +11,7 @@ import com.ject.user.domain.exception.UnderAgeException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 
@@ -124,6 +125,30 @@ class MemberTest {
         assertFalse(banned.isWithdrawn());
         assertTrue(banned.appearsWithdrawn());
         assertFalse(restricted.appearsWithdrawn());
+    }
+
+    @Test
+    @DisplayName("탈퇴 시각 + 7일부터 같은 소셜 계정으로 다시 가입할 수 있다")
+    void canRejoinAfter7Days() {
+        // given
+        Member member = restoreWithStatus(MemberStatus.ACTIVE);
+        member.withdraw(NOW);
+        Instant rejoinAt = NOW.plus(Duration.ofDays(7));
+
+        // when & then
+        assertEquals(rejoinAt, member.rejoinAvailableAt());
+        assertFalse(member.canRejoin(rejoinAt.minusSeconds(1)));
+        assertTrue(member.canRejoin(rejoinAt));
+    }
+
+    @Test
+    @DisplayName("탈퇴하지 않은 회원은 재가입 시각이 없다")
+    void rejoinAvailableAtRequiresWithdrawal() {
+        // given
+        Member member = restoreWithStatus(MemberStatus.ACTIVE);
+
+        // when & then
+        assertThrows(IllegalStateException.class, member::rejoinAvailableAt);
     }
 
     private static Member signup(LocalDate birthDate, Gender gender) {

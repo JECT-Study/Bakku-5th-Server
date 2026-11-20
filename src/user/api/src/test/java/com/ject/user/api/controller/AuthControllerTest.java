@@ -1,6 +1,15 @@
 package com.ject.user.api.controller;
 
+import com.ject.common.core.time.ServiceTime;
 import com.ject.user.api.exception.UserExceptionHandler;
+import com.ject.user.application.dto.AccessToken;
+import com.ject.user.application.dto.LoginTokens;
+import com.ject.user.application.dto.SignupCommand;
+import com.ject.user.application.dto.SignupToken;
+import com.ject.user.application.dto.SocialLoginResult;
+import com.ject.user.application.exception.RejoinNotAvailableException;
+import com.ject.user.application.service.SignupService;
+import com.ject.user.application.service.SocialLoginService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -11,6 +20,12 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasEntry;
@@ -20,6 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class AuthControllerTest {
 
+    private static final Instant NOW = Instant.parse("2026-11-15T03:00:00Z");
     private static final String DEVICE_ID = "6f1c9a7e-5b1d-4c0e-9e8f-0a1b2c3d4e5f";
 
     private static final String SIGNUP_BODY = """
@@ -42,7 +58,9 @@ class AuthControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new AuthController())
+        ServiceTime serviceTime = new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul")));
+        mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(new StubSocialLoginService(), new StubSignupService(),
+                        serviceTime))
                 .setControllerAdvice(new UserExceptionHandler())
                 .defaultResponseCharacterEncoding(StandardCharsets.UTF_8)
                 .build();
@@ -55,32 +73,34 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.result").value("LOGIN"))
-                .andExpect(jsonPath("$.data.accessToken").value("eyJhbGciOiJIUzI1NiJ9.access"))
-                .andExpect(jsonPath("$.data.accessTokenExpiresAt").value("2026-11-27T15:30:00+09:00"))
+                .andExpect(jsonPath("$.data.accessToken").value("access-token"))
+                .andExpect(jsonPath("$.data.accessTokenExpiresAt").value("2026-11-15T13:00:00+09:00"))
+                .andExpect(jsonPath("$.data.refreshToken").value("refresh-token"))
                 .andExpect(jsonPath("$.data.member.userId").value(101))
+                .andExpect(jsonPath("$.data.member.nickname").value("쿠로미덕후"))
                 .andExpect(jsonPath("$.data", hasEntry(equalTo("signupToken"), nullValue())));
     }
 
     @Test
-    @DisplayName("AU-1 처음 로그인하면 SIGNUP_REQUIRED와 가입 토큰을 반환하고 토큰은 null이다")
+    @DisplayName("AU-1 처음 로그인하면 SIGNUP_REQUIRED와 가입 토큰 · 자동 채우기 값을 반환하고 토큰은 null이다")
     void login_newMember_returnsSignupToken() throws Exception {
         login("naver", "{\"socialAccessToken\": \"new-naver-token\", \"deviceId\": \"%s\"}".formatted(DEVICE_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.result").value("SIGNUP_REQUIRED"))
-                .andExpect(jsonPath("$.data.signupToken").value("eyJhbGciOiJIUzI1NiJ9.signup"))
-                .andExpect(jsonPath("$.data.signupTokenExpiresAt").value("2026-12-04T14:30:00+09:00"))
+                .andExpect(jsonPath("$.data.signupToken").value("signup-token"))
+                .andExpect(jsonPath("$.data.signupTokenExpiresAt").value("2026-11-22T12:00:00+09:00"))
                 .andExpect(jsonPath("$.data.prefill.birthDate").value("2001-03-15"))
+                .andExpect(jsonPath("$.data.prefill.gender").value("FEMALE"))
                 .andExpect(jsonPath("$.data", hasEntry(equalTo("accessToken"), nullValue())));
     }
 
     @Test
-    @DisplayName("AU-1 Apple은 identityToken과 authorizationCode로 로그인한다")
-    void login_apple_returnsTokens() throws Exception {
-        login("apple", """
-                {"identityToken": "eyJraWQiOiJBSURPUEsxIn0.apple", "authorizationCode": "c1a2b3c4d5.0.apple", "deviceId": "%s"}
-                """.formatted(DEVICE_ID))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.result").value("LOGIN"));
+    @DisplayName("AU-1 탈퇴 후 7일 안이면 MEMBER_002와 data.rejoinAvailableAt을 반환한다")
+    void login_withdrawnWithin7Days_returnsMember002() throws Exception {
+        login("kakao", "{\"socialAccessToken\": \"withdrawn-token\", \"deviceId\": \"%s\"}".formatted(DEVICE_ID))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("MEMBER_002"))
+                .andExpect(jsonPath("$.data.rejoinAvailableAt").value("2026-11-22T12:00:00+09:00"));
     }
 
     @Test
@@ -105,7 +125,8 @@ class AuthControllerTest {
     void signup_returns201WithTokens() throws Exception {
         post("/api/v1/auth/signup", SIGNUP_BODY)
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.refreshToken").value("eyJhbGciOiJIUzI1NiJ9.refresh"))
+                .andExpect(jsonPath("$.data.accessToken").value("access-token"))
+                .andExpect(jsonPath("$.data.refreshToken").value("refresh-token"))
                 .andExpect(jsonPath("$.data.member.nickname").value("쿠로미덕후"));
     }
 
@@ -143,5 +164,44 @@ class AuthControllerTest {
         return mockMvc.perform(MockMvcRequestBuilders.post(uri)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body));
+    }
+
+    /**
+     * 토큰이 new로 시작하면 가입 필요, withdrawn으로 시작하면 탈퇴 7일 안, 그 밖에는 기존 회원으로 보는 로그인 서비스.
+     */
+    private static class StubSocialLoginService extends SocialLoginService {
+
+        StubSocialLoginService() {
+            super(null, null, null, null, null, null);
+        }
+
+        @Override
+        public SocialLoginResult login(String provider, String socialAccessToken, String deviceId) {
+            if (socialAccessToken.startsWith("new")) {
+                return new SocialLoginResult(null, new SignupToken("signup-token", NOW.plus(Duration.ofDays(7))),
+                        LocalDate.of(2001, 3, 15), "FEMALE");
+            }
+            if (socialAccessToken.startsWith("withdrawn")) {
+                throw new RejoinNotAvailableException(OffsetDateTime.parse("2026-11-22T12:00:00+09:00"));
+            }
+            return SocialLoginResult.login(new LoginTokens(new AccessToken("access-token", NOW.plusSeconds(3600)),
+                    "refresh-token", 101L, "쿠로미덕후"));
+        }
+    }
+
+    /**
+     * 받은 닉네임으로 101번 회원을 만든 것처럼 토큰을 주는 가입 서비스.
+     */
+    private static class StubSignupService extends SignupService {
+
+        StubSignupService() {
+            super(null, null, null, null, null);
+        }
+
+        @Override
+        public LoginTokens signup(SignupCommand command) {
+            return new LoginTokens(new AccessToken("access-token", NOW.plusSeconds(3600)), "refresh-token", 101L,
+                    command.nickname());
+        }
     }
 }

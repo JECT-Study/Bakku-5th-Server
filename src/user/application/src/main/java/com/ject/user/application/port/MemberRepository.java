@@ -2,6 +2,7 @@ package com.ject.user.application.port;
 
 import com.ject.user.domain.domain.Member;
 import com.ject.user.domain.domain.Nickname;
+import com.ject.user.domain.domain.SocialProvider;
 
 import java.util.Collection;
 import java.util.List;
@@ -20,6 +21,16 @@ public interface MemberRepository {
      * 영문 대소문자를 구분하지 않고 찾는다 (결정 A5-2). 탈퇴 회원은 닉네임이 비어 있어 찾지 않는다.
      */
     Optional<Member> findByNickname(Nickname nickname);
+
+    /**
+     * 탈퇴하지 않은 회원 중 이 소셜 계정의 회원. 한 소셜 계정은 탈퇴하지 않은 회원 하나에만 연결된다 (결정 C9).
+     */
+    Optional<Member> findActiveBySocialIdHash(SocialProvider provider, String socialIdHash);
+
+    /**
+     * 이 소셜 계정으로 가장 최근에 탈퇴한 회원. 재가입 7일 확인에 쓴다 (A-03-1).
+     */
+    Optional<Member> findLatestWithdrawnBySocialIdHash(SocialProvider provider, String socialIdHash);
 
     /**
      * 있는 회원만 반환하며 순서는 보장하지 않는다.

@@ -1,6 +1,7 @@
 package com.ject.user.api.controller;
 
 import com.ject.common.core.exception.CommonErrorCode;
+import com.ject.common.core.time.ServiceTime;
 import com.ject.common.web.response.ApiResponse;
 import com.ject.common.web.response.ApiResponse.FieldError;
 import com.ject.user.api.controller.api.AuthApi;
@@ -14,18 +15,29 @@ import com.ject.user.api.dto.response.LoginMemberResponse;
 import com.ject.user.api.dto.response.LoginResponse;
 import com.ject.user.api.dto.response.SignupPrefillResponse;
 import com.ject.user.api.dto.response.TokenResponse;
+import com.ject.user.application.dto.LoginTokens;
+import com.ject.user.application.dto.SignupCommand;
+import com.ject.user.application.dto.SocialLoginResult;
+import com.ject.user.application.service.SignupService;
+import com.ject.user.application.service.SocialLoginService;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-
-import static com.ject.user.api.controller.UserStubData.NOW;
 
 @RestController
 public class AuthController implements AuthApi {
 
-    private static final String NEW_MEMBER_TOKEN_PREFIX = "new";
+    private final SocialLoginService socialLoginService;
+    private final SignupService signupService;
+    private final ServiceTime serviceTime;
+
+    public AuthController(SocialLoginService socialLoginService, SignupService signupService,
+                          ServiceTime serviceTime) {
+        this.socialLoginService = socialLoginService;
+        this.signupService = signupService;
+        this.serviceTime = serviceTime;
+    }
 
     @Override
     public ApiResponse<LoginResponse> login(String provider, SocialLoginRequest request) {
@@ -36,24 +48,32 @@ public class AuthController implements AuthApi {
         }
 
         String token = "apple".equals(provider) ? request.identityToken() : request.socialAccessToken();
-        if (token.startsWith(NEW_MEMBER_TOKEN_PREFIX)) {
-            SignupPrefillResponse prefill = "naver".equals(provider)
-                    ? new SignupPrefillResponse(LocalDate.of(2001, 3, 15), Gender.FEMALE)
-                    : new SignupPrefillResponse(null, null);
+        SocialLoginResult result = socialLoginService.login(provider, token, request.deviceId());
+        if (result.signupRequired()) {
+            SignupPrefillResponse prefill = new SignupPrefillResponse(result.prefillBirthDate(),
+                    result.prefillGender() == null ? null : Gender.valueOf(result.prefillGender()));
             return ApiResponse.success(new LoginResponse(LoginResult.SIGNUP_REQUIRED, null, null, null, null,
-                    "eyJhbGciOiJIUzI1NiJ9.signup", NOW.plusDays(7), prefill));
+                    result.signupToken().value(), serviceTime.toOffset(result.signupToken().expiresAt()), prefill));
         }
 
-        TokenResponse issued = UserStubData.token();
-        return ApiResponse.success(new LoginResponse(LoginResult.LOGIN, issued.accessToken(), issued.accessTokenExpiresAt(),
-                issued.refreshToken(), issued.member(), null, null, null));
+        TokenResponse tokens = toTokenResponse(result.tokens());
+        return ApiResponse.success(new LoginResponse(LoginResult.LOGIN, tokens.accessToken(),
+                tokens.accessTokenExpiresAt(), tokens.refreshToken(), tokens.member(), null, null, null));
     }
 
     @Override
     public ApiResponse<TokenResponse> signup(SignupRequest request) {
-        TokenResponse token = UserStubData.token();
-        return ApiResponse.created(new TokenResponse(token.accessToken(), token.accessTokenExpiresAt(), token.refreshToken(),
-                new LoginMemberResponse(UserStubData.MY_ID, request.nickname())));
+        LoginTokens tokens = signupService.signup(new SignupCommand(
+                request.signupToken(),
+                request.agreements().stream()
+                        .map(agreement -> new SignupCommand.Agreement(agreement.termsType().name(),
+                                agreement.version(), agreement.agreed()))
+                        .toList(),
+                request.nickname(),
+                request.birthDate(),
+                request.gender() == null ? null : request.gender().name(),
+                request.deviceId()));
+        return ApiResponse.created(toTokenResponse(tokens));
     }
 
     @Override
@@ -64,6 +84,11 @@ public class AuthController implements AuthApi {
     @Override
     public ApiResponse<Void> logout(LogoutRequest request) {
         return ApiResponse.success(null);
+    }
+
+    private TokenResponse toTokenResponse(LoginTokens tokens) {
+        return new TokenResponse(tokens.accessToken().value(), serviceTime.toOffset(tokens.accessToken().expiresAt()),
+                tokens.refreshToken(), new LoginMemberResponse(tokens.memberId(), tokens.nickname()));
     }
 
     private static List<FieldError> missingTokenFields(String provider, SocialLoginRequest request) {
