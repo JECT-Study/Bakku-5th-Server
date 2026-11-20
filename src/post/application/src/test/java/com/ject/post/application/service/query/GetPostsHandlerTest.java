@@ -75,13 +75,13 @@ class GetPostsHandlerTest {
     }
 
     @Test
-    @DisplayName("카드: 지역은 구+동, 지금 교환은 교환 가능이고 종료 전일 때만, 시각은 +09:00, 내 글 여부")
+    @DisplayName("카드: 지역은 구+동, 지금 교환은 종료 전일 때만, 시각은 +09:00, 내 글 여부")
     void handle_mapsCard() {
         // given
         Instant endsAt = NOW.plus(Duration.ofMinutes(30));
         FakePostSummaryReader reader = new FakePostSummaryReader(List.of(
                 row(2L, VIEWER_ID, PostStatus.AVAILABLE, endsAt),
-                row(1L, 99L, PostStatus.RESERVED, endsAt)));
+                row(1L, 99L, PostStatus.AVAILABLE, NOW.minus(Duration.ofMinutes(1)))));
 
         // when
         List<PostSummaryResult> content = handler(reader)
@@ -96,10 +96,9 @@ class GetPostsHandlerTest {
         assertEquals(OffsetDateTime.parse("2026-11-02T14:30:00+09:00"), mine.createdAt());
         assertTrue(mine.isMine());
 
-        PostSummaryResult reserved = content.get(1);
-        assertEquals("RESERVED", reserved.status());
-        assertFalse(reserved.nowExchange());
-        assertFalse(reserved.isMine());
+        PostSummaryResult ended = content.get(1);
+        assertFalse(ended.nowExchange());
+        assertFalse(ended.isMine());
     }
 
     private static GetPostsHandler handler(FakePostSummaryReader reader) {

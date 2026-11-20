@@ -34,7 +34,7 @@ public class JpaPostSummaryReader implements PostSummaryReader {
         List<PostEntity> posts = queryFactory
                 .selectFrom(postEntity)
                 .where(
-                        postEntity.status.in(PostStatus.AVAILABLE, PostStatus.RESERVED),
+                        postEntity.status.eq(PostStatus.AVAILABLE),
                         exchangeType(condition.nowExchange(), condition.now()),
                         categoryEq(condition.category()),
                         idBefore(cursorId))
@@ -52,11 +52,9 @@ public class JpaPostSummaryReader implements PostSummaryReader {
             return null;
         }
         if (nowExchange) {
-            return postEntity.status.eq(PostStatus.AVAILABLE)
-                    .and(postEntity.nowExchangeEndsAt.gt(now));
+            return postEntity.nowExchangeEndsAt.gt(now);
         }
-        return postEntity.status.ne(PostStatus.AVAILABLE)
-                .or(postEntity.nowExchangeEndsAt.isNull())
+        return postEntity.nowExchangeEndsAt.isNull()
                 .or(postEntity.nowExchangeEndsAt.loe(now));
     }
 

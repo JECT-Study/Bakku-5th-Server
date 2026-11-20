@@ -21,7 +21,7 @@ public record PostSummaryResponse(
         @Schema(description = "구+동. 구가 없으면 시+동", example = "마포구 동교동")
         String regionName,
 
-        @Schema(description = "교환글 상태. AVAILABLE 또는 RESERVED", example = "AVAILABLE")
+        @Schema(description = "교환글 상태. 홈 목록은 AVAILABLE만", example = "AVAILABLE")
         PostStatus status,
 
         @Schema(description = "교환 가능이고 종료 시각 전이면 true", example = "true")

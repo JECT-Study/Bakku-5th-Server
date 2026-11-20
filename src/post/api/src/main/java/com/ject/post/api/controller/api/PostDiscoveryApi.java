@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequestMapping("/api/v1/posts")
 public interface PostDiscoveryApi {
 
-    @Operation(summary = "PO-2 홈 목록", description = "교환 방식 · 카테고리로 거른 글을 최신순으로 보여줍니다. 교환 가능 · 예약중 글만 나오고, 탐색 위치 1km 거르기는 2차입니다.")
+    @Operation(summary = "PO-2 홈 목록", description = "교환 방식 · 카테고리로 거른 글을 최신순으로 보여줍니다. 교환 가능 글만 나오고(예약중이 되면 빠졌다가 약속이 취소되면 다시 나옴), 탐색 위치 1km 거르기는 2차입니다.")
     @GetMapping
     ApiResponse<CursorPageResponse<PostSummaryResponse>> getPosts(
             @LoginMember Long memberId,
