@@ -63,11 +63,12 @@ public class LoginTokenIssuer {
     }
 
     /**
-     * 저장된 토큰을 새 토큰으로 회전한다 (AU-3). 재발급 서비스의 트랜잭션 안에서 부른다.
-     * 여기에 트랜잭션을 따로 걸면 AUTH_005를 던질 때 바깥 트랜잭션까지 롤백 표시가 되어 500이 나므로 걸지 않는다.
+     * 저장된 토큰을 새 토큰으로 회전한다 (AU-3). 재발급 서비스의 트랜잭션에 합류한다.
+     * AUTH_005로 바깥 트랜잭션이 롤백 표시되면 커밋 때 500이 나므로 이 예외로는 롤백하지 않는다.
      *
      * @throws InvalidRefreshTokenException 다른 요청이 먼저 회전함 (AUTH_005, 결정 C3)
      */
+    @Transactional(noRollbackFor = InvalidRefreshTokenException.class)
     public LoginTokens rotate(Member member, RefreshToken stored) {
         String refreshToken = newRefreshToken();
         stored.rotate(hash(refreshToken), serviceTime.now());
