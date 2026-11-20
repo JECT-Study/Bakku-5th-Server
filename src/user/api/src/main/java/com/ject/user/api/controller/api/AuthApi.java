@@ -26,7 +26,7 @@ public interface AuthApi {
 
     @Operation(summary = "AU-1 소셜 로그인",
             description = "소셜 인증 결과로 회원인지 확인합니다. 기존 회원이면 토큰을 발급하고(LOGIN), 처음이면 가입 토큰을 돌려줍니다(SIGNUP_REQUIRED). "
-                    + "stub은 토큰 값이 new로 시작하면 SIGNUP_REQUIRED, 아니면 LOGIN을 응답합니다. 인증 없이 호출합니다. "
+                    + "Apple은 아직 지원하지 않아 MEMBER_001을 응답합니다. 인증 없이 호출합니다. "
                     + "에러: MEMBER_001 소셜 토큰 검증 실패 · MEMBER_002 탈퇴 후 7일 안 (rejoinAvailableAt) · MEMBER_003 영구 정지")
     @SecurityRequirements
     @PostMapping("/{provider}/login")
@@ -38,7 +38,8 @@ public interface AuthApi {
     @Operation(summary = "AU-2 회원 가입 완료",
             description = "약관 동의와 프로필(닉네임 · 생년월일 · 성별)을 한 번에 받아 회원을 만들고 토큰을 발급합니다. 인증 대신 Body의 가입 토큰을 씁니다. "
                     + "에러: MEMBER_010 가입 토큰 만료 · MEMBER_011 필수 약관 미동의 · MEMBER_012 약관 버전 오래됨 · MEMBER_013 만 14세 미만 · "
-                    + "MEMBER_014 이미 가입됨 · MEMBER_101 닉네임 형식 · MEMBER_102 닉네임 중복")
+                    + "MEMBER_014 이미 가입됨 · MEMBER_101 닉네임 형식 · MEMBER_102 닉네임 중복 · "
+                    + "MEMBER_002 가입 토큰을 받은 뒤 탈퇴해 7일이 안 지남 (data.rejoinAvailableAt)")
     @SecurityRequirements
     @PostMapping("/signup")
     @ResponseStatus(HttpStatus.CREATED)

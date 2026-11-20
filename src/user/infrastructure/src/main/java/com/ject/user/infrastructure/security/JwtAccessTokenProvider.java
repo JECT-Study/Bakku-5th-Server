@@ -3,6 +3,7 @@ package com.ject.user.infrastructure.security;
 import com.ject.user.application.dto.AccessToken;
 import com.ject.user.application.exception.InvalidAccessTokenException;
 import com.ject.user.application.port.AccessTokenProvider;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.JwtParser;
@@ -60,8 +61,12 @@ public class JwtAccessTokenProvider implements AccessTokenProvider {
     @Override
     public Long verify(String token) {
         try {
-            String subject = parser.parseSignedClaims(token).getPayload().getSubject();
-            return Long.valueOf(subject);
+            Claims claims = parser.parseSignedClaims(token).getPayload();
+            // 같은 키로 서명한 가입 토큰은 액세스 토큰으로 쓸 수 없다
+            if (claims.get(JwtSignupTokenProvider.TYPE_CLAIM) != null) {
+                throw InvalidAccessTokenException.invalid();
+            }
+            return Long.valueOf(claims.getSubject());
         } catch (ExpiredJwtException e) {
             throw InvalidAccessTokenException.expired();
         } catch (JwtException | IllegalArgumentException e) {

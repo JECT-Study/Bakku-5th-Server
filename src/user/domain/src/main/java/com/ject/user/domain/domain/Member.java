@@ -2,6 +2,7 @@ package com.ject.user.domain.domain;
 
 import com.ject.user.domain.exception.MemberAlreadyWithdrawnException;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Objects;
@@ -11,6 +12,8 @@ import java.util.Objects;
  * 탈퇴해도 행은 남기고 개인정보만 비운다 (결정 A4-2). 소셜 식별값은 HMAC 해시로만 갖는다 (결정 A4-1 · C9).
  */
 public class Member {
+
+    private static final Duration REJOIN_WAITING_PERIOD = Duration.ofDays(7);
 
     private final Long id;
     private final SocialProvider provider;
@@ -98,6 +101,20 @@ public class Member {
      */
     public void increaseCompletedCount() {
         this.completedCount++;
+    }
+
+    /**
+     * 같은 소셜 계정으로 다시 가입할 수 있는 시각. 탈퇴 시각 + 7일 (A-03-1, 결정 A4-4).
+     */
+    public Instant rejoinAvailableAt() {
+        if (!isWithdrawn()) {
+            throw new IllegalStateException("탈퇴하지 않은 회원입니다. id=" + id);
+        }
+        return withdrawnAt.plus(REJOIN_WAITING_PERIOD);
+    }
+
+    public boolean canRejoin(Instant now) {
+        return !now.isBefore(rejoinAvailableAt());
     }
 
     public boolean isWithdrawn() {
