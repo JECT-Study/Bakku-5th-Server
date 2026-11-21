@@ -11,13 +11,17 @@ public class FakePostImagePort implements PostImagePort {
     @Override
     public List<String> attachToPost(Long authorId, Long postId, List<String> imageKeys) {
         String tmpPrefix = "post/tmp/" + authorId + "/";
+        String finalPrefix = "post/" + postId + "/";
         List<String> finalKeys = new ArrayList<>();
         for (int i = 0; i < imageKeys.size(); i++) {
             String key = imageKeys.get(i);
-            if (!key.startsWith(tmpPrefix)) {
+            if (key.startsWith(finalPrefix)) {
+                finalKeys.add(key);
+            } else if (key.startsWith(tmpPrefix)) {
+                finalKeys.add(finalPrefix + key.substring(tmpPrefix.length()));
+            } else {
                 throw new InvalidImageKeyException(i + 1, key);
             }
-            finalKeys.add("post/" + postId + "/" + key.substring(tmpPrefix.length()));
         }
         return finalKeys;
     }
