@@ -1,5 +1,6 @@
 package com.ject.exchange.api.dto.request;
 
+import com.ject.exchange.domain.domain.appointment.vo.Place;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -25,4 +26,7 @@ public record PlaceRequest(
         @NotNull @DecimalMin("-180") @DecimalMax("180")
         Double lng
 ) {
+        public Place toPlace() {
+                return new Place(name, address, lat, lng);
+        }
 }
