@@ -7,12 +7,14 @@ import com.ject.exchange.application.dto.dto.ExchangeResult;
 import com.ject.exchange.application.dto.dto.PostInfo;
 import com.ject.exchange.application.dto.dto.UserInfo;
 import com.ject.exchange.application.dto.query.GetAppointmentQuery;
+import com.ject.exchange.application.dto.query.GetCurrentAppointmentQuery;
 import com.ject.exchange.application.dto.query.GetExchangeQuery;
 import com.ject.exchange.domain.domain.exchange.Exchange;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * 테스트용 가짜 쿼리 버스. 교환 상세 조회는 가짜 저장소의 현재 값으로 응답한다.
@@ -24,6 +26,8 @@ class FakeQueryBus implements QueryBus {
     private final List<Query<?>> sentQueries = new ArrayList<>();
     private AppointmentResult appointmentResult;
     private RuntimeException appointmentFailure;
+    private Optional<AppointmentResult> currentAppointment;
+    private RuntimeException currentAppointmentFailure;
 
     FakeQueryBus(FakeExchangeRepository exchangeRepository) {
         this.exchangeRepository = exchangeRepository;
@@ -48,6 +52,12 @@ class FakeQueryBus implements QueryBus {
         if (query instanceof GetAppointmentQuery && appointmentResult != null) {
             return (R) appointmentResult;
         }
+        if (query instanceof GetCurrentAppointmentQuery && currentAppointmentFailure != null) {
+            throw currentAppointmentFailure;
+        }
+        if (query instanceof GetCurrentAppointmentQuery && currentAppointment != null) {
+            return (R) currentAppointment;
+        }
         throw new IllegalStateException("이 테스트가 다루지 않는 쿼리: " + query);
     }
 
@@ -58,6 +68,16 @@ class FakeQueryBus implements QueryBus {
     /** 약속 조회가 Handler 예외(없는 약속 · 참여자 아님)로 끝나는 경우를 흉내 낸다. */
     void willFailAppointment(RuntimeException failure) {
         this.appointmentFailure = failure;
+    }
+
+    /** 현재 약속 조회 결과. 유효한 약속이 없으면 빈 Optional을 넘긴다. */
+    void willReturnCurrentAppointment(Optional<AppointmentResult> result) {
+        this.currentAppointment = result;
+    }
+
+    /** 현재 약속 조회가 Handler 예외(없는 교환 · 참여자 아님)로 끝나는 경우를 흉내 낸다. */
+    void willFailCurrentAppointment(RuntimeException failure) {
+        this.currentAppointmentFailure = failure;
     }
 
     List<Query<?>> sentQueries() {

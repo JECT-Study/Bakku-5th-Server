@@ -16,11 +16,13 @@ import com.ject.exchange.api.dto.response.AppointmentResponse;
 import com.ject.exchange.api.dto.response.ConfirmationResponse;
 import com.ject.exchange.application.dto.dto.AppointmentResult;
 import com.ject.exchange.application.dto.query.GetAppointmentQuery;
+import com.ject.exchange.application.dto.query.GetCurrentAppointmentQuery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Optional;
+
 import static com.ject.exchange.api.controller.ExchangeStubData.APPOINTMENT_CREATED_AT;
-import static com.ject.exchange.api.controller.ExchangeStubData.APPOINTMENT_ID;
 import static com.ject.exchange.api.controller.ExchangeStubData.EXCHANGE_ID;
 import static com.ject.exchange.api.controller.ExchangeStubData.OWNER_ID;
 import static com.ject.exchange.api.controller.ExchangeStubData.REQUESTER_ID;
@@ -51,9 +53,10 @@ public class AppointmentController implements AppointmentApi {
     }
 
     @Override
-    public ApiResponse<AppointmentResponse> getCurrentAppointment(Long exchangeId) {
-        return ApiResponse.success(confirmedAppointment(
-                APPOINTMENT_ID, exchangeId, AppointmentStatus.CONFIRMED, SCHEDULED_AT, 30, null, null));
+    public ApiResponse<AppointmentResponse> getCurrentAppointment(Long memberId, Long exchangeId) {
+        Optional<AppointmentResult> result = queryBus.send(new GetCurrentAppointmentQuery(exchangeId, memberId));
+        // 유효한 약속이 없으면 404가 아니라 data null (계약)
+        return ApiResponse.success(result.map(AppointmentResponse::from).orElse(null));
     }
 
     @Override

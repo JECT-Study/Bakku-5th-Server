@@ -7,6 +7,9 @@ import lombok.Getter;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
 
 @Getter
 public class Appointment {
@@ -88,6 +91,21 @@ public class Appointment {
      */
     public boolean isInProgressAt(Instant now) {
         return status == AppointmentStatus.CONFIRMED || isPendingProposalAt(now);
+    }
+
+    /**
+     * 한 교환의 약속 중 현재 유효한 약속 (확정됐거나 만료 전 제안). 둘 이상이면 확정을 먼저, 같은 상태면 나중에 만든 약속
+     * @param appointments 같은 교환의 약속들
+     * @param now 만료 판단 기준 시각
+     */
+    public static Optional<Appointment> currentAmong(List<Appointment> appointments, Instant now) {
+        // 정상 흐름에서는 후보가 하나뿐이다. 데이터가 어긋나도 확정 약속이 화면(약속 취소 메뉴)에 우선 반영되도록 정렬한다
+        Comparator<Appointment> priority = Comparator
+                .comparing((Appointment appointment) -> appointment.getStatus() == AppointmentStatus.CONFIRMED)
+                .thenComparing(Appointment::getId, Comparator.nullsFirst(Comparator.naturalOrder()));
+        return appointments.stream()
+                .filter(appointment -> appointment.isInProgressAt(now))
+                .max(priority);
     }
 
     /**
