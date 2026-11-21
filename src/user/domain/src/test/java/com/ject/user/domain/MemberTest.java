@@ -152,6 +152,35 @@ class MemberTest {
     }
 
     @Test
+    @DisplayName("마케팅 수신 동의를 바꾸면 값과 변경 일시가 바뀐다")
+    void changeMarketingConsent() {
+        // given
+        Member member = signup(LocalDate.of(2000, 1, 1), null);
+        Instant later = NOW.plus(Duration.ofDays(1));
+
+        // when
+        member.changeMarketingConsent(false, later);
+
+        // then
+        assertFalse(member.isMarketingAgreed());
+        assertEquals(later, member.getMarketingChangedAt());
+    }
+
+    @Test
+    @DisplayName("마케팅 수신 동의를 같은 값으로 보내면 변경 일시는 그대로다")
+    void changeMarketingConsent_sameValue() {
+        // given
+        Member member = signup(LocalDate.of(2000, 1, 1), null);
+
+        // when
+        member.changeMarketingConsent(true, NOW.plus(Duration.ofDays(1)));
+
+        // then
+        assertTrue(member.isMarketingAgreed());
+        assertEquals(NOW, member.getMarketingChangedAt());
+    }
+
+    @Test
     @DisplayName("닉네임을 바꾼 적이 없으면 지금 바꿀 수 있다")
     void nicknameChangeableAt_neverChanged() {
         // given

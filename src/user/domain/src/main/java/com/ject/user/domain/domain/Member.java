@@ -25,8 +25,8 @@ public class Member {
     private MemberStatus status;
     private final Instant restrictedUntil;
     private int completedCount;
-    private final boolean marketingAgreed;
-    private final Instant marketingChangedAt;
+    private boolean marketingAgreed;
+    private Instant marketingChangedAt;
     private final Instant nicknameChangedAt;
     private final Long previousMemberId;
     private final Instant createdAt;
@@ -112,6 +112,18 @@ public class Member {
             throw new IllegalStateException("탈퇴하지 않은 회원입니다. id=" + id);
         }
         return withdrawnAt.plus(REJOIN_WAITING_PERIOD);
+    }
+
+    /**
+     * 마케팅 정보 수신 동의를 바꾼다 (G-06-1 · P-04-04). 같은 값이면 변경 일시를 그대로 둔다.
+     * 변경 일시는 마지막으로 동의 · 철회한 시각이라, 같은 값을 다시 보내도 바뀌지 않아야 한다.
+     */
+    public void changeMarketingConsent(boolean agreed, Instant now) {
+        if (this.marketingAgreed == agreed) {
+            return;
+        }
+        this.marketingAgreed = agreed;
+        this.marketingChangedAt = now;
     }
 
     /**

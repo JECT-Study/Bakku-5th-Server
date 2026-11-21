@@ -6,6 +6,7 @@ import com.ject.common.web.auth.LoginMemberArgumentResolver;
 import com.ject.user.api.exception.UserExceptionHandler;
 import com.ject.user.api.ratelimit.IpRateLimiter;
 import com.ject.user.api.ratelimit.RateLimitInterceptor;
+import com.ject.user.application.dto.MarketingConsent;
 import com.ject.user.application.dto.MyInfo;
 import com.ject.user.application.dto.NicknameAvailability;
 import com.ject.user.application.service.MemberService;
@@ -159,6 +160,7 @@ class MemberControllerTest {
     @DisplayName("MB-7 바꾼 값과 변경 일시를 반환한다")
     void updateMarketingConsent() throws Exception {
         mockMvc.perform(put("/api/v1/members/me/marketing-consent")
+                        .requestAttr(LoginMember.ATTRIBUTE, 7L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"agreed\": true}"))
                 .andExpect(status().isOk())
@@ -170,6 +172,7 @@ class MemberControllerTest {
     @DisplayName("MB-7 agreed가 없으면 COMMON_001")
     void updateMarketingConsent_missingAgreed_returnsCommon001() throws Exception {
         mockMvc.perform(put("/api/v1/members/me/marketing-consent")
+                        .requestAttr(LoginMember.ATTRIBUTE, 7L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest())
@@ -236,6 +239,11 @@ class MemberControllerTest {
         public MyInfo getMyInfo(Long memberId) {
             return new MyInfo(memberId, "쿠로미덕후", LocalDate.of(2001, 3, 15), "FEMALE", 12, null, false,
                     Instant.parse("2026-11-01T03:00:00Z"));
+        }
+
+        @Override
+        public MarketingConsent updateMarketingConsent(Long memberId, boolean agreed) {
+            return new MarketingConsent(agreed, Instant.parse("2026-11-27T05:30:00Z"));
         }
     }
 

@@ -1,6 +1,7 @@
 package com.ject.user.application;
 
 import com.ject.common.core.time.ServiceTime;
+import com.ject.user.application.dto.MarketingConsent;
 import com.ject.user.application.dto.MyInfo;
 import com.ject.user.application.service.MemberService;
 import com.ject.user.domain.domain.BirthDate;
@@ -85,6 +86,47 @@ class MemberServiceTest {
 
         // when & then
         assertThrows(MemberNotFoundException.class, () -> memberService.getMyInfo(member.getId()));
+    }
+
+    @Test
+    @DisplayName("MB-7 마케팅 수신 동의를 바꾸면 저장되고 변경 일시는 지금이다")
+    void updateMarketingConsent() {
+        // given
+        Long memberId = memberRepository.save(member("쿠로미덕후", null, MemberStatus.ACTIVE)).getId();
+
+        // when
+        MarketingConsent consent = memberService.updateMarketingConsent(memberId, false);
+
+        // then
+        assertEquals(new MarketingConsent(false, NOW), consent);
+        Member saved = memberRepository.findById(memberId).orElseThrow();
+        assertEquals(false, saved.isMarketingAgreed());
+        assertEquals(NOW, saved.getMarketingChangedAt());
+    }
+
+    @Test
+    @DisplayName("MB-7 같은 값을 보내면 변경 일시는 그대로다")
+    void updateMarketingConsent_sameValue() {
+        // given
+        Long memberId = memberRepository.save(member("쿠로미덕후", null, MemberStatus.ACTIVE)).getId();
+
+        // when
+        MarketingConsent consent = memberService.updateMarketingConsent(memberId, true);
+
+        // then
+        assertEquals(new MarketingConsent(true, JOINED_AT), consent);
+    }
+
+    @Test
+    @DisplayName("MB-7 탈퇴한 회원이면 MemberNotFoundException")
+    void updateMarketingConsent_withdrawnMember() {
+        // given
+        Member member = memberRepository.save(member("쿠로미덕후", null, MemberStatus.ACTIVE));
+        member.withdraw(NOW);
+        memberRepository.save(member);
+
+        // when & then
+        assertThrows(MemberNotFoundException.class, () -> memberService.updateMarketingConsent(member.getId(), false));
     }
 
     private static Member member(String nickname, Gender gender, MemberStatus status) {

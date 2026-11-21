@@ -17,6 +17,7 @@ import com.ject.user.api.dto.response.NicknameAvailabilityResponse;
 import com.ject.user.api.dto.response.NicknameUpdateResponse;
 import com.ject.user.api.dto.response.NoShowResponse;
 import com.ject.user.api.dto.response.WithdrawalNoticeResponse;
+import com.ject.user.application.dto.MarketingConsent;
 import com.ject.user.application.dto.MyInfo;
 import com.ject.user.application.dto.NicknameAvailability;
 import com.ject.user.application.service.MemberService;
@@ -73,8 +74,11 @@ public class MemberController implements MemberApi {
     }
 
     @Override
-    public ApiResponse<MarketingConsentResponse> updateMarketingConsent(MarketingConsentRequest request) {
-        return ApiResponse.success(new MarketingConsentResponse(request.agreed(), NOW));
+    public ApiResponse<MarketingConsentResponse> updateMarketingConsent(Long memberId,
+                                                                        MarketingConsentRequest request) {
+        MarketingConsent consent = memberService.updateMarketingConsent(memberId, request.agreed());
+        return ApiResponse.success(new MarketingConsentResponse(consent.agreed(),
+                serviceTime.toOffset(consent.changedAt())));
     }
 
     @Override

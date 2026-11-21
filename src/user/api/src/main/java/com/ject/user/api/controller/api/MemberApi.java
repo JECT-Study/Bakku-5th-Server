@@ -61,9 +61,10 @@ public interface MemberApi {
     ApiResponse<Void> withdraw(@Valid @RequestBody(required = false) WithdrawalRequest request);
 
     @Operation(summary = "MB-7 마케팅 수신 동의 변경",
-            description = "설정 > 알림 설정의 마케팅 정보 수신 토글입니다. 1차 알림 설정은 이것만 있습니다. 바꾸면 변경 일시를 저장합니다.")
+            description = "설정 > 알림 설정의 마케팅 정보 수신 토글입니다. 1차 알림 설정은 이것만 있습니다. 바꾸면 변경 일시를 저장하고, 지금과 같은 값이면 변경 일시는 그대로입니다.")
     @PutMapping("/me/marketing-consent")
-    ApiResponse<MarketingConsentResponse> updateMarketingConsent(@Valid @RequestBody MarketingConsentRequest request);
+    ApiResponse<MarketingConsentResponse> updateMarketingConsent(@LoginMember Long memberId,
+                                                                 @Valid @RequestBody MarketingConsentRequest request);
 
     @Operation(summary = "MB-3 닉네임 수정 (2차)",
             description = "닉네임은 30일에 한 번 바꿀 수 있습니다. 가입 때 정한 닉네임은 횟수에 넣지 않아 가입 직후 1회 바꿀 수 있습니다. "

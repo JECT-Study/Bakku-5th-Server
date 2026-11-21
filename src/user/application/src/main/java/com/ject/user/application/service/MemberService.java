@@ -1,6 +1,7 @@
 package com.ject.user.application.service;
 
 import com.ject.common.core.time.ServiceTime;
+import com.ject.user.application.dto.MarketingConsent;
 import com.ject.user.application.dto.MyInfo;
 import com.ject.user.application.port.MemberRepository;
 import com.ject.user.domain.domain.Member;
@@ -30,6 +31,18 @@ public class MemberService {
      */
     public MyInfo getMyInfo(Long memberId) {
         return MyInfo.from(getActiveMember(memberId), serviceTime.now());
+    }
+
+    /**
+     * 마케팅 정보 수신 동의 변경 (MB-7). 같은 값이면 변경 일시를 바꾸지 않는다.
+     *
+     * @throws MemberNotFoundException 없는 회원 · 탈퇴한 회원 (MEMBER_201)
+     */
+    @Transactional
+    public MarketingConsent updateMarketingConsent(Long memberId, boolean agreed) {
+        Member member = getActiveMember(memberId);
+        member.changeMarketingConsent(agreed, serviceTime.now());
+        return MarketingConsent.from(memberRepository.save(member));
     }
 
     /**
