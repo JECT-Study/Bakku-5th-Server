@@ -9,7 +9,8 @@ public enum PostErrorCode implements ErrorCode {
     POST_RESERVED("POST_003", 409, "약속이 잡힌 글은 수정할 수 없습니다."),
     POST_COMPLETED("POST_004", 409, "교환이 완료된 글입니다."),
     INVALID_IMAGE_KEY("POST_005", 400, "사용할 수 없는 이미지입니다."),
-    RESTRICTED_MEMBER("POST_006", 403, "이용이 제한된 회원입니다.");
+    RESTRICTED_MEMBER("POST_006", 403, "이용이 제한된 회원입니다."),
+    UPDATE_CONFLICT("POST_007", 409, "다른 변경이 먼저 반영되어 수정할 수 없습니다.");
 
     private final String code;
     private final int status;
