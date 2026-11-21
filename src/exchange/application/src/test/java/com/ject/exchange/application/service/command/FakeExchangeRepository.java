@@ -31,6 +31,12 @@ class FakeExchangeRepository implements ExchangeRepository {
         return Optional.ofNullable(store.get(id));
     }
 
+    /** 잠금은 DB에서만 의미가 있으므로 Fake는 findById와 같다. */
+    @Override
+    public Optional<Exchange> findByIdForUpdate(Long id) {
+        return findById(id);
+    }
+
     /** 테스트 준비용 저장. 저장 횟수에 포함하지 않는다. */
     void preload(Exchange exchange) {
         store.put(exchange.getId(), exchange);
