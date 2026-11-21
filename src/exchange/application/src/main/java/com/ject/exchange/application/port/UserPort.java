@@ -10,4 +10,9 @@ public interface UserPort {
      * 없는 회원 ID는 결과에서 빠진다 (예외를 던지지 않는다). 순서는 보장하지 않는다
      */
     List<UserInfo> findAllByIds(List<Long> userIds);
+
+    /**
+     * 두 회원 중 한쪽이라도 상대를 차단했는지 (양방향, C-09-2). 회원이 없으면 false
+     */
+    boolean isBlocked(Long memberId, Long otherMemberId);
 }

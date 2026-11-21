@@ -12,6 +12,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -24,13 +25,17 @@ class UserAdapterTest {
     private static final Long MISSING_MEMBER = 100L;
     private static final Long ANOTHER_MISSING_MEMBER = 200L;
 
+    private static final Long MEMBER_C = 103L;
+
     private FakeMemberSummaryQuery memberSummaryQuery;
+    private FakeBlockRelationQuery blockRelationQuery;
     private UserAdapter userAdapter;
 
     @BeforeEach
     void setUp() {
         memberSummaryQuery = new FakeMemberSummaryQuery();
-        userAdapter = new UserAdapter(memberSummaryQuery);
+        blockRelationQuery = new FakeBlockRelationQuery();
+        userAdapter = new UserAdapter(memberSummaryQuery, blockRelationQuery);
     }
 
     @Test
@@ -101,6 +106,46 @@ class UserAdapterTest {
         List<UserInfo> users = userAdapter.findAllByIds(List.of(MISSING_MEMBER, ANOTHER_MISSING_MEMBER));
 
         assertTrue(users.isEmpty());
+    }
+
+    @Test
+    @DisplayName("A가 B를 차단했으면 A 기준으로도 B 기준으로도 차단 관계다")
+    void isBlocked_memberBlockedOther_trueBothDirections() {
+        blockRelationQuery.block(MEMBER_A, MEMBER_B);
+
+        assertTrue(userAdapter.isBlocked(MEMBER_A, MEMBER_B));
+        assertTrue(userAdapter.isBlocked(MEMBER_B, MEMBER_A));
+    }
+
+    @Test
+    @DisplayName("B가 A를 차단했으면 A 기준으로도 차단 관계다")
+    void isBlocked_otherBlockedMember_true() {
+        blockRelationQuery.block(MEMBER_B, MEMBER_A);
+
+        assertTrue(userAdapter.isBlocked(MEMBER_A, MEMBER_B));
+    }
+
+    @Test
+    @DisplayName("둘 사이에 차단이 없으면 제3자 차단이 있어도 false다")
+    void isBlocked_noBlockBetween_false() {
+        blockRelationQuery.block(MEMBER_A, MEMBER_C);
+        blockRelationQuery.block(MEMBER_C, MEMBER_B);
+
+        assertFalse(userAdapter.isBlocked(MEMBER_A, MEMBER_B));
+    }
+
+    @Test
+    @DisplayName("없는 회원이면 예외 없이 false다")
+    void isBlocked_missingMember_false() {
+        assertFalse(userAdapter.isBlocked(MEMBER_A, MISSING_MEMBER));
+    }
+
+    @Test
+    @DisplayName("받은 두 id 그대로 차단 조회에 한 번 위임한다")
+    void isBlocked_delegatesOnceWithSameIds() {
+        userAdapter.isBlocked(MEMBER_A, MEMBER_B);
+
+        assertEquals(List.of(List.of(MEMBER_A, MEMBER_B)), blockRelationQuery.isBlockedCalls());
     }
 
     private static Map<Long, UserInfo> byId(List<UserInfo> users) {

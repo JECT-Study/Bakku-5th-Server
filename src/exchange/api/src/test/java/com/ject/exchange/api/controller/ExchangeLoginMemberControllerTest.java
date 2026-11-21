@@ -71,7 +71,7 @@ class ExchangeLoginMemberControllerTest {
         postPort = new FakePostPort();
         userPort = new FakeUserPort();
         commandBus = new FakeCommandBus(new UpdateNewItemHandler(exchangeRepository),
-                new CreateExchangeHandler(exchangeRepository, postPort));
+                new CreateExchangeHandler(exchangeRepository, postPort, userPort));
         queryBus = new FakeQueryBus(new GetExchangeHandler(exchangeRepository, postPort, userPort));
         mockMvc = MockMvcBuilders.standaloneSetup(new ExchangeController(commandBus, queryBus))
                 .setControllerAdvice(new ExchangeExceptionHandler())
@@ -83,8 +83,8 @@ class ExchangeLoginMemberControllerTest {
         postPort.register(new PostInfo(POST_P, "치이카와 교환해요", null, MEMBER_B, PostInfo.Status.AVAILABLE));
         postPort.register(new PostInfo(POST_Q_OF_A, "우사기 미니 피규어", null, MEMBER_A, PostInfo.Status.AVAILABLE));
         postPort.register(new PostInfo(POST_OF_C, "하치와레 키링", null, MEMBER_C, PostInfo.Status.AVAILABLE));
-        userPort.register(new UserInfo(MEMBER_A, "바꾸", 3));
-        userPort.register(new UserInfo(MEMBER_B, "하치", 0));
+        userPort.register(new UserInfo(MEMBER_A, "바꾸", 2));
+        userPort.register(new UserInfo(MEMBER_B, "하치", 5));
         userPort.register(new UserInfo(MEMBER_C, "쿠로미덕후", 1));
         userPort.register(new UserInfo(LEGACY_HARDCODED_MEMBER, "고정회원", 7));
     }
@@ -183,10 +183,83 @@ class ExchangeLoginMemberControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.requester.userId").value(MEMBER_A))
                 .andExpect(jsonPath("$.data.requester.nickname").value("바꾸"))
-                .andExpect(jsonPath("$.data.requester.completedCount").value(3))
+                .andExpect(jsonPath("$.data.requester.completedCount").value(2))
                 .andExpect(jsonPath("$.data.owner.userId").value(MEMBER_B))
                 .andExpect(jsonPath("$.data.owner.nickname").value("하치"))
-                .andExpect(jsonPath("$.data.owner.completedCount").value(0));
+                .andExpect(jsonPath("$.data.owner.completedCount").value(5));
+    }
+
+    // ---- E-1 차단 관계 (AC-9 · AC-10) ----
+
+    @Test
+    @DisplayName("E-1 A가 B를 차단했으면 NEW 방식 요청은 403 EXCHANGE_008이고 교환이 저장되지 않는다")
+    void createExchange_requesterBlockedOwner_newItem_returnsExchange008() throws Exception {
+        userPort.block(MEMBER_A, MEMBER_B);
+
+        mockMvc.perform(createRequest(MEMBER_A, newItemBody(POST_P)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("EXCHANGE_008"));
+
+        assertTrue(exchangeRepository.isEmpty());
+    }
+
+    @Test
+    @DisplayName("E-1 B가 A를 차단했으면 POST 방식 요청은 403 EXCHANGE_008이고 교환이 저장되지 않는다")
+    void createExchange_ownerBlockedRequester_post_returnsExchange008() throws Exception {
+        userPort.block(MEMBER_B, MEMBER_A);
+
+        mockMvc.perform(createRequest(MEMBER_A, postOfferBody(POST_P, POST_Q_OF_A)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("EXCHANGE_008"));
+
+        assertTrue(exchangeRepository.isEmpty());
+    }
+
+    @Test
+    @DisplayName("E-1 차단을 해제하면 같은 요청이 201이다")
+    void createExchange_afterUnblock_returns201() throws Exception {
+        userPort.block(MEMBER_A, MEMBER_B);
+        mockMvc.perform(createRequest(MEMBER_A, newItemBody(POST_P)))
+                .andExpect(status().isForbidden());
+
+        userPort.unblock(MEMBER_A, MEMBER_B);
+
+        mockMvc.perform(createRequest(MEMBER_A, newItemBody(POST_P)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.requester.userId").value(MEMBER_A));
+        assertEquals(1, exchangeRepository.findAll().size());
+    }
+
+    @Test
+    @DisplayName("E-1 차단 관계이면서 남의 글을 첨부하면 403 EXCHANGE_008이다")
+    void createExchange_blockedWithOthersAttachedPost_returnsExchange008() throws Exception {
+        userPort.block(MEMBER_A, MEMBER_B);
+
+        mockMvc.perform(createRequest(MEMBER_A, postOfferBody(POST_P, POST_OF_C)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("EXCHANGE_008"));
+    }
+
+    @Test
+    @DisplayName("E-1 차단 관계이면서 글이 예약중이면 409 EXCHANGE_005이다")
+    void createExchange_blockedWithReservedPost_returnsExchange005() throws Exception {
+        postPort.register(new PostInfo(POST_P, "치이카와 교환해요", null, MEMBER_B, PostInfo.Status.RESERVED));
+        userPort.block(MEMBER_A, MEMBER_B);
+
+        mockMvc.perform(createRequest(MEMBER_A, newItemBody(POST_P)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("EXCHANGE_005"));
+    }
+
+    @Test
+    @DisplayName("E-1 차단 관계이면서 없는 글이면 404 EXCHANGE_009이다")
+    void createExchange_blockedWithMissingPost_returnsExchange009() throws Exception {
+        userPort.block(MEMBER_A, MEMBER_B);
+
+        mockMvc.perform(createRequest(MEMBER_A, newItemBody(999L)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("EXCHANGE_009"));
     }
 
     // ---- E-2 ----
@@ -262,10 +335,10 @@ class ExchangeLoginMemberControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.requester.userId").value(MEMBER_A))
                 .andExpect(jsonPath("$.data.requester.nickname").value("바꾸"))
-                .andExpect(jsonPath("$.data.requester.completedCount").value(3))
+                .andExpect(jsonPath("$.data.requester.completedCount").value(2))
                 .andExpect(jsonPath("$.data.owner.userId").value(MEMBER_B))
                 .andExpect(jsonPath("$.data.owner.nickname").value("하치"))
-                .andExpect(jsonPath("$.data.owner.completedCount").value(0));
+                .andExpect(jsonPath("$.data.owner.completedCount").value(5));
     }
 
     @Test
@@ -294,7 +367,7 @@ class ExchangeLoginMemberControllerTest {
                 .andExpect(jsonPath("$.data.owner.nickname").doesNotExist())
                 .andExpect(jsonPath("$.data.owner.completedCount").value(0))
                 .andExpect(jsonPath("$.data.requester.nickname").value("바꾸"))
-                .andExpect(jsonPath("$.data.requester.completedCount").value(3));
+                .andExpect(jsonPath("$.data.requester.completedCount").value(2));
     }
 
     // ---- helpers ----

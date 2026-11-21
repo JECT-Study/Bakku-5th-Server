@@ -2,6 +2,7 @@ package com.ject.exchange.application.service.command;
 
 import com.ject.common.core.cqrs.command.CommandHandler;
 import com.ject.common.core.time.ServiceTime;
+import com.ject.common.event.exchange.ExchangeCompleted;
 import com.ject.exchange.application.dto.command.RespondConfirmationCommand;
 import com.ject.exchange.application.port.PostPort;
 import com.ject.exchange.domain.domain.appointment.Appointment;
@@ -13,6 +14,7 @@ import com.ject.exchange.domain.repository.AppointmentRepository;
 import com.ject.exchange.domain.repository.ExchangeRepository;
 import com.ject.exchange.domain.repository.PostLockRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +30,7 @@ public class RespondConfirmationHandler implements CommandHandler<RespondConfirm
     private final PostLockRepository postLockRepository;
     private final PostPort postPort;
     private final ServiceTime serviceTime;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -52,23 +55,26 @@ public class RespondConfirmationHandler implements CommandHandler<RespondConfirm
         Instant now = serviceTime.now();
         Appointment answered = appointment.answerConfirmation(command.memberId(), command.answer(),
                 command.notMetReason(), command.notMetDetail(), now);
-        requestPostChange(appointment.getStatus(), answered.getStatus(), exchange, postIds, now);
-        // Todo: 채팅방 결과 카드 · 상대 알림("약속이 취소됐어요") · 같은 글 다른 방 안내 · 완료 횟수, 교환 확인 카드 발송 · 리마인드 · 자동 완료 예약 취소
+        applyDecidedResult(appointment.getStatus(), answered, exchange, postIds, now);
+        // Todo: 채팅방 결과 카드 · 상대 알림("약속이 취소됐어요") · 같은 글 다른 방 안내, 교환 확인 카드 발송 · 리마인드 · 자동 완료 예약 취소
         return appointmentRepository.save(answered).getId();
     }
 
     /**
-     * 결과가 처음 정해질 때만 교환 · 글 상태를 바꾼다. 못 만남 뒤 이유 남기기는 결과가 그대로라 요청하지 않는다
+     * 결과가 처음 정해질 때만 교환 · 글 상태를 바꾸고, 완료면 완료 이벤트를 발행한다. 못 만남 뒤 이유 남기기는 결과가 그대로라 아무것도 하지 않는다
      */
-    private void requestPostChange(AppointmentStatus before, AppointmentStatus after, Exchange exchange,
-                                   List<Long> postIds, Instant now) {
+    private void applyDecidedResult(AppointmentStatus before, Appointment answered, Exchange exchange,
+                                    List<Long> postIds, Instant now) {
         if (before != AppointmentStatus.CONFIRMED) {
             return;
         }
         // post 요청이 실패하면 응답도 남지 않아야 하므로 저장보다 먼저 요청한다 (accept와 같음)
-        if (after == AppointmentStatus.COMPLETED) {
+        if (answered.getStatus() == AppointmentStatus.COMPLETED) {
             exchangeRepository.save(exchange.complete(now));
             postPort.complete(postIds);
+            // user BC가 커밋 뒤 두 사람의 완료 횟수를 올린다 (F-01-2 동작 3). 롤백되면 처리되지 않는다
+            eventPublisher.publishEvent(new ExchangeCompleted(answered.getId(),
+                    List.of(answered.getProposerUserId(), answered.getReceiverUserId()), false));
             return;
         }
         postPort.release(postIds);

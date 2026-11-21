@@ -1,6 +1,7 @@
 package com.ject.exchange.application.service.command;
 
 import com.ject.common.core.time.ServiceTime;
+import com.ject.common.event.exchange.ExchangeCompleted;
 import com.ject.exchange.application.dto.command.AcceptAppointmentCommand;
 import com.ject.exchange.application.dto.command.RespondConfirmationCommand;
 import com.ject.exchange.application.dto.dto.AppointmentResult;
@@ -31,11 +32,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -79,6 +82,8 @@ class RespondConfirmationHandlerTest {
     private FakeAppointmentRepository appointmentRepository;
     private FakePostLockRepository postLockRepository;
     private FakePostPort postPort;
+    /** 핸들러가 발행한 이벤트. 람다 ApplicationEventPublisher가 여기에 모은다 */
+    private List<Object> publishedEvents;
 
     @BeforeEach
     void setUp() {
@@ -86,6 +91,7 @@ class RespondConfirmationHandlerTest {
         appointmentRepository = new FakeAppointmentRepository(exchangeRepository, CREATED_AT);
         postLockRepository = new FakePostLockRepository(appointmentRepository);
         postPort = new FakePostPort();
+        publishedEvents = new ArrayList<>();
 
         postPort.register(post(POST_P0, OWNER_ID));
         postPort.register(post(SOURCE_POST_P1, REQUESTER_ID));
@@ -452,6 +458,176 @@ class RespondConfirmationHandlerTest {
         assertEquals(opensAt, result.confirmation().askedAt());
     }
 
+    // ---- exchange-user-connect AC-13 교환 완료 이벤트 ----
+
+    @Test
+    @DisplayName("제안자 A가 DONE으로 먼저 답하면 ExchangeCompleted가 제안자 · 받는 사람 순서로 한 번 발행된다")
+    void handle_doneByProposer_publishesExchangeCompletedOnce() {
+        givenConfirmedAppointment();
+
+        handlerAt(NOW).handle(done(REQUESTER_ID));
+
+        assertEquals(List.of(new ExchangeCompleted(APPOINTMENT_ID, List.of(REQUESTER_ID, OWNER_ID), false)),
+                publishedEvents);
+    }
+
+    @Test
+    @DisplayName("받는 사람 B가 DONE으로 먼저 답해도 memberIds는 제안자 · 받는 사람 순서다")
+    void handle_doneByReceiver_publishesWithProposerFirst() {
+        givenConfirmedAppointment();
+
+        handlerAt(NOW).handle(done(OWNER_ID));
+
+        assertEquals(List.of(new ExchangeCompleted(APPOINTMENT_ID, List.of(REQUESTER_ID, OWNER_ID), false)),
+                publishedEvents);
+    }
+
+    @Test
+    @DisplayName("게시자 B가 제안한 약속이면 memberIds는 B · A 순서다")
+    void handle_ownerProposedAppointment_publishesOwnerFirst() {
+        exchangeRepository.preload(defaultExchange(ExchangeStatus.ACTIVE));
+        appointmentRepository.preload(Appointment.of(APPOINTMENT_ID, EXCHANGE_ID, OWNER_ID, REQUESTER_ID,
+                AppointmentStatus.CONFIRMED, scheduled(), PLACE, new AppointmentItemIds(List.of(ITEM_P1)),
+                EXPIRES_AT, 30, 60, CONFIRMED_AT, null, List.of(), CREATED_AT, CREATED_AT));
+
+        handlerAt(NOW).handle(done(REQUESTER_ID));
+
+        assertEquals(List.of(new ExchangeCompleted(APPOINTMENT_ID, List.of(OWNER_ID, REQUESTER_ID), false)),
+                publishedEvents);
+    }
+
+    @Test
+    @DisplayName("이벤트를 발행해도 F-1 결과는 같다")
+    void handle_doneWithPublish_keepsResult() {
+        givenConfirmedAppointment();
+
+        Long respondedId = handlerAt(NOW).handle(done(REQUESTER_ID));
+
+        assertEquals(APPOINTMENT_ID, respondedId);
+        assertEquals(AppointmentStatus.COMPLETED, stored().getStatus());
+        assertEquals(ExchangeStatus.COMPLETED, storedExchange().getStatus());
+        assertEquals(1, postPort.completeRequests().size());
+        assertEquals(1, publishedEvents.size());
+    }
+
+    @Test
+    @DisplayName("DONE + DONE이면 이벤트는 먼저 처리된 한 번만 발행된다")
+    void handle_doneAndDone_publishesOnce() {
+        givenConfirmedAppointment();
+
+        handlerAt(NOW).handle(done(OWNER_ID));
+        assertRejected(ExchangeErrorCode.CONFIRMATION_ALREADY_DECIDED,
+                () -> handlerAt(NOW).handle(done(REQUESTER_ID)));
+
+        assertEquals(1, publishedEvents.size());
+    }
+
+    // ---- exchange-user-connect AC-14 완료가 아니면 발행 없음 ----
+
+    @Test
+    @DisplayName("NOT_MET으로 먼저 답하면 이벤트를 발행하지 않는다")
+    void handle_notMet_publishesNothing() {
+        givenConfirmedAppointment();
+
+        handlerAt(NOW).handle(notMet(REQUESTER_ID, NotMetReason.NO_SHOW, null));
+
+        assertTrue(publishedEvents.isEmpty());
+    }
+
+    @Test
+    @DisplayName("NOT_MET 뒤 상대가 이유를 남겨도 이벤트를 발행하지 않는다")
+    void handle_reasonAfterNotMet_publishesNothing() {
+        givenConfirmedAppointment();
+
+        handlerAt(NOW).handle(notMet(REQUESTER_ID, NotMetReason.NO_SHOW, null));
+        handlerAt(NOW.plus(Duration.ofHours(1))).handle(notMet(OWNER_ID, NotMetReason.SELF_ABSENT, null));
+
+        assertTrue(publishedEvents.isEmpty());
+    }
+
+    @Test
+    @DisplayName("NOT_MET 뒤 상대가 DONE을 보내 EXCHANGE_303이면 이벤트를 발행하지 않는다")
+    void handle_doneAfterNotMet_publishesNothing() {
+        givenConfirmedAppointment();
+        handlerAt(NOW).handle(notMet(OWNER_ID, NotMetReason.ITEM_MISMATCH, null));
+
+        assertRejected(ExchangeErrorCode.CONFIRMATION_ALREADY_DECIDED,
+                () -> handlerAt(NOW).handle(done(REQUESTER_ID)));
+
+        assertTrue(publishedEvents.isEmpty());
+    }
+
+    @Test
+    @DisplayName("열리기 전 DONE이면 EXCHANGE_301이고 이벤트를 발행하지 않는다")
+    void handle_beforeOpen_publishesNothing() {
+        givenConfirmedAppointment();
+
+        assertRejected(ExchangeErrorCode.CONFIRMATION_NOT_OPEN,
+                () -> handlerAt(NOW.minusSeconds(1)).handle(done(REQUESTER_ID)));
+
+        assertTrue(publishedEvents.isEmpty());
+    }
+
+    @Test
+    @DisplayName("DONE으로 답한 사람이 다시 보내 EXCHANGE_302이면 추가 발행이 없다")
+    void handle_againAfterDone_noExtraPublish() {
+        givenConfirmedAppointment();
+        handlerAt(NOW).handle(done(REQUESTER_ID));
+
+        assertRejected(ExchangeErrorCode.CONFIRMATION_ALREADY_ANSWERED,
+                () -> handlerAt(NOW).handle(done(REQUESTER_ID)));
+
+        assertEquals(1, publishedEvents.size());
+    }
+
+    @Test
+    @DisplayName("확정이 아닌 약속이면 EXCHANGE_109이고 이벤트를 발행하지 않는다")
+    void handle_notConfirmed_publishesNothing() {
+        exchangeRepository.preload(defaultExchange(ExchangeStatus.ACTIVE));
+        appointmentRepository.preload(Appointment.of(APPOINTMENT_ID, EXCHANGE_ID, REQUESTER_ID, OWNER_ID,
+                AppointmentStatus.CANCELED, scheduled(), PLACE, new AppointmentItemIds(List.of(ITEM_P1)),
+                EXPIRES_AT, 30, null, CONFIRMED_AT, null, List.of(), CREATED_AT, CREATED_AT));
+
+        assertRejected(ExchangeErrorCode.INVALID_APPOINTMENT_STATUS,
+                () -> handlerAt(NOW).handle(done(OWNER_ID)));
+
+        assertTrue(publishedEvents.isEmpty());
+    }
+
+    @Test
+    @DisplayName("교환이 종료됐으면 EXCHANGE_010이고 이벤트를 발행하지 않는다")
+    void handle_closedExchange_publishesNothing() {
+        exchangeRepository.preload(defaultExchange(ExchangeStatus.CLOSED));
+        appointmentRepository.preload(confirmedAppointment(scheduled()));
+
+        assertRejected(ExchangeErrorCode.EXCHANGE_CLOSED, () -> handlerAt(NOW).handle(done(REQUESTER_ID)));
+
+        assertTrue(publishedEvents.isEmpty());
+    }
+
+    @Test
+    @DisplayName("참여자가 아니면 EXCHANGE_002이고 이벤트를 발행하지 않는다")
+    void handle_thirdParty_publishesNothing() {
+        givenConfirmedAppointment();
+
+        assertRejected(ExchangeErrorCode.NOT_EXCHANGE_PARTICIPANT,
+                () -> handlerAt(NOW).handle(done(OTHER_MEMBER_ID)));
+
+        assertTrue(publishedEvents.isEmpty());
+    }
+
+    @Test
+    @DisplayName("없는 약속이면 EXCHANGE_101이고 이벤트를 발행하지 않는다")
+    void handle_missingAppointment_publishesNothing() {
+        givenConfirmedAppointment();
+
+        assertRejected(ExchangeErrorCode.APPOINTMENT_NOT_FOUND, () -> handlerAt(NOW).handle(
+                new RespondConfirmationCommand(MISSING_APPOINTMENT_ID, REQUESTER_ID, ConfirmationAnswer.DONE,
+                        null, null)));
+
+        assertTrue(publishedEvents.isEmpty());
+    }
+
     // ---- AC-12 없는 약속 · 참여자 아님 ----
 
     @Test
@@ -745,8 +921,9 @@ class RespondConfirmationHandlerTest {
     }
 
     private RespondConfirmationHandler handlerAt(Instant now) {
+        ApplicationEventPublisher eventPublisher = publishedEvents::add;
         return new RespondConfirmationHandler(appointmentRepository, exchangeRepository, postLockRepository,
-                postPort, serviceTime(now));
+                postPort, serviceTime(now), eventPublisher);
     }
 
     private GetAppointmentHandler getHandlerAt(Instant now) {

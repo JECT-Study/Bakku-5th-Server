@@ -202,7 +202,7 @@ class RejectAppointmentHandlerTest {
         // given
         givenDefaultExchangeAndProposal();
         ProposeAppointmentHandler proposeHandler = new ProposeAppointmentHandler(exchangeRepository,
-                appointmentRepository, postPort, serviceTime);
+                appointmentRepository, postPort, new FakeUserPort(), serviceTime);
 
         // when
         handler.handle(command(APPOINTMENT_ID, OWNER_ID));
@@ -223,7 +223,7 @@ class RejectAppointmentHandlerTest {
         // given
         givenDefaultExchangeAndProposal();
         ProposeAppointmentHandler proposeHandler = new ProposeAppointmentHandler(exchangeRepository,
-                appointmentRepository, postPort, serviceTime);
+                appointmentRepository, postPort, new FakeUserPort(), serviceTime);
 
         // when
         handler.handle(command(APPOINTMENT_ID, OWNER_ID));

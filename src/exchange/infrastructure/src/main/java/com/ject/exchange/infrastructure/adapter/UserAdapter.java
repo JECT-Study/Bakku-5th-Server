@@ -4,6 +4,7 @@ import com.ject.exchange.application.dto.dto.UserInfo;
 import com.ject.exchange.application.port.UserPort;
 import com.ject.common.core.exception.DomainException;
 import com.ject.user.application.dto.MemberSummary;
+import com.ject.user.application.query.BlockRelationQuery;
 import com.ject.user.application.query.MemberSummaryQuery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -22,6 +23,7 @@ import java.util.Optional;
 public class UserAdapter implements UserPort {
 
     private final MemberSummaryQuery memberSummaryQuery;
+    private final BlockRelationQuery blockRelationQuery;
 
     /**
      * 호출한 쪽의 트랜잭션 밖에서 조회한다.
@@ -64,5 +66,11 @@ public class UserAdapter implements UserPort {
 
     private static UserInfo toUserInfo(MemberSummary summary) {
         return new UserInfo(summary.userId(), summary.nickname(), summary.completedCount());
+    }
+
+    @Override
+    public boolean isBlocked(Long memberId, Long otherMemberId) {
+        // user BC 계약이 양방향으로 본다 (C-09-2). 차단 행이 없으면 회원이 없어도 false
+        return blockRelationQuery.isBlocked(memberId, otherMemberId);
     }
 }
