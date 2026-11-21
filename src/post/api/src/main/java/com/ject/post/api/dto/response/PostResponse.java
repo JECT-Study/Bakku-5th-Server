@@ -73,6 +73,14 @@ public record PostResponse(
 ) {
 
     public static PostResponse from(PostResult result, ImageUrlResolver imageUrlResolver) {
+        return of(result, imageUrlResolver, null);
+    }
+
+    public static PostResponse fromDetail(PostResult result, ImageUrlResolver imageUrlResolver) {
+        return of(result, imageUrlResolver, result.canRequest());
+    }
+
+    private static PostResponse of(PostResult result, ImageUrlResolver imageUrlResolver, Boolean canRequest) {
         PostResult.PlaceResult place = result.place();
         AuthorInfo author = result.author();
         return new PostResponse(
@@ -95,7 +103,7 @@ public record PostResponse(
                 new AuthorResponse(author.userId(), author.nickname(), author.completedCount()),
                 result.isMine(),
                 result.chatRoomId(),
-                null,
+                canRequest,
                 result.createdAt());
     }
 }

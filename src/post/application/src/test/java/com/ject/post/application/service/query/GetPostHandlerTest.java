@@ -64,6 +64,19 @@ class GetPostHandlerTest {
         assertEquals(OffsetDateTime.parse("2026-11-02T14:30:00+09:00"), result.createdAt());
         assertEquals(0, result.requestCount());
         assertNull(result.chatRoomId());
+        assertFalse(result.canRequest());
+    }
+
+    @Test
+    @DisplayName("다른 사람의 교환 가능 글이면 요청할 수 있고, 예약중이면 없다")
+    void handle_canRequest() {
+        // given
+        Long availableId = save(PostStatus.AVAILABLE, null).getId();
+        Long reservedId = save(PostStatus.RESERVED, null).getId();
+
+        // then
+        assertTrue(handler.handle(new GetPostQuery(availableId, 99L)).canRequest());
+        assertFalse(handler.handle(new GetPostQuery(reservedId, 99L)).canRequest());
     }
 
     @Test

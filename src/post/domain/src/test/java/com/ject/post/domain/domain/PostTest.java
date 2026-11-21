@@ -58,6 +58,29 @@ class PostTest {
     }
 
     @Test
+    @DisplayName("교환 가능한 다른 사람 글에만 교환 요청할 수 있다")
+    void canBeRequestedBy() {
+        // given
+        Post available = withStatus(PostStatus.AVAILABLE);
+
+        // then
+        assertTrue(available.canBeRequestedBy(99L));
+        assertFalse(available.canBeRequestedBy(AUTHOR_ID));
+        assertFalse(withStatus(PostStatus.RESERVED).canBeRequestedBy(99L));
+        assertFalse(withStatus(PostStatus.COMPLETED).canBeRequestedBy(99L));
+    }
+
+    @Test
+    @DisplayName("작성자인지 판단한다")
+    void isWrittenBy() {
+        Post post = withStatus(PostStatus.AVAILABLE);
+
+        assertTrue(post.isWrittenBy(AUTHOR_ID));
+        assertFalse(post.isWrittenBy(99L));
+        assertFalse(post.isWrittenBy(null));
+    }
+
+    @Test
     @DisplayName("저장 후 정식 사진 key로 바꾸고 순서는 받은 그대로다")
     void attachImages_replacesKeys() {
         // given
@@ -126,6 +149,16 @@ class PostTest {
 
         // then
         assertEquals(List.of("chiikawa", "하치와레"), post.getTags());
+    }
+
+    private static Post withStatus(PostStatus status) {
+        return Post.builder()
+                .id(10L)
+                .authorId(AUTHOR_ID)
+                .status(status)
+                .imageKeys(List.of("post/10/8f14e45f.jpg"))
+                .place(PLACE)
+                .build();
     }
 
     private static Post create(List<String> imageKeys, Integer nowExchangeMinutes) {
