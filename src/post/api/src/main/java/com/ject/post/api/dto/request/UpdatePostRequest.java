@@ -1,6 +1,7 @@
 package com.ject.post.api.dto.request;
 
 import com.ject.post.api.dto.enums.PostCategory;
+import com.ject.post.application.dto.command.UpdatePostCommand;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
@@ -57,5 +58,10 @@ public record UpdatePostRequest(
     @Schema(hidden = true)
     public boolean isTagsUnique() {
         return tags == null || new HashSet<>(tags).size() == tags.size();
+    }
+
+    public UpdatePostCommand toCommand(Long postId, Long editorId) {
+        return new UpdatePostCommand(postId, editorId, imageKeys, title, category.name(), opened, tags,
+                description, wantedItem, place.toCommand());
     }
 }

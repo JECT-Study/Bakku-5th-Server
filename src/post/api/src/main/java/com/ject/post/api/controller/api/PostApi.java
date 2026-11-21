@@ -40,9 +40,10 @@ public interface PostApi {
     @GetMapping("/{postId}")
     ApiResponse<PostResponse> getPost(@LoginMember Long memberId, @PathVariable("postId") Long postId);
 
-    @Operation(summary = "PO-4 교환글 수정", description = "교환 가능 글만 수정합니다. 전체 교체라 보내지 않은 tags · description · wantedItem · place.memo는 지워집니다.")
+    @Operation(summary = "PO-4 교환글 수정", description = "교환 가능 글만 작성자가 수정합니다. 전체 교체라 보내지 않은 tags · description · wantedItem · place.memo는 지워지고, 지금 교환 여부 · 시간은 바뀌지 않습니다.")
     @PutMapping("/{postId}")
-    ApiResponse<PostResponse> updatePost(@PathVariable("postId") Long postId,
+    ApiResponse<PostResponse> updatePost(@LoginMember Long memberId,
+                                         @PathVariable("postId") Long postId,
                                          @Valid @RequestBody UpdatePostRequest request);
 
     @Operation(summary = "PO-5 교환글 삭제", description = "교환 가능 글만 삭제합니다. FE는 PO-10으로 팝업 문구를 고른 뒤 호출합니다.")
