@@ -34,4 +34,9 @@ public class PushDeviceRepositoryAdapter implements PushDeviceRepository {
     public void deleteByDeviceIdOfOtherMembers(String deviceId, Long memberId) {
         pushDeviceJpaRepository.deleteByDeviceIdOfOtherMembers(deviceId, memberId);
     }
+
+    @Override
+    public void deleteAllByMemberId(Long memberId) {
+        pushDeviceJpaRepository.deleteAllByMemberId(memberId);
+    }
 }

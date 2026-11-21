@@ -11,6 +11,7 @@ import com.ject.user.application.dto.MyInfo;
 import com.ject.user.application.dto.NicknameAvailability;
 import com.ject.user.application.service.MemberService;
 import com.ject.user.application.service.NicknameService;
+import com.ject.user.application.service.WithdrawalService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,10 +28,13 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -41,13 +45,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class MemberControllerTest {
 
     private MockMvc mockMvc;
+    private StubWithdrawalService withdrawalService;
 
     @BeforeEach
     void setUp() {
         Clock clock = Clock.fixed(Instant.parse("2026-11-14T03:00:00Z"), ZoneId.of("Asia/Seoul"));
         ServiceTime serviceTime = new ServiceTime(clock);
+        withdrawalService = new StubWithdrawalService();
         mockMvc = MockMvcBuilders.standaloneSetup(
-                        new MemberController(new StubNicknameService(), new StubMemberService(), serviceTime))
+                        new MemberController(new StubNicknameService(), new StubMemberService(), withdrawalService,
+                                serviceTime))
                 .setControllerAdvice(new UserExceptionHandler())
                 .setCustomArgumentResolvers(new LoginMemberArgumentResolver())
                 .addMappedInterceptors(new String[]{"/api/v1/members/nickname-availability"},
@@ -139,17 +146,33 @@ class MemberControllerTest {
     }
 
     @Test
-    @DisplayName("MB-6 이유 없이도 탈퇴할 수 있다")
-    void withdraw_withoutReason() throws Exception {
-        mockMvc.perform(delete("/api/v1/members/me"))
+    @DisplayName("MB-6 로그인한 회원을 탈퇴시키고 사유를 넘긴다")
+    void withdraw_withReason() throws Exception {
+        mockMvc.perform(delete("/api/v1/members/me")
+                        .requestAttr(LoginMember.ATTRIBUTE, 7L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\": \"HARD_TO_FIND_PARTNER\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
+
+        assertEquals(List.of("7:HARD_TO_FIND_PARTNER"), withdrawalService.calls);
+    }
+
+    @Test
+    @DisplayName("MB-6 본문 없이도 탈퇴할 수 있다")
+    void withdraw_withoutBody() throws Exception {
+        mockMvc.perform(delete("/api/v1/members/me").requestAttr(LoginMember.ATTRIBUTE, 7L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        assertEquals(List.of("7:null"), withdrawalService.calls);
     }
 
     @Test
     @DisplayName("MB-6 이유가 목록에 없으면 COMMON_002")
     void withdraw_unknownReason_returnsCommon002() throws Exception {
         mockMvc.perform(delete("/api/v1/members/me")
+                        .requestAttr(LoginMember.ATTRIBUTE, 7L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"reason\": \"BORED\"}"))
                 .andExpect(status().isBadRequest())
@@ -244,6 +267,23 @@ class MemberControllerTest {
         @Override
         public MarketingConsent updateMarketingConsent(Long memberId, boolean agreed) {
             return new MarketingConsent(agreed, Instant.parse("2026-11-27T05:30:00Z"));
+        }
+    }
+
+    /**
+     * 받은 회원 id와 사유를 남기는 탈퇴 서비스.
+     */
+    private static class StubWithdrawalService extends WithdrawalService {
+
+        private final List<String> calls = new ArrayList<>();
+
+        StubWithdrawalService() {
+            super(null, null, null, null, null, null);
+        }
+
+        @Override
+        public void withdraw(Long memberId, String reason) {
+            calls.add(memberId + ":" + reason);
         }
     }
 

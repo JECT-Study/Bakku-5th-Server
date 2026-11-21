@@ -61,6 +61,11 @@ class FakeRefreshTokenRepository implements RefreshTokenRepository {
         byDeviceId.remove(token.getDeviceId());
     }
 
+    @Override
+    public void deleteAllByMemberId(Long memberId) {
+        byDeviceId.values().removeIf(token -> token.getMemberId().equals(memberId));
+    }
+
     int count() {
         return byDeviceId.size();
     }
