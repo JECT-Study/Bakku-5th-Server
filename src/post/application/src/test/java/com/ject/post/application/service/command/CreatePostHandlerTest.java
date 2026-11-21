@@ -1,6 +1,7 @@
 package com.ject.post.application.service.command;
 
 import com.ject.common.core.time.ServiceTime;
+import com.ject.post.application.FakePostImagePort;
 import com.ject.post.application.FakePostRepository;
 import com.ject.post.application.dto.command.CreatePostCommand;
 import com.ject.post.domain.domain.Post;
@@ -19,7 +20,6 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CreatePostHandlerTest {
 
@@ -32,11 +32,11 @@ class CreatePostHandlerTest {
     void setUp() {
         postRepository = new FakePostRepository(NOW);
         ServiceTime serviceTime = new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul")));
-        handler = new CreatePostHandler(postRepository, serviceTime);
+        handler = new CreatePostHandler(postRepository, new FakePostImagePort(), serviceTime);
     }
 
     @Test
-    @DisplayName("작성하면 글 ID를 돌려주고, 사진 key를 글 경로로 옮겨 저장한다")
+    @DisplayName("작성하면 글 ID를 돌려주고, 이미지 모듈이 돌려준 정식 key로 저장한다")
     void handle_savesPostWithMovedImages() {
         // when
         Long postId = handler.handle(command(List.of("post/tmp/3/8f14e45f.jpg", "post/tmp/3/c9f0f895.png"), 60));
@@ -51,14 +51,14 @@ class CreatePostHandlerTest {
     }
 
     @Test
-    @DisplayName("다른 회원이 올린 사진이 있으면 저장하지 않고 POST_005")
-    void handle_otherMembersImage_throws() {
+    @DisplayName("이미지 모듈이 사진을 거절하면 POST_005를 그대로 던진다")
+    void handle_rejectedImage_throws() {
         // when
-        assertThrows(InvalidImageKeyException.class,
-                () -> handler.handle(command(List.of("post/tmp/7/8f14e45f.jpg"), null)));
+        InvalidImageKeyException e = assertThrows(InvalidImageKeyException.class,
+                () -> handler.handle(command(List.of("post/tmp/3/8f14e45f.jpg", "post/tmp/7/c9f0f895.png"), null)));
 
         // then
-        assertTrue(postRepository.findById(1L).isEmpty());
+        assertEquals("2번째 이미지를 사용할 수 없습니다. key=post/tmp/7/c9f0f895.png", e.getMessage());
     }
 
     private static CreatePostCommand command(List<String> imageKeys, Integer nowExchangeMinutes) {
