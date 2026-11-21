@@ -33,7 +33,8 @@ public interface AppointmentApi {
 
     @Operation(summary = "A-2 약속 상세", description = "약속 · 변경 제안 · 취소 요청 · 교환 확인 카드의 버튼 상태와 약속 상세 화면에 사용합니다.")
     @GetMapping("/appointments/{appointmentId}")
-    ApiResponse<AppointmentResponse> getAppointment(@PathVariable("appointmentId") Long appointmentId);
+    ApiResponse<AppointmentResponse> getAppointment(@Parameter(hidden = true) @LoginMember Long memberId,
+                                                    @PathVariable("appointmentId") Long appointmentId);
 
     @Operation(summary = "A-3 현재 유효한 약속", description = "PROPOSED 또는 CONFIRMED 약속을 반환합니다. 유효한 약속이 없으면 data가 null입니다 (404 아님).")
     @GetMapping("/exchanges/{exchangeId}/appointments/current")

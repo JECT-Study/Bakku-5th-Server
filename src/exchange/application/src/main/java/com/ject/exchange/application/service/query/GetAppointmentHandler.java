@@ -47,17 +47,18 @@ public class GetAppointmentHandler implements QueryHandler<GetAppointmentQuery, 
             throw new ExchangeException(ExchangeErrorCode.NOT_EXCHANGE_PARTICIPANT);
         }
         Instant now = serviceTime.now();
+        AppointmentStatus displayStatus = appointment.displayStatusAt(now);
         return new AppointmentResult(
                 appointment.getId(),
                 appointment.getExchangeId(),
                 appointment.getProposerUserId(),
                 appointment.getReceiverUserId(),
-                appointment.getStatus(),
+                displayStatus,
                 appointment.getTime().type(),
                 appointment.getTime().scheduledAt(),
                 appointment.getPlace(),
                 itemsOf(appointment, exchange),
-                appointment.getStatus() == AppointmentStatus.PROPOSED ? appointment.getExpiresAt() : null,
+                displayStatus == AppointmentStatus.PROPOSED ? appointment.getExpiresAt() : null,
                 appointment.reminderOffsetMinutesOf(query.viewerId()),
                 appointmentRepository.existsPendingProposalOnPost(exchange.getPostId(), exchange.getId(), now),
                 appointment.getConfirmedAt(),
