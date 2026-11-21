@@ -58,7 +58,7 @@ class SignupServiceTest {
         refreshTokenRepository = new FakeRefreshTokenRepository();
         ServiceTime serviceTime = new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul")));
         LoginTokenIssuer issuer = new LoginTokenIssuer(new FakeAccessTokenProvider(), refreshTokenRepository,
-                serviceTime);
+                new FakePushDeviceRepository(), serviceTime);
         signupService = new SignupService(new FakeSignupTokenProvider(), memberRepository, termsAgreementRepository,
                 issuer, serviceTime);
     }

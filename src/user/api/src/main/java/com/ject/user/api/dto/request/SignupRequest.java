@@ -4,6 +4,7 @@ import com.ject.user.api.dto.enums.Gender;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
@@ -33,6 +34,7 @@ public record SignupRequest(
 
         @Schema(description = "기기 ID (DV-1과 같은 값)", example = "6f1c9a7e-5b1d-4c0e-9e8f-0a1b2c3d4e5f")
         @NotBlank
+        @Size(max = 100)
         String deviceId
 ) {
 }

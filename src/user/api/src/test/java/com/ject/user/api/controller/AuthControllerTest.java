@@ -1,15 +1,20 @@
 package com.ject.user.api.controller;
 
 import com.ject.common.core.time.ServiceTime;
+import com.ject.common.web.auth.LoginMember;
+import com.ject.common.web.auth.LoginMemberArgumentResolver;
 import com.ject.user.api.exception.UserExceptionHandler;
 import com.ject.user.application.dto.AccessToken;
 import com.ject.user.application.dto.LoginTokens;
 import com.ject.user.application.dto.SignupCommand;
 import com.ject.user.application.dto.SignupToken;
 import com.ject.user.application.dto.SocialLoginResult;
+import com.ject.user.application.exception.InvalidRefreshTokenException;
 import com.ject.user.application.exception.RejoinNotAvailableException;
+import com.ject.user.application.service.LogoutService;
 import com.ject.user.application.service.SignupService;
 import com.ject.user.application.service.SocialLoginService;
+import com.ject.user.application.service.TokenRefreshService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,10 +31,13 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -55,13 +63,16 @@ class AuthControllerTest {
             """.formatted(DEVICE_ID);
 
     private MockMvc mockMvc;
+    private StubLogoutService logoutService;
 
     @BeforeEach
     void setUp() {
         ServiceTime serviceTime = new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul")));
+        logoutService = new StubLogoutService();
         mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(new StubSocialLoginService(), new StubSignupService(),
-                        serviceTime))
+                        new StubTokenRefreshService(), logoutService, serviceTime))
                 .setControllerAdvice(new UserExceptionHandler())
+                .setCustomArgumentResolvers(new LoginMemberArgumentResolver())
                 .defaultResponseCharacterEncoding(StandardCharsets.UTF_8)
                 .build();
     }
@@ -140,20 +151,52 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("AU-3 재발급하면 새 토큰을 반환한다")
+    @DisplayName("AU-3 재발급하면 새 토큰 · 만료 시각 · 회원을 반환한다")
     void refresh_returnsTokens() throws Exception {
-        post("/api/v1/auth/token/refresh", "{\"refreshToken\": \"eyJhbGciOiJIUzI1NiJ9.refresh\"}")
+        post("/api/v1/auth/token/refresh", "{\"refreshToken\": \"refresh-token\"}")
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.accessToken").value("eyJhbGciOiJIUzI1NiJ9.access"));
+                .andExpect(jsonPath("$.data.accessToken").value("access-token"))
+                .andExpect(jsonPath("$.data.accessTokenExpiresAt").value("2026-11-15T13:00:00+09:00"))
+                .andExpect(jsonPath("$.data.refreshToken").value("new-refresh-token"))
+                .andExpect(jsonPath("$.data.member.userId").value(101));
     }
 
     @Test
-    @DisplayName("AU-4 로그아웃하면 성공만 반환한다")
+    @DisplayName("AU-3 무효한 리프레시 토큰이면 401 AUTH_004")
+    void refresh_invalidToken_returnsAuth004() throws Exception {
+        post("/api/v1/auth/token/refresh", "{\"refreshToken\": \"invalid\"}")
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTH_004"));
+    }
+
+    @Test
+    @DisplayName("AU-3 이미 재발급된 토큰이면 409 AUTH_005")
+    void refresh_alreadyReissued_returnsAuth005() throws Exception {
+        post("/api/v1/auth/token/refresh", "{\"refreshToken\": \"reissued\"}")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("AUTH_005"));
+    }
+
+    @Test
+    @DisplayName("AU-3 리프레시 토큰이 없으면 COMMON_001")
+    void refresh_withoutToken_returnsCommon001() throws Exception {
+        post("/api/v1/auth/token/refresh", "{}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_001"))
+                .andExpect(jsonPath("$.errors[0].field").value("refreshToken"));
+    }
+
+    @Test
+    @DisplayName("AU-4 로그인한 회원 · 리프레시 토큰 · 기기 ID로 로그아웃하고 성공만 반환한다")
     void logout_returnsSuccess() throws Exception {
-        post("/api/v1/auth/logout", "{\"refreshToken\": \"eyJhbGciOiJIUzI1NiJ9.refresh\", \"deviceId\": \"%s\"}".formatted(DEVICE_ID))
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/auth/logout")
+                        .requestAttr(LoginMember.ATTRIBUTE, 101L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\": \"refresh-token\", \"deviceId\": \"%s\"}".formatted(DEVICE_ID)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$", hasEntry(equalTo("data"), nullValue())));
+        assertEquals(List.of("101:refresh-token:" + DEVICE_ID), logoutService.calls);
     }
 
     private ResultActions login(String provider, String body) throws Exception {
@@ -186,6 +229,45 @@ class AuthControllerTest {
             }
             return SocialLoginResult.login(new LoginTokens(new AccessToken("access-token", NOW.plusSeconds(3600)),
                     "refresh-token", 101L, "쿠로미덕후"));
+        }
+    }
+
+    /**
+     * "invalid"는 무효, "reissued"는 이미 재발급됨, 그 밖에는 101번 회원에게 새 토큰을 주는 재발급 서비스.
+     */
+    private static class StubTokenRefreshService extends TokenRefreshService {
+
+        StubTokenRefreshService() {
+            super(null, null, null, null);
+        }
+
+        @Override
+        public LoginTokens refresh(String refreshToken) {
+            if (refreshToken.equals("invalid")) {
+                throw InvalidRefreshTokenException.invalid();
+            }
+            if (refreshToken.equals("reissued")) {
+                throw InvalidRefreshTokenException.alreadyReissued();
+            }
+            return new LoginTokens(new AccessToken("access-token", NOW.plusSeconds(3600)), "new-refresh-token", 101L,
+                    "쿠로미덕후");
+        }
+    }
+
+    /**
+     * 받은 값을 "{회원 id}:{리프레시 토큰}:{기기 ID}"로 남기는 로그아웃 서비스.
+     */
+    private static class StubLogoutService extends LogoutService {
+
+        private final List<String> calls = new ArrayList<>();
+
+        StubLogoutService() {
+            super(null, null);
+        }
+
+        @Override
+        public void logout(Long memberId, String refreshToken, String deviceId) {
+            calls.add(memberId + ":" + refreshToken + ":" + deviceId);
         }
     }
 
