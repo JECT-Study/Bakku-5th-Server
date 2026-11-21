@@ -3,6 +3,8 @@ package com.ject.exchange.domain.domain.appointment;
 import com.ject.exchange.domain.domain.appointment.vo.AppointmentItemIds;
 import com.ject.exchange.domain.domain.appointment.vo.AppointmentTime;
 import com.ject.exchange.domain.domain.appointment.vo.Place;
+import com.ject.exchange.domain.exception.ExchangeErrorCode;
+import com.ject.exchange.domain.exception.ExchangeException;
 import lombok.Getter;
 
 import java.time.Duration;
@@ -84,6 +86,62 @@ public class Appointment {
                                  Instant confirmedAt, Instant createdAt, Instant updatedAt) {
         return new Appointment(id, exchangeId, proposerUserId, receiverUserId, status, time, place, itemIds,
                 expiresAt, proposerReminderOffsetMinutes, receiverReminderOffsetMinutes, confirmedAt, createdAt, updatedAt);
+    }
+
+    /**
+     * 받는 사람인지 확인한다. 제안자 본인이나 다른 사람이면 NOT_APPOINTMENT_RECEIVER
+     */
+    public void validateReceiver(Long userId) {
+        if (!receiverUserId.equals(userId)) {
+            throw new ExchangeException(ExchangeErrorCode.NOT_APPOINTMENT_RECEIVER);
+        }
+    }
+
+    /**
+     * 제안 수락. 받는 사람이 만료 전 제안을 수락하면 확정된다. 지금 바로 약속이면 알림 값은 무시하고 null로 둔다
+     * @param accepterId 수락하는 회원 ID (받는 사람)
+     * @param reminderOffsetMinutes 받는 사람의 약속 전 알림(분). null이면 끄기
+     * @param now 수락 시각 (확정 시각)
+     */
+    public Appointment accept(Long accepterId, Integer reminderOffsetMinutes, Instant now) {
+        validateReceiver(accepterId);
+        validateAcceptableStatus();
+        validateNotExpired(now);
+        // 지금 바로 약속은 알림을 쓰지 않는다
+        Integer receiverReminder = time.type() == AppointmentTimeType.NOW ? null : reminderOffsetMinutes;
+        return new Appointment(id, exchangeId, proposerUserId, receiverUserId, AppointmentStatus.CONFIRMED,
+                time, place, itemIds, expiresAt, proposerReminderOffsetMinutes, receiverReminder,
+                now, createdAt, updatedAt);
+    }
+
+    private void validateAcceptableStatus() {
+        // 다른 방에서 먼저 확정돼 자동 거절된 제안은 "다른 분과 약속이 잡혀 있어요"로 안내한다 (E-05-1)
+        if (status == AppointmentStatus.AUTO_REJECTED) {
+            throw new ExchangeException(ExchangeErrorCode.POST_RESERVED_ELSEWHERE);
+        }
+        if (status != AppointmentStatus.PROPOSED) {
+            throw new ExchangeException(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE);
+        }
+    }
+
+    private void validateNotExpired(Instant now) {
+        if (isPendingProposalAt(now)) {
+            return;
+        }
+        // 만료 시각은 약속 시각을 넘지 않으므로, 약속 시각이 지났으면 그 안내를 우선한다
+        if (time.scheduledAt() != null && !time.scheduledAt().isAfter(now)) {
+            throw new ExchangeException(ExchangeErrorCode.SCHEDULED_AT_PASSED);
+        }
+        throw new ExchangeException(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE);
+    }
+
+    /**
+     * 같은 글(또는 고른 첨부 글)의 다른 약속이 확정되어 자동 거절된 제안
+     */
+    public Appointment autoReject() {
+        return new Appointment(id, exchangeId, proposerUserId, receiverUserId, AppointmentStatus.AUTO_REJECTED,
+                time, place, itemIds, expiresAt, proposerReminderOffsetMinutes, receiverReminderOffsetMinutes,
+                confirmedAt, createdAt, updatedAt);
     }
 
     /**

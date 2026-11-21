@@ -109,6 +109,15 @@ public class Exchange {
     }
 
     /**
+     * 진행 중인 교환인지 확인한다. 아니면 EXCHANGE_CLOSED
+     */
+    public void validateActive() {
+        if (this.status != ExchangeStatus.ACTIVE) {
+            throw new ExchangeException(ExchangeErrorCode.EXCHANGE_CLOSED);
+        }
+    }
+
+    /**
      * 약속을 제안할 수 있는지 확인하고, 제안을 받을 상대방 ID를 돌려준다
      * 참여자가 아니면 NOT_EXCHANGE_PARTICIPANT, 진행 중인 교환이 아니면 EXCHANGE_CLOSED (이 순서로 판정)
      */
