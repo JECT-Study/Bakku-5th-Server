@@ -2,6 +2,7 @@ package com.ject.user.application;
 
 import com.ject.common.event.exchange.ExchangeCompleted;
 import com.ject.user.application.event.ExchangeCompletedListener;
+import com.ject.user.application.service.CompletedCountService;
 import com.ject.user.domain.domain.BirthDate;
 import com.ject.user.domain.domain.Member;
 import com.ject.user.domain.domain.MemberStatus;
@@ -12,8 +13,10 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ExchangeCompletedListenerTest {
@@ -27,7 +30,7 @@ class ExchangeCompletedListenerTest {
         FakeMemberRepository memberRepository = new FakeMemberRepository();
         Long requesterId = save(memberRepository, "요청자", 2);
         Long ownerId = save(memberRepository, "게시자", 0);
-        ExchangeCompletedListener listener = new ExchangeCompletedListener(memberRepository);
+        ExchangeCompletedListener listener = listener(memberRepository);
 
         // when
         listener.handle(new ExchangeCompleted(1L, List.of(requesterId, ownerId), false));
@@ -35,6 +38,26 @@ class ExchangeCompletedListenerTest {
         // then
         assertEquals(3, memberRepository.findById(requesterId).orElseThrow().getCompletedCount());
         assertEquals(1, memberRepository.findById(ownerId).orElseThrow().getCompletedCount());
+    }
+
+    @Test
+    @DisplayName("횟수를 올리다 실패해도 예외를 넘기지 않는다 (교환은 이미 커밋됨)")
+    void failureIsNotPropagated() {
+        // given
+        FakeMemberRepository memberRepository = new FakeMemberRepository() {
+            @Override
+            public void increaseCompletedCount(Collection<Long> ids) {
+                throw new IllegalStateException("DB 오류");
+            }
+        };
+        ExchangeCompletedListener listener = listener(memberRepository);
+
+        // when & then
+        assertDoesNotThrow(() -> listener.handle(new ExchangeCompleted(1L, List.of(1L, 2L), false)));
+    }
+
+    private static ExchangeCompletedListener listener(FakeMemberRepository memberRepository) {
+        return new ExchangeCompletedListener(new CompletedCountService(memberRepository));
     }
 
     private static Long save(FakeMemberRepository repository, String nickname, int completedCount) {
