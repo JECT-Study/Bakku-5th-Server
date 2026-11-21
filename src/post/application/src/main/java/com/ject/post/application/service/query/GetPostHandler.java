@@ -48,7 +48,7 @@ public class GetPostHandler implements QueryHandler<GetPostQuery, PostResult> {
                 post.getDescription(),
                 post.getWantedItem(),
                 new PostResult.PlaceResult(place.lat(), place.lng(), place.name(),
-                        place.displayRegionName(), place.memo()),
+                        place.regionName(), place.memo()),
                 post.isNowExchange(serviceTime.now()),
                 serviceTime.toOffset(post.getNowExchangeEndsAt()),
                 0,

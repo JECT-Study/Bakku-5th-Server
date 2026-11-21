@@ -45,7 +45,7 @@ class GetPostHandlerTest {
     }
 
     @Test
-    @DisplayName("글과 작성자를 합쳐 돌려주고, 지역은 구+동, 시각은 +09:00이다")
+    @DisplayName("글과 작성자를 합쳐 돌려주고, 지역은 저장한 원본, 시각은 +09:00이다")
     void handle_returnsResult() {
         // given
         Long postId = save(PostStatus.AVAILABLE, 60).getId();
@@ -56,7 +56,7 @@ class GetPostHandlerTest {
         // then
         assertEquals("AVAILABLE", result.status());
         assertEquals("CHARACTER", result.category());
-        assertEquals("마포구 동교동", result.place().regionName());
+        assertEquals("서울특별시 마포구 동교동", result.place().regionName());
         assertEquals(AUTHOR, result.author());
         assertTrue(result.isMine());
         assertTrue(result.nowExchange());

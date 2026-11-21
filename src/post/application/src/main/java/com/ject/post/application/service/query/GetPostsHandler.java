@@ -6,7 +6,6 @@ import com.ject.post.application.dto.PostPageResult;
 import com.ject.post.application.dto.PostSummaryResult;
 import com.ject.post.application.dto.query.GetPostsQuery;
 import com.ject.post.application.port.PostSummaryReader;
-import com.ject.post.domain.domain.Place;
 import com.ject.post.domain.domain.Post;
 import com.ject.post.domain.domain.PostCategory;
 import lombok.RequiredArgsConstructor;
@@ -46,7 +45,7 @@ public class GetPostsHandler implements QueryHandler<GetPostsQuery, PostPageResu
                 row.id(),
                 row.thumbnailKey(),
                 row.title(),
-                Place.displayRegionName(row.regionName()),
+                row.regionName(),
                 row.status().name(),
                 Post.isNowExchange(row.status(), row.nowExchangeEndsAt(), now),
                 serviceTime.toOffset(row.nowExchangeEndsAt()),
