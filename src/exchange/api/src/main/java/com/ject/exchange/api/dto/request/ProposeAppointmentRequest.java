@@ -1,6 +1,8 @@
 package com.ject.exchange.api.dto.request;
 
 import com.ject.exchange.api.dto.enums.AppointmentTimeType;
+import com.ject.exchange.api.dto.validation.TenMinuteStep;
+import com.ject.exchange.application.dto.command.ProposeAppointmentCommand;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -29,7 +31,17 @@ public record ProposeAppointmentRequest(
         List<@NotNull Long> offeredItemIds,
 
         @Schema(description = "내 약속 전 알림(분). null 끄기, 10분 단위 10~1440. NOW면 무시", example = "30")
-        @Min(10) @Max(1440)
+        @Min(10) @Max(1440) @TenMinuteStep
         Integer reminderOffsetMinutes
 ) {
+        public ProposeAppointmentCommand toCommand(Long exchangeId, Long proposerId) {
+                return new ProposeAppointmentCommand(
+                        exchangeId,
+                        proposerId,
+                        com.ject.exchange.domain.domain.appointment.AppointmentTimeType.valueOf(timeType.name()),
+                        scheduledAt == null ? null : scheduledAt.toInstant(),
+                        place.toPlace(),
+                        offeredItemIds,
+                        reminderOffsetMinutes);
+        }
 }

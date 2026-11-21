@@ -1,5 +1,6 @@
 package com.ject.exchange.api.controller.api;
 
+import com.ject.common.web.auth.LoginMember;
 import com.ject.common.web.response.ApiResponse;
 import com.ject.exchange.api.dto.request.AcceptAppointmentRequest;
 import com.ject.exchange.api.dto.request.ConfirmationRequest;
@@ -7,6 +8,7 @@ import com.ject.exchange.api.dto.request.ProposeAppointmentRequest;
 import com.ject.exchange.api.dto.request.UpdateReminderRequest;
 import com.ject.exchange.api.dto.response.AppointmentResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -25,7 +27,8 @@ public interface AppointmentApi {
     @Operation(summary = "A-1 약속 제안", description = "채팅방에 \"교환을 제안해요\" 카드가 생기고 상대에게 알림이 갑니다. 한 채팅방에 진행 중인 제안은 1개입니다.")
     @PostMapping("/exchanges/{exchangeId}/appointments")
     @ResponseStatus(HttpStatus.CREATED)
-    ApiResponse<AppointmentResponse> proposeAppointment(@PathVariable("exchangeId") Long exchangeId,
+    ApiResponse<AppointmentResponse> proposeAppointment(@Parameter(hidden = true) @LoginMember Long memberId,
+                                                        @PathVariable("exchangeId") Long exchangeId,
                                                         @Valid @RequestBody ProposeAppointmentRequest request);
 
     @Operation(summary = "A-2 약속 상세", description = "약속 · 변경 제안 · 취소 요청 · 교환 확인 카드의 버튼 상태와 약속 상세 화면에 사용합니다.")
