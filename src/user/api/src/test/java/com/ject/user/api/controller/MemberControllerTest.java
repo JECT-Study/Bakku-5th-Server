@@ -1,10 +1,14 @@
 package com.ject.user.api.controller;
 
 import com.ject.common.core.time.ServiceTime;
+import com.ject.common.web.auth.LoginMember;
+import com.ject.common.web.auth.LoginMemberArgumentResolver;
 import com.ject.user.api.exception.UserExceptionHandler;
 import com.ject.user.api.ratelimit.IpRateLimiter;
 import com.ject.user.api.ratelimit.RateLimitInterceptor;
+import com.ject.user.application.dto.MyInfo;
 import com.ject.user.application.dto.NicknameAvailability;
+import com.ject.user.application.service.MemberService;
 import com.ject.user.application.service.NicknameService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -20,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 
 import static org.hamcrest.Matchers.equalTo;
@@ -39,10 +44,13 @@ class MemberControllerTest {
     @BeforeEach
     void setUp() {
         Clock clock = Clock.fixed(Instant.parse("2026-11-14T03:00:00Z"), ZoneId.of("Asia/Seoul"));
-        mockMvc = MockMvcBuilders.standaloneSetup(new MemberController(new StubNicknameService()))
+        ServiceTime serviceTime = new ServiceTime(clock);
+        mockMvc = MockMvcBuilders.standaloneSetup(
+                        new MemberController(new StubNicknameService(), new StubMemberService(), serviceTime))
                 .setControllerAdvice(new UserExceptionHandler())
+                .setCustomArgumentResolvers(new LoginMemberArgumentResolver())
                 .addMappedInterceptors(new String[]{"/api/v1/members/nickname-availability"},
-                        new RateLimitInterceptor(new IpRateLimiter(30, Duration.ofMinutes(1), new ServiceTime(clock))))
+                        new RateLimitInterceptor(new IpRateLimiter(30, Duration.ofMinutes(1), serviceTime)))
                 .defaultResponseCharacterEncoding(StandardCharsets.UTF_8)
                 .build();
     }
@@ -107,13 +115,17 @@ class MemberControllerTest {
     }
 
     @Test
-    @DisplayName("MB-2 내 정보는 1차 필드를 채우고 2차 필드는 null이다")
+    @DisplayName("MB-2 로그인한 회원의 내 정보를 주고 2차 필드는 null이다")
     void getMe_returnsFirstReleaseFields() throws Exception {
-        mockMvc.perform(get("/api/v1/members/me"))
+        mockMvc.perform(get("/api/v1/members/me").requestAttr(LoginMember.ATTRIBUTE, 7L))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.userId").value(101))
+                .andExpect(jsonPath("$.data.userId").value(7))
+                .andExpect(jsonPath("$.data.nickname").value("쿠로미덕후"))
+                .andExpect(jsonPath("$.data.gender").value("FEMALE"))
                 .andExpect(jsonPath("$.data.completedCount").value(12))
                 .andExpect(jsonPath("$.data.birthDate").value("2001-03-15"))
+                .andExpect(jsonPath("$.data.createdAt").value("2026-11-01T12:00:00+09:00"))
+                .andExpect(jsonPath("$.data", hasEntry(equalTo("nicknameChangeableAt"), nullValue())))
                 .andExpect(jsonPath("$.data", hasEntry(equalTo("mannerScore"), nullValue())))
                 .andExpect(jsonPath("$.data", hasEntry(equalTo("noShow"), nullValue())));
     }
@@ -189,7 +201,7 @@ class MemberControllerTest {
     @Test
     @DisplayName("MB-4 /members/me는 다른 회원 프로필이 아니라 내 정보로 간다")
     void getMe_notMatchedAsProfile() throws Exception {
-        mockMvc.perform(get("/api/v1/members/me"))
+        mockMvc.perform(get("/api/v1/members/me").requestAttr(LoginMember.ATTRIBUTE, 7L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.birthDate").value("2001-03-15"));
     }
@@ -209,6 +221,22 @@ class MemberControllerTest {
                     request.setRemoteAddr(ip);
                     return request;
                 });
+    }
+
+    /**
+     * 받은 회원 id를 그대로 담아 내 정보를 주는 회원 서비스.
+     */
+    private static class StubMemberService extends MemberService {
+
+        StubMemberService() {
+            super(null, null);
+        }
+
+        @Override
+        public MyInfo getMyInfo(Long memberId) {
+            return new MyInfo(memberId, "쿠로미덕후", LocalDate.of(2001, 3, 15), "FEMALE", 12, null, false,
+                    Instant.parse("2026-11-01T03:00:00Z"));
+        }
     }
 
     /**

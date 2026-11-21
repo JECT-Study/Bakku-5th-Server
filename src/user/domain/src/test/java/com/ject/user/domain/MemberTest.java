@@ -151,6 +151,31 @@ class MemberTest {
         assertThrows(IllegalStateException.class, member::rejoinAvailableAt);
     }
 
+    @Test
+    @DisplayName("닉네임을 바꾼 적이 없으면 지금 바꿀 수 있다")
+    void nicknameChangeableAt_neverChanged() {
+        // given
+        Member member = signup(LocalDate.of(2000, 1, 1), null);
+
+        // when & then
+        assertNull(member.nicknameChangeableAt(NOW));
+    }
+
+    @Test
+    @DisplayName("닉네임을 바꾸면 30일 뒤부터 다시 바꿀 수 있다")
+    void nicknameChangeableAt_after30Days() {
+        // given
+        Instant changedAt = NOW;
+        Instant changeableAt = changedAt.plus(Duration.ofDays(30));
+        Member member = Member.restore(1L, SocialProvider.NAVER, "hash", new Nickname("바꾸"),
+                new BirthDate(LocalDate.of(2000, 1, 1)), null, MemberStatus.ACTIVE, null, 0, false, NOW, changedAt,
+                null, NOW, null);
+
+        // when & then
+        assertEquals(changeableAt, member.nicknameChangeableAt(changeableAt.minusSeconds(1)));
+        assertNull(member.nicknameChangeableAt(changeableAt));
+    }
+
     private static Member signup(LocalDate birthDate, Gender gender) {
         return Member.create(SocialProvider.KAKAO, "hash", new Nickname("바꾸"), new BirthDate(birthDate),
                 gender, true, null, NOW, TODAY);

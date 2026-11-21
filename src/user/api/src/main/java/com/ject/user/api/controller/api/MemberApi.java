@@ -1,5 +1,6 @@
 package com.ject.user.api.controller.api;
 
+import com.ject.common.web.auth.LoginMember;
 import com.ject.common.web.response.ApiResponse;
 import com.ject.user.api.dto.request.MarketingConsentRequest;
 import com.ject.user.api.dto.request.NicknameUpdateRequest;
@@ -46,7 +47,7 @@ public interface MemberApi {
             description = "1차는 마이페이지 요약의 닉네임 · 교환 완료 횟수에 씁니다. 2차 필드(mannerScore · receivedReviews · noShow · warningCount · restrictedUntil)는 1차에 null입니다. "
                     + "에러: MEMBER_201 회원 없음 → 기기 로그인 정보 삭제 후 로그인 화면")
     @GetMapping("/me")
-    ApiResponse<MyInfoResponse> getMe();
+    ApiResponse<MyInfoResponse> getMe(@LoginMember Long memberId);
 
     @Operation(summary = "MB-5 탈퇴 전 안내 정보",
             description = "탈퇴 화면에 들어올 때 부릅니다. 진행 중인 교환이 있으면 FE가 안내 문구를 보여줍니다. 탈퇴는 막지 않습니다.")

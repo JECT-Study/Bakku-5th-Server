@@ -14,6 +14,7 @@ import java.util.Objects;
 public class Member {
 
     private static final Duration REJOIN_WAITING_PERIOD = Duration.ofDays(7);
+    private static final Duration NICKNAME_CHANGE_INTERVAL = Duration.ofDays(30);
 
     private final Long id;
     private final SocialProvider provider;
@@ -111,6 +112,20 @@ public class Member {
             throw new IllegalStateException("탈퇴하지 않은 회원입니다. id=" + id);
         }
         return withdrawnAt.plus(REJOIN_WAITING_PERIOD);
+    }
+
+    /**
+     * 다음에 닉네임을 바꿀 수 있는 시각. 닉네임은 30일에 한 번 바꿀 수 있다 (G-03-2).
+     * 가입 때 정한 닉네임은 횟수에 넣지 않는다 (결정 D2).
+     *
+     * @return 지금 바꿀 수 있으면 null
+     */
+    public Instant nicknameChangeableAt(Instant now) {
+        if (nicknameChangedAt == null) {
+            return null;
+        }
+        Instant changeableAt = nicknameChangedAt.plus(NICKNAME_CHANGE_INTERVAL);
+        return now.isBefore(changeableAt) ? changeableAt : null;
     }
 
     public boolean canRejoin(Instant now) {
