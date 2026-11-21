@@ -1,21 +1,19 @@
 package com.ject.post.domain.domain;
 
-import com.ject.post.domain.exception.InvalidImageKeyException;
+import com.ject.post.domain.exception.NotPostAuthorException;
+import com.ject.post.domain.exception.PostCompletedException;
+import com.ject.post.domain.exception.PostReservedException;
 import lombok.Builder;
 import lombok.Getter;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
 @Getter
 public class Post {
-
-    private static final String TMP_KEY_PREFIX = "post/tmp/%d/";
-    private static final String POST_KEY_PREFIX = "post/%d/";
 
     private final Long id;
     private final Long authorId;
@@ -55,7 +53,6 @@ public class Post {
     public static Post create(Long authorId, List<String> imageKeys, String title, PostCategory category,
                               boolean opened, List<String> tags, String description, String wantedItem,
                               Place place, Integer nowExchangeMinutes, Instant now) {
-        validateUploadedBy(authorId, imageKeys);
         Instant nowExchangeEndsAt = nowExchangeMinutes == null
                 ? null
                 : now.plus(Duration.ofMinutes(nowExchangeMinutes));
@@ -76,34 +73,50 @@ public class Post {
                 .build();
     }
 
-    public void moveImagesToPost() {
+    public void update(Long editorId, List<String> imageKeys, String title, PostCategory category, boolean opened,
+                       List<String> tags, String description, String wantedItem, Place place) {
+        if (!isWrittenBy(editorId)) {
+            throw new NotPostAuthorException(id);
+        }
+        if (status == PostStatus.RESERVED) {
+            throw new PostReservedException(id);
+        }
+        if (status == PostStatus.COMPLETED) {
+            throw new PostCompletedException(id);
+        }
+        this.imageKeys = List.copyOf(imageKeys);
+        this.title = title;
+        this.category = category;
+        this.opened = opened;
+        this.tags = distinctTags(tags);
+        this.description = description;
+        this.wantedItem = wantedItem;
+        this.place = place;
+    }
+
+    public void attachImages(List<String> finalKeys) {
         if (id == null) {
-            throw new IllegalStateException("저장 전에는 사진을 옮길 수 없습니다.");
+            throw new IllegalStateException("저장 전에는 사진을 연결할 수 없습니다.");
         }
-        String tmpPrefix = TMP_KEY_PREFIX.formatted(authorId);
-        String postPrefix = POST_KEY_PREFIX.formatted(id);
-        List<String> moved = new ArrayList<>();
-        for (String key : imageKeys) {
-            moved.add(key.startsWith(tmpPrefix) ? postPrefix + key.substring(tmpPrefix.length()) : key);
-        }
-        this.imageKeys = List.copyOf(moved);
+        this.imageKeys = List.copyOf(finalKeys);
+    }
+
+    public boolean isWrittenBy(Long memberId) {
+        return authorId.equals(memberId);
+    }
+
+    public boolean canBeRequestedBy(Long memberId) {
+        return !isWrittenBy(memberId) && status == PostStatus.AVAILABLE;
     }
 
     public boolean isNowExchange(Instant now) {
+        return isNowExchange(status, nowExchangeEndsAt, now);
+    }
+
+    public static boolean isNowExchange(PostStatus status, Instant nowExchangeEndsAt, Instant now) {
         return status == PostStatus.AVAILABLE
                 && nowExchangeEndsAt != null
                 && now.isBefore(nowExchangeEndsAt);
-    }
-
-    private static void validateUploadedBy(Long authorId, List<String> imageKeys) {
-        String tmpPrefix = TMP_KEY_PREFIX.formatted(authorId);
-        for (int i = 0; i < imageKeys.size(); i++) {
-            String key = imageKeys.get(i);
-            String fileName = key.startsWith(tmpPrefix) ? key.substring(tmpPrefix.length()) : "";
-            if (fileName.isEmpty() || fileName.contains("/")) {
-                throw new InvalidImageKeyException(i + 1, key);
-            }
-        }
     }
 
     private static List<String> distinctTags(List<String> tags) {

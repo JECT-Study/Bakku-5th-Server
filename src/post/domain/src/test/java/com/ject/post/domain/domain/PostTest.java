@@ -58,27 +58,31 @@ class PostTest {
     }
 
     @Test
-    @DisplayName("다른 회원이 올린 사진이면 몇 번째인지 담아 POST_005")
-    void create_otherMembersImage_throws() {
-        // when
-        InvalidImageKeyException e = assertThrows(InvalidImageKeyException.class,
-                () -> create(List.of("post/tmp/3/8f14e45f.jpg", "post/tmp/7/c9f0f895.jpg"), null));
+    @DisplayName("교환 가능한 다른 사람 글에만 교환 요청할 수 있다")
+    void canBeRequestedBy() {
+        // given
+        Post available = withStatus(PostStatus.AVAILABLE);
 
         // then
-        assertEquals("POST_005", e.getErrorCode().getCode());
-        assertEquals("2번째 이미지는 본인이 올린 이미지가 아닙니다. key=post/tmp/7/c9f0f895.jpg", e.getMessage());
+        assertTrue(available.canBeRequestedBy(99L));
+        assertFalse(available.canBeRequestedBy(AUTHOR_ID));
+        assertFalse(withStatus(PostStatus.RESERVED).canBeRequestedBy(99L));
+        assertFalse(withStatus(PostStatus.COMPLETED).canBeRequestedBy(99L));
     }
 
     @Test
-    @DisplayName("tmp 경로 아래 폴더가 더 있으면 POST_005")
-    void create_nestedPath_throws() {
-        assertThrows(InvalidImageKeyException.class,
-                () -> create(List.of("post/tmp/3/a/8f14e45f.jpg"), null));
+    @DisplayName("작성자인지 판단한다")
+    void isWrittenBy() {
+        Post post = withStatus(PostStatus.AVAILABLE);
+
+        assertTrue(post.isWrittenBy(AUTHOR_ID));
+        assertFalse(post.isWrittenBy(99L));
+        assertFalse(post.isWrittenBy(null));
     }
 
     @Test
-    @DisplayName("저장 후 사진 key를 글 경로로 옮기고 순서는 유지한다")
-    void moveImagesToPost_changesPrefix() {
+    @DisplayName("저장 후 정식 사진 key로 바꾸고 순서는 받은 그대로다")
+    void attachImages_replacesKeys() {
         // given
         Post saved = Post.builder()
                 .id(10L)
@@ -89,20 +93,31 @@ class PostTest {
                 .build();
 
         // when
-        saved.moveImagesToPost();
+        saved.attachImages(List.of("post/10/8f14e45f.jpg", "post/10/c9f0f895.png"));
 
         // then
         assertEquals(List.of("post/10/8f14e45f.jpg", "post/10/c9f0f895.png"), saved.getImageKeys());
     }
 
     @Test
-    @DisplayName("저장 전에는 사진을 옮길 수 없다")
-    void moveImagesToPost_beforeSave_throws() {
+    @DisplayName("저장 전에는 사진을 연결할 수 없다")
+    void attachImages_beforeSave_throws() {
         // given
         Post post = create(List.of("post/tmp/3/8f14e45f.jpg"), null);
 
         // when · then
-        assertThrows(IllegalStateException.class, post::moveImagesToPost);
+        assertThrows(IllegalStateException.class, () -> post.attachImages(List.of("post/10/8f14e45f.jpg")));
+    }
+
+    @Test
+    @DisplayName("사용할 수 없는 사진은 몇 번째인지 담아 POST_005")
+    void invalidImageKeyException_message() {
+        // when
+        InvalidImageKeyException e = new InvalidImageKeyException(2, "post/tmp/7/c9f0f895.jpg");
+
+        // then
+        assertEquals("POST_005", e.getErrorCode().getCode());
+        assertEquals("2번째 이미지를 사용할 수 없습니다. key=post/tmp/7/c9f0f895.jpg", e.getMessage());
     }
 
     @Test
@@ -134,6 +149,16 @@ class PostTest {
 
         // then
         assertEquals(List.of("chiikawa", "하치와레"), post.getTags());
+    }
+
+    private static Post withStatus(PostStatus status) {
+        return Post.builder()
+                .id(10L)
+                .authorId(AUTHOR_ID)
+                .status(status)
+                .imageKeys(List.of("post/10/8f14e45f.jpg"))
+                .place(PLACE)
+                .build();
     }
 
     private static Post create(List<String> imageKeys, Integer nowExchangeMinutes) {

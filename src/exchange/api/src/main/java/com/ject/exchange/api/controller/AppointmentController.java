@@ -1,5 +1,7 @@
 package com.ject.exchange.api.controller;
 
+import com.ject.common.core.cqrs.command.CommandBus;
+import com.ject.common.core.cqrs.query.QueryBus;
 import com.ject.common.web.response.ApiResponse;
 import com.ject.exchange.api.controller.api.AppointmentApi;
 import com.ject.exchange.api.dto.enums.AppointmentChangeStatus;
@@ -14,6 +16,9 @@ import com.ject.exchange.api.dto.request.UpdateReminderRequest;
 import com.ject.exchange.api.dto.response.AppointmentChangeResponse;
 import com.ject.exchange.api.dto.response.AppointmentResponse;
 import com.ject.exchange.api.dto.response.ConfirmationResponse;
+import com.ject.exchange.application.dto.dto.AppointmentResult;
+import com.ject.exchange.application.dto.query.GetAppointmentQuery;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RestController;
 
 import static com.ject.exchange.api.controller.ExchangeStubData.APPOINTMENT_CREATED_AT;
@@ -32,16 +37,17 @@ import static com.ject.exchange.api.controller.ExchangeStubData.confirmedAppoint
 import static com.ject.exchange.api.controller.ExchangeStubData.place;
 
 @RestController
+@RequiredArgsConstructor
 public class AppointmentController implements AppointmentApi {
 
+    private final CommandBus commandBus;
+    private final QueryBus queryBus;
+
     @Override
-    public ApiResponse<AppointmentResponse> proposeAppointment(Long exchangeId, ProposeAppointmentRequest request) {
-        return ApiResponse.created(new AppointmentResponse(
-                APPOINTMENT_ID, exchangeId, REQUESTER_ID, OWNER_ID,
-                AppointmentStatus.PROPOSED, AppointmentTimeType.SCHEDULED, SCHEDULED_AT, place(), appointmentItems(),
-                SCHEDULED_AT, 30, true,
-                null, null, null,
-                null, APPOINTMENT_CREATED_AT));
+    public ApiResponse<AppointmentResponse> proposeAppointment(Long memberId, Long exchangeId, ProposeAppointmentRequest request) {
+        Long appointmentId = commandBus.send(request.toCommand(exchangeId, memberId));
+        AppointmentResult result = queryBus.send(new GetAppointmentQuery(appointmentId, memberId));
+        return ApiResponse.created(AppointmentResponse.from(result));
     }
 
     @Override

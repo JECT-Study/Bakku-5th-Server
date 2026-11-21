@@ -2,6 +2,7 @@ package com.ject.post.infrastructure.repository;
 
 import com.ject.post.domain.domain.Post;
 import com.ject.post.domain.exception.PostNotFoundException;
+import com.ject.post.domain.exception.PostUpdateConflictException;
 import com.ject.post.domain.repository.PostRepository;
 import com.ject.post.infrastructure.entity.PostEntity;
 import com.ject.post.infrastructure.entity.PostImageEntity;
@@ -12,7 +13,10 @@ import com.ject.post.infrastructure.jpa.PostImageEntityRepository;
 import com.ject.post.infrastructure.jpa.PostTagEntityRepository;
 import com.ject.post.infrastructure.jpa.PostTagLinkEntityRepository;
 import com.ject.post.infrastructure.mapper.PostMapper;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +34,7 @@ public class JpaPostRepository implements PostRepository {
     private final PostImageEntityRepository postImageEntityRepository;
     private final PostTagEntityRepository postTagEntityRepository;
     private final PostTagLinkEntityRepository postTagLinkEntityRepository;
+    private final EntityManager entityManager;
 
     @Override
     @Transactional
@@ -50,10 +55,22 @@ public class JpaPostRepository implements PostRepository {
                         postTagLinkEntityRepository.findTagNamesByPostId(id)));
     }
 
+    @Override
+    @Transactional
+    public void increaseViewCount(Long id) {
+        postEntityRepository.increaseViewCount(id);
+    }
+
     private PostEntity update(Post post) {
         PostEntity entity = postEntityRepository.findById(post.getId())
                 .orElseThrow(() -> new PostNotFoundException(post.getId()));
+        entityManager.lock(entity, LockModeType.OPTIMISTIC_FORCE_INCREMENT);
         entity.update(post);
+        try {
+            postEntityRepository.flush();
+        } catch (ObjectOptimisticLockingFailureException e) {
+            throw new PostUpdateConflictException(post.getId());
+        }
         return entity;
     }
 

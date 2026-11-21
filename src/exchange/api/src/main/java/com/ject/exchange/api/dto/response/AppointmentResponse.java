@@ -2,9 +2,12 @@ package com.ject.exchange.api.dto.response;
 
 import com.ject.exchange.api.dto.enums.AppointmentStatus;
 import com.ject.exchange.api.dto.enums.AppointmentTimeType;
+import com.ject.exchange.application.dto.dto.AppointmentResult;
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @Schema(description = "약속")
@@ -60,4 +63,35 @@ public record AppointmentResponse(
         @Schema(description = "제안 시각", example = "2026-10-26T16:40:00+09:00")
         OffsetDateTime createdAt
 ) {
+    /**
+     * 약속 제안 응답. 변경 제안 · 취소 요청 · 교환 확인은 아직 없으므로 null
+     */
+    public static AppointmentResponse from(AppointmentResult result) {
+        return new AppointmentResponse(
+                result.id(),
+                result.exchangeId(),
+                result.proposerUserId(),
+                result.receiverUserId(),
+                EnumMapper.map(result.status(), AppointmentStatus.class),
+                EnumMapper.map(result.timeType(), AppointmentTimeType.class),
+                toSeoul(result.scheduledAt()),
+                new PlaceResponse(result.place().name(), result.place().address(), result.place().lat(), result.place().lng()),
+                result.items().stream()
+                        .map(item -> new AppointmentItemResponse(item.offeredItemId(), item.type(), item.name(), item.thumbnailUrl()))
+                        .toList(),
+                toSeoul(result.expiresAt()),
+                result.myReminderOffsetMinutes(),
+                result.otherActiveProposalsOnPost(),
+                null,   // Todo: 약속 변경 제안 구현 후 반영
+                null,   // Todo: 약속 취소 구현 후 반영
+                null,   // Todo: 교환 확인 구현 후 반영
+                toSeoul(result.confirmedAt()),
+                toSeoul(result.createdAt()));
+    }
+
+    private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
+
+    private static OffsetDateTime toSeoul(Instant instant) {
+        return instant == null ? null : instant.atZone(SEOUL).toOffsetDateTime();
+    }
 }

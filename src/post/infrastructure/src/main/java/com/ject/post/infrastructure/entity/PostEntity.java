@@ -1,6 +1,7 @@
 package com.ject.post.infrastructure.entity;
 
 import com.ject.common.jpa.BaseEntity;
+import com.ject.post.domain.domain.Hub;
 import com.ject.post.domain.domain.Post;
 import com.ject.post.domain.domain.PostCategory;
 import com.ject.post.domain.domain.PostStatus;
@@ -13,6 +14,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -55,11 +57,19 @@ public class PostEntity extends BaseEntity {
     @Embedded
     private PlaceEmbeddable place;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "hub", nullable = false, length = 20)
+    private Hub hub;
+
     @Column(name = "now_exchange_ends_at")
     private Instant nowExchangeEndsAt;
 
     @Column(name = "view_count", nullable = false)
     private int viewCount;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
 
     public static PostEntity from(Post post) {
         PostEntity entity = new PostEntity();
@@ -82,6 +92,7 @@ public class PostEntity extends BaseEntity {
                 .regionName(post.getPlace().regionName())
                 .memo(post.getPlace().memo())
                 .build();
+        this.hub = post.getPlace().hub();
         this.nowExchangeEndsAt = post.getNowExchangeEndsAt();
         this.viewCount = post.getViewCount();
     }

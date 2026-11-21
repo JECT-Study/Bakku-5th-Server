@@ -1,10 +1,12 @@
 package com.ject.exchange.api.controller.api;
 
+import com.ject.common.web.auth.LoginMember;
 import com.ject.common.web.response.ApiResponse;
 import com.ject.exchange.api.dto.request.CreateExchangeRequest;
 import com.ject.exchange.api.dto.request.NewItemRequest;
 import com.ject.exchange.api.dto.response.ExchangeResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -31,6 +33,7 @@ public interface ExchangeApi {
 
     @Operation(summary = "E-3 새로 작성한 아이템 수정", description = "요청자가 새로 작성한 아이템을 수정합니다. 확정 약속이 있으면 수정할 수 없습니다.")
     @PutMapping("/{exchangeId}/new-item")
-    ApiResponse<ExchangeResponse> updateNewItem(@PathVariable("exchangeId") Long exchangeId,
+    ApiResponse<ExchangeResponse> updateNewItem(@Parameter(hidden = true) @LoginMember Long memberId,
+                                                @PathVariable("exchangeId") Long exchangeId,
                                                 @Valid @RequestBody NewItemRequest request);
 }

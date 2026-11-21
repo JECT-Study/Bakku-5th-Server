@@ -39,4 +39,13 @@ public class JpaExchangeRepository implements ExchangeRepository {
                         e, offeredItemEntityRepository.findByExchangeIdOrderBySortOrder(id)
                 ));
     }
+
+    @Override
+    @Transactional
+    public Optional<Exchange> findByIdForUpdate(Long id) {
+        return exchangeEntityRepository.findWithLockById(id)
+                .map(e -> ExchangeMapper.toDomain(
+                        e, offeredItemEntityRepository.findByExchangeIdOrderBySortOrder(id)
+                ));
+    }
 }

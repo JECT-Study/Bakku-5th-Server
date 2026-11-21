@@ -95,9 +95,55 @@ public class Exchange {
         return requestUserId.equals(userId) || ownerId.equals(userId);
     }
 
+    /**
+     * 참여자 한 명을 받아 상대방 ID를 돌려준다
+     */
+    public Long counterpartOf(Long participantId) {
+        if (requestUserId.equals(participantId)) {
+            return ownerId;
+        }
+        if (ownerId.equals(participantId)) {
+            return requestUserId;
+        }
+        throw new ExchangeException(ExchangeErrorCode.NOT_EXCHANGE_PARTICIPANT);
+    }
+
+    /**
+     * 약속을 제안할 수 있는지 확인하고, 제안을 받을 상대방 ID를 돌려준다
+     * 참여자가 아니면 NOT_EXCHANGE_PARTICIPANT, 진행 중인 교환이 아니면 EXCHANGE_CLOSED (이 순서로 판정)
+     */
+    public Long appointmentReceiverFor(Long proposerId) {
+        Long receiverId = counterpartOf(proposerId);
+        if (this.status != ExchangeStatus.ACTIVE) {
+            throw new ExchangeException(ExchangeErrorCode.EXCHANGE_CLOSED);
+        }
+        return receiverId;
+    }
+
+    public Exchange updateNewItem(Long requesterId, ItemName name, Boolean opened, ItemDescription description) {
+        if (!this.requestUserId.equals(requesterId)) {
+            throw new ExchangeException(ExchangeErrorCode.NOT_REQUESTER);
+        }
+        if (offerType != OfferType.NEW) {
+            throw new ExchangeException(ExchangeErrorCode.NOT_NEW_ITEM_OFFER);
+        }
+        if (this.status != ExchangeStatus.ACTIVE) {
+            throw new ExchangeException(ExchangeErrorCode.EXCHANGE_CLOSED);
+        }
+        // Todo: 확정 약속이 있으면 NEW_ITEM_LOCKED
+        OfferedItem item = newItem();
+        OfferedItem updatedItem = item.updateNew(name, opened, description);
+        return new Exchange(id, postId, requestUserId, ownerId, offerType,
+                List.of(updatedItem), status, completedAt, createdAt, updatedAt);
+    }
+
     private static void validateNotOwnPost(Long requesterId, Long ownerId) {
         if (requesterId.equals(ownerId)) {
             throw new ExchangeException(ExchangeErrorCode.OWN_POST_REQUEST);
         }
+    }
+
+    private OfferedItem newItem() {
+        return offeredItems.get(0);   // NEW 방식은 아이템이 항상 1개
     }
 }

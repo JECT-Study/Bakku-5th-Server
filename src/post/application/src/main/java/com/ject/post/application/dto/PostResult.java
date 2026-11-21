@@ -21,6 +21,7 @@ public record PostResult(
         AuthorInfo author,
         boolean isMine,
         Long chatRoomId,
+        boolean canRequest,
         OffsetDateTime createdAt
 ) {
 
