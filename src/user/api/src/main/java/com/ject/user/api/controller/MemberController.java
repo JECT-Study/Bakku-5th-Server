@@ -1,5 +1,6 @@
 package com.ject.user.api.controller;
 
+import com.ject.common.core.time.ServiceTime;
 import com.ject.common.web.response.ApiResponse;
 import com.ject.user.api.controller.api.MemberApi;
 import com.ject.user.api.dto.enums.Gender;
@@ -16,11 +17,13 @@ import com.ject.user.api.dto.response.NicknameAvailabilityResponse;
 import com.ject.user.api.dto.response.NicknameUpdateResponse;
 import com.ject.user.api.dto.response.NoShowResponse;
 import com.ject.user.api.dto.response.WithdrawalNoticeResponse;
+import com.ject.user.application.dto.MarketingConsent;
+import com.ject.user.application.dto.MyInfo;
 import com.ject.user.application.dto.NicknameAvailability;
+import com.ject.user.application.service.MemberService;
 import com.ject.user.application.service.NicknameService;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDate;
 import java.util.List;
 
 import static com.ject.user.api.controller.UserStubData.MY_ID;
@@ -31,9 +34,13 @@ import static com.ject.user.api.controller.UserStubData.NOW;
 public class MemberController implements MemberApi {
 
     private final NicknameService nicknameService;
+    private final MemberService memberService;
+    private final ServiceTime serviceTime;
 
-    public MemberController(NicknameService nicknameService) {
+    public MemberController(NicknameService nicknameService, MemberService memberService, ServiceTime serviceTime) {
         this.nicknameService = nicknameService;
+        this.memberService = memberService;
+        this.serviceTime = serviceTime;
     }
 
     @Override
@@ -47,9 +54,13 @@ public class MemberController implements MemberApi {
     }
 
     @Override
-    public ApiResponse<MyInfoResponse> getMe() {
-        return ApiResponse.success(new MyInfoResponse(MY_ID, MY_NICKNAME, LocalDate.of(2001, 3, 15), Gender.FEMALE, 12,
-                null, false, NOW.minusDays(30), null, null, null, null, null));
+    public ApiResponse<MyInfoResponse> getMe(Long memberId) {
+        MyInfo info = memberService.getMyInfo(memberId);
+        Gender gender = info.gender() == null ? null : Gender.valueOf(info.gender());
+        // 매너 지표 · 후기 · 노쇼 · 경고 · 이용 제한은 2차 (MVP v0.9)
+        return ApiResponse.success(new MyInfoResponse(info.userId(), info.nickname(), info.birthDate(), gender,
+                info.completedCount(), serviceTime.toOffset(info.nicknameChangeableAt()), info.marketingAgreed(),
+                serviceTime.toOffset(info.createdAt()), null, null, null, null, null));
     }
 
     @Override
@@ -63,8 +74,11 @@ public class MemberController implements MemberApi {
     }
 
     @Override
-    public ApiResponse<MarketingConsentResponse> updateMarketingConsent(MarketingConsentRequest request) {
-        return ApiResponse.success(new MarketingConsentResponse(request.agreed(), NOW));
+    public ApiResponse<MarketingConsentResponse> updateMarketingConsent(Long memberId,
+                                                                        MarketingConsentRequest request) {
+        MarketingConsent consent = memberService.updateMarketingConsent(memberId, request.agreed());
+        return ApiResponse.success(new MarketingConsentResponse(consent.agreed(),
+                serviceTime.toOffset(consent.changedAt())));
     }
 
     @Override

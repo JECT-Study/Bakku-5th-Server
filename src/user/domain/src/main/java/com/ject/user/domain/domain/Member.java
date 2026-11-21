@@ -14,6 +14,7 @@ import java.util.Objects;
 public class Member {
 
     private static final Duration REJOIN_WAITING_PERIOD = Duration.ofDays(7);
+    private static final Duration NICKNAME_CHANGE_INTERVAL = Duration.ofDays(30);
 
     private final Long id;
     private final SocialProvider provider;
@@ -24,8 +25,8 @@ public class Member {
     private MemberStatus status;
     private final Instant restrictedUntil;
     private int completedCount;
-    private final boolean marketingAgreed;
-    private final Instant marketingChangedAt;
+    private boolean marketingAgreed;
+    private Instant marketingChangedAt;
     private final Instant nicknameChangedAt;
     private final Long previousMemberId;
     private final Instant createdAt;
@@ -111,6 +112,32 @@ public class Member {
             throw new IllegalStateException("탈퇴하지 않은 회원입니다. id=" + id);
         }
         return withdrawnAt.plus(REJOIN_WAITING_PERIOD);
+    }
+
+    /**
+     * 마케팅 정보 수신 동의를 바꾼다 (G-06-1 · P-04-04). 같은 값이면 변경 일시를 그대로 둔다.
+     * 변경 일시는 마지막으로 동의 · 철회한 시각이라, 같은 값을 다시 보내도 바뀌지 않아야 한다.
+     */
+    public void changeMarketingConsent(boolean agreed, Instant now) {
+        if (this.marketingAgreed == agreed) {
+            return;
+        }
+        this.marketingAgreed = agreed;
+        this.marketingChangedAt = now;
+    }
+
+    /**
+     * 다음에 닉네임을 바꿀 수 있는 시각. 닉네임은 30일에 한 번 바꿀 수 있다 (G-03-2).
+     * 가입 때 정한 닉네임은 횟수에 넣지 않는다 (결정 D2).
+     *
+     * @return 지금 바꿀 수 있으면 null
+     */
+    public Instant nicknameChangeableAt(Instant now) {
+        if (nicknameChangedAt == null) {
+            return null;
+        }
+        Instant changeableAt = nicknameChangedAt.plus(NICKNAME_CHANGE_INTERVAL);
+        return now.isBefore(changeableAt) ? changeableAt : null;
     }
 
     public boolean canRejoin(Instant now) {
