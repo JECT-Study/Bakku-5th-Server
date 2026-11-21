@@ -1,6 +1,6 @@
 package com.ject.exchange.api.dto.request;
 
-import com.ject.exchange.application.dto.command.CreateExchangeCommand;
+import com.ject.exchange.application.dto.dto.NewItem;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -19,6 +19,7 @@ public record NewItemRequest(
         String name,
 
         @Schema(description = "개봉 여부. true 개봉 / false 미개봉", example = "false")
+        @NotNull
         Boolean opened,
 
         @Schema(description = "자세한 설명 (0~1,000자)", example = "가챠에서 두 개 나와서 하나 교환해요")
@@ -26,7 +27,7 @@ public record NewItemRequest(
         String description
 ) {
         // Todo: 이미지 모듈 업로드 후 수정
-        public CreateExchangeCommand.NewItem toCommand() {
-                return new CreateExchangeCommand.NewItem(name, opened, description);
+        public NewItem toNewItem() {
+                return new NewItem(name, opened, description);
         }
 }

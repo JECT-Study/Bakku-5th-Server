@@ -44,4 +44,11 @@ public class OfferedItem {
         }
         return new OfferedItem(null, null, name, opened, description, sortOrder);
     }
+
+    public OfferedItem updateNew(ItemName name, Boolean opened, ItemDescription description) {
+        if (name == null || opened == null || description == null) {
+            throw new ExchangeException(ExchangeErrorCode.INVALID_OFFERED_ITEMS);
+        }
+        return new OfferedItem(id, null, name, opened, description, sortOrder);
+    }
 }
