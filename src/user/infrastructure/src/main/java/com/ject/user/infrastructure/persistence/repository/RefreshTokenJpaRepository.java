@@ -30,4 +30,8 @@ public interface RefreshTokenJpaRepository extends JpaRepository<RefreshTokenJpa
             """)
     int rotate(@Param("id") Long id, @Param("tokenHash") String tokenHash,
                @Param("previousTokenHash") String previousTokenHash, @Param("rotatedAt") Instant rotatedAt);
+
+    @Modifying(flushAutomatically = true)
+    @Query("DELETE FROM RefreshTokenJpaEntity t WHERE t.memberId = :memberId")
+    void deleteAllByMemberId(@Param("memberId") Long memberId);
 }

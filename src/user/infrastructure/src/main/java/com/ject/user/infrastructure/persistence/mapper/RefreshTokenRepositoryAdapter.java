@@ -57,6 +57,11 @@ public class RefreshTokenRepositoryAdapter implements RefreshTokenRepository {
         refreshTokenJpaRepository.deleteById(token.getId());
     }
 
+    @Override
+    public void deleteAllByMemberId(Long memberId) {
+        refreshTokenJpaRepository.deleteAllByMemberId(memberId);
+    }
+
     private static RefreshToken toDomain(RefreshTokenJpaEntity entity) {
         return RefreshToken.restore(entity.getId(), entity.getMemberId(), entity.getDeviceId(), entity.getTokenHash(),
                 entity.getPreviousTokenHash(), entity.getRotatedAt());

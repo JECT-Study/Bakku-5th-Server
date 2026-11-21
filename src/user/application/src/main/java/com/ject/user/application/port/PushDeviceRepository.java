@@ -23,4 +23,9 @@ public interface PushDeviceRepository {
      * 다른 회원이 이 기기로 로그인했을 때 이전 회원의 행을 지운다.
      */
     void deleteByDeviceIdOfOtherMembers(String deviceId, Long memberId);
+
+    /**
+     * 회원의 모든 푸시 기기를 지운다. 탈퇴한 회원의 기기로 알림이 가지 않게 한다.
+     */
+    void deleteAllByMemberId(Long memberId);
 }

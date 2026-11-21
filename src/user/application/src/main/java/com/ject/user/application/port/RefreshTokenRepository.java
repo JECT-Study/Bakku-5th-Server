@@ -25,4 +25,9 @@ public interface RefreshTokenRepository {
     boolean saveRotation(RefreshToken rotated);
 
     void delete(RefreshToken refreshToken);
+
+    /**
+     * 회원의 모든 기기 리프레시 토큰을 지운다 (탈퇴).
+     */
+    void deleteAllByMemberId(Long memberId);
 }

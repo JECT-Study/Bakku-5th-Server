@@ -34,6 +34,11 @@ class FakePushDeviceRepository implements PushDeviceRepository {
                 && !device.getMemberId().equals(memberId));
     }
 
+    @Override
+    public void deleteAllByMemberId(Long memberId) {
+        byDeviceId.values().removeIf(device -> device.getMemberId().equals(memberId));
+    }
+
     Optional<PushDevice> findByDeviceId(String deviceId) {
         return Optional.ofNullable(byDeviceId.get(deviceId));
     }

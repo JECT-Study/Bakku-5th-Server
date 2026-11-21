@@ -56,9 +56,12 @@ public interface MemberApi {
 
     @Operation(summary = "MB-6 회원 탈퇴",
             description = "진행 중인 교환이 있어도 탈퇴할 수 있습니다. 확정 약속 자동 취소 → 교환 가능 글 삭제 → 모든 채팅방 나감 순서로 처리하고, "
-                    + "닉네임 · 생년월일 · 성별은 즉시 비웁니다. 소셜 연결 끊기, 리프레시 · 푸시 토큰 삭제도 함께 합니다.")
+                    + "닉네임 · 생년월일 · 성별은 즉시 비웁니다. 모든 기기의 리프레시 · 푸시 토큰도 지웁니다. "
+                    + "카카오 · 네이버 연결 끊기는 FE가 SDK로 먼저 한 뒤 이 API를 부릅니다. "
+                    + "탈퇴 후 같은 토큰으로 부르면 MEMBER_201 → 기기 로그인 정보 삭제 후 로그인 화면")
     @DeleteMapping("/me")
-    ApiResponse<Void> withdraw(@Valid @RequestBody(required = false) WithdrawalRequest request);
+    ApiResponse<Void> withdraw(@LoginMember Long memberId,
+                               @Valid @RequestBody(required = false) WithdrawalRequest request);
 
     @Operation(summary = "MB-7 마케팅 수신 동의 변경",
             description = "설정 > 알림 설정의 마케팅 정보 수신 토글입니다. 1차 알림 설정은 이것만 있습니다. 바꾸면 변경 일시를 저장하고, 지금과 같은 값이면 변경 일시는 그대로입니다.")

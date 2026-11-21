@@ -34,4 +34,8 @@ public interface PushDeviceJpaRepository extends JpaRepository<PushDeviceJpaEnti
     @Modifying(flushAutomatically = true)
     @Query("DELETE FROM PushDeviceJpaEntity d WHERE d.deviceId = :deviceId AND d.memberId <> :memberId")
     void deleteByDeviceIdOfOtherMembers(@Param("deviceId") String deviceId, @Param("memberId") Long memberId);
+
+    @Modifying(flushAutomatically = true)
+    @Query("DELETE FROM PushDeviceJpaEntity d WHERE d.memberId = :memberId")
+    void deleteAllByMemberId(@Param("memberId") Long memberId);
 }

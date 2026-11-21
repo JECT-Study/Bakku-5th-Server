@@ -22,6 +22,7 @@ import com.ject.user.application.dto.MyInfo;
 import com.ject.user.application.dto.NicknameAvailability;
 import com.ject.user.application.service.MemberService;
 import com.ject.user.application.service.NicknameService;
+import com.ject.user.application.service.WithdrawalService;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -35,11 +36,14 @@ public class MemberController implements MemberApi {
 
     private final NicknameService nicknameService;
     private final MemberService memberService;
+    private final WithdrawalService withdrawalService;
     private final ServiceTime serviceTime;
 
-    public MemberController(NicknameService nicknameService, MemberService memberService, ServiceTime serviceTime) {
+    public MemberController(NicknameService nicknameService, MemberService memberService,
+                            WithdrawalService withdrawalService, ServiceTime serviceTime) {
         this.nicknameService = nicknameService;
         this.memberService = memberService;
+        this.withdrawalService = withdrawalService;
         this.serviceTime = serviceTime;
     }
 
@@ -69,7 +73,9 @@ public class MemberController implements MemberApi {
     }
 
     @Override
-    public ApiResponse<Void> withdraw(WithdrawalRequest request) {
+    public ApiResponse<Void> withdraw(Long memberId, WithdrawalRequest request) {
+        String reason = request == null || request.reason() == null ? null : request.reason().name();
+        withdrawalService.withdraw(memberId, reason);
         return ApiResponse.success(null);
     }
 
