@@ -2,10 +2,15 @@ package com.ject.user.infrastructure.persistence.mapper;
 
 import com.ject.user.application.port.MemberRepository;
 import com.ject.user.domain.domain.Member;
+import com.ject.user.domain.domain.MemberStatus;
 import com.ject.user.domain.domain.Nickname;
+import com.ject.user.domain.domain.SocialProvider;
+import com.ject.user.domain.exception.AlreadySignedUpException;
+import com.ject.user.domain.exception.DuplicateNicknameException;
 import com.ject.user.domain.exception.MemberNotFoundException;
 import com.ject.user.infrastructure.persistence.entity.MemberJpaEntity;
 import com.ject.user.infrastructure.persistence.repository.MemberJpaRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
 
 import java.time.Clock;
@@ -18,6 +23,9 @@ import java.util.Optional;
  */
 @Repository
 public class MemberRepositoryAdapter implements MemberRepository {
+
+    private static final String NICKNAME_UNIQUE_INDEX = "uk_user_member_nickname";
+    private static final String SOCIAL_ACCOUNT_UNIQUE_INDEX = "uk_user_member_provider_social_id_hash";
 
     private final MemberJpaRepository memberJpaRepository;
     private final Clock clock;
@@ -33,13 +41,31 @@ public class MemberRepositoryAdapter implements MemberRepository {
     @Override
     public Member save(Member member) {
         if (member.getId() == null) {
-            MemberJpaEntity saved = memberJpaRepository.save(MemberMapper.toNewEntity(member));
-            return MemberMapper.toDomain(saved);
+            return MemberMapper.toDomain(insert(member));
         }
         MemberJpaEntity entity = memberJpaRepository.findById(member.getId())
                 .orElseThrow(() -> new MemberNotFoundException(member.getId()));
         MemberMapper.apply(member, entity);
         return MemberMapper.toDomain(memberJpaRepository.save(entity));
+    }
+
+    /**
+     * 확인 뒤 같은 닉네임 · 같은 소셜 계정으로 동시에 가입하면 DB 고유 제약에서 걸린다 (결정 C8).
+     * id가 IDENTITY라 insert가 바로 실행되므로 여기서 제약 이름으로 구분해 비즈니스 예외로 바꾼다.
+     */
+    private MemberJpaEntity insert(Member member) {
+        try {
+            return memberJpaRepository.save(MemberMapper.toNewEntity(member));
+        } catch (DataIntegrityViolationException e) {
+            String message = String.valueOf(e.getMostSpecificCause().getMessage());
+            if (message.contains(NICKNAME_UNIQUE_INDEX)) {
+                throw new DuplicateNicknameException();
+            }
+            if (message.contains(SOCIAL_ACCOUNT_UNIQUE_INDEX)) {
+                throw new AlreadySignedUpException();
+            }
+            throw e;
+        }
     }
 
     @Override
@@ -50,6 +76,17 @@ public class MemberRepositoryAdapter implements MemberRepository {
     @Override
     public Optional<Member> findByNickname(Nickname nickname) {
         return memberJpaRepository.findByNicknameIgnoreCase(nickname.value()).map(MemberMapper::toDomain);
+    }
+
+    @Override
+    public Optional<Member> findActiveBySocialIdHash(SocialProvider provider, String socialIdHash) {
+        return memberJpaRepository.findActiveBySocialIdHash(provider, socialIdHash).map(MemberMapper::toDomain);
+    }
+
+    @Override
+    public Optional<Member> findLatestWithdrawnBySocialIdHash(SocialProvider provider, String socialIdHash) {
+        return memberJpaRepository.findFirstByProviderAndSocialIdHashAndStatusOrderByWithdrawnAtDesc(
+                provider, socialIdHash, MemberStatus.WITHDRAWN).map(MemberMapper::toDomain);
     }
 
     @Override

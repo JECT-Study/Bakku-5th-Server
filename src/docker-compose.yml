@@ -44,6 +44,22 @@ services:
       timeout: 5s
       retries: 12
 
+  garage:
+    image: dxflrs/garage:v2.3.0
+    ports:
+      - "127.0.0.1:3900:3900"
+    volumes:
+      - ./docker/garage/garage.toml:/etc/garage.toml:ro
+      - garage-meta:/var/lib/garage/meta
+      - garage-data:/var/lib/garage/data
+    healthcheck:
+      test: ["CMD", "/garage", "status"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
 volumes:
   postgres-data:
   es-data:
+  garage-meta:
+  garage-data:

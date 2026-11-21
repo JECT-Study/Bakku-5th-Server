@@ -9,6 +9,9 @@ dependencies {
     // 작성자 조회 (user 도메인 조회 계약)
     implementation project(':user-application')
 
+    // 사진 확인 · 이동 (image 도메인 연결 계약)
+    implementation project(':image-application')
+
     // 조회 수 하루 1회 기록
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 

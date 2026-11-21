@@ -3,8 +3,10 @@ package com.ject.user.application;
 import com.ject.user.application.port.MemberRepository;
 import com.ject.user.domain.domain.Member;
 import com.ject.user.domain.domain.Nickname;
+import com.ject.user.domain.domain.SocialProvider;
 
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +40,22 @@ class FakeMemberRepository implements MemberRepository {
                 .filter(member -> member.getNickname() != null)
                 .filter(member -> member.getNickname().normalized().equals(nickname.normalized()))
                 .findFirst();
+    }
+
+    @Override
+    public Optional<Member> findActiveBySocialIdHash(SocialProvider provider, String socialIdHash) {
+        return store.values().stream()
+                .filter(member -> member.getProvider() == provider && socialIdHash.equals(member.getSocialIdHash()))
+                .filter(member -> !member.isWithdrawn())
+                .findFirst();
+    }
+
+    @Override
+    public Optional<Member> findLatestWithdrawnBySocialIdHash(SocialProvider provider, String socialIdHash) {
+        return store.values().stream()
+                .filter(member -> member.getProvider() == provider && socialIdHash.equals(member.getSocialIdHash()))
+                .filter(Member::isWithdrawn)
+                .max(Comparator.comparing(Member::getWithdrawnAt));
     }
 
     @Override

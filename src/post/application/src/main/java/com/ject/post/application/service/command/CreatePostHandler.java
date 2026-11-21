@@ -3,6 +3,7 @@ package com.ject.post.application.service.command;
 import com.ject.common.core.cqrs.command.CommandHandler;
 import com.ject.common.core.time.ServiceTime;
 import com.ject.post.application.dto.command.CreatePostCommand;
+import com.ject.post.application.port.PostImagePort;
 import com.ject.post.domain.domain.Place;
 import com.ject.post.domain.domain.Post;
 import com.ject.post.domain.domain.PostCategory;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class CreatePostHandler implements CommandHandler<CreatePostCommand, Long> {
 
     private final PostRepository postRepository;
+    private final PostImagePort postImagePort;
     private final ServiceTime serviceTime;
 
     @Override
@@ -36,7 +38,7 @@ public class CreatePostHandler implements CommandHandler<CreatePostCommand, Long
                 serviceTime.now());
 
         Post saved = postRepository.save(post);
-        saved.moveImagesToPost();
+        saved.attachImages(postImagePort.attachToPost(saved.getAuthorId(), saved.getId(), saved.getImageKeys()));
         return postRepository.save(saved).getId();
     }
 }
