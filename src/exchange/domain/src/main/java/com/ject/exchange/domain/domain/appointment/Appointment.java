@@ -98,6 +98,17 @@ public class Appointment {
     }
 
     /**
+     * 조회 시점에 보여 줄 상태. 만료 스케줄이 없어 저장 상태가 PROPOSED로 남은 제안은 만료 시각이 지나면 EXPIRED로 본다.
+     * 저장값은 바꾸지 않는다
+     */
+    public AppointmentStatus displayStatusAt(Instant now) {
+        if (status == AppointmentStatus.PROPOSED && !isPendingProposalAt(now)) {
+            return AppointmentStatus.EXPIRED;
+        }
+        return status;
+    }
+
+    /**
      * 조회자의 약속 전 알림(분). 참여자가 아니면 null
      */
     public Integer reminderOffsetMinutesOf(Long userId) {

@@ -23,6 +23,7 @@ class FakeQueryBus implements QueryBus {
     private final FakeExchangeRepository exchangeRepository;
     private final List<Query<?>> sentQueries = new ArrayList<>();
     private AppointmentResult appointmentResult;
+    private RuntimeException appointmentFailure;
 
     FakeQueryBus(FakeExchangeRepository exchangeRepository) {
         this.exchangeRepository = exchangeRepository;
@@ -41,6 +42,9 @@ class FakeQueryBus implements QueryBus {
                     exchange.getOwnerId(), new UserInfo(exchange.getOwnerId(), "쿠로미덕후"));
             return (R) ExchangeResult.of(exchange, posts, users);
         }
+        if (query instanceof GetAppointmentQuery && appointmentFailure != null) {
+            throw appointmentFailure;
+        }
         if (query instanceof GetAppointmentQuery && appointmentResult != null) {
             return (R) appointmentResult;
         }
@@ -49,6 +53,11 @@ class FakeQueryBus implements QueryBus {
 
     void willReturnAppointment(AppointmentResult result) {
         this.appointmentResult = result;
+    }
+
+    /** 약속 조회가 Handler 예외(없는 약속 · 참여자 아님)로 끝나는 경우를 흉내 낸다. */
+    void willFailAppointment(RuntimeException failure) {
+        this.appointmentFailure = failure;
     }
 
     List<Query<?>> sentQueries() {

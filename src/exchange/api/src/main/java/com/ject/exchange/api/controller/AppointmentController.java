@@ -4,7 +4,6 @@ import com.ject.common.core.cqrs.command.CommandBus;
 import com.ject.common.core.cqrs.query.QueryBus;
 import com.ject.common.web.response.ApiResponse;
 import com.ject.exchange.api.controller.api.AppointmentApi;
-import com.ject.exchange.api.dto.enums.AppointmentChangeStatus;
 import com.ject.exchange.api.dto.enums.AppointmentStatus;
 import com.ject.exchange.api.dto.enums.AppointmentTimeType;
 import com.ject.exchange.api.dto.enums.ConfirmationAnswer;
@@ -13,7 +12,6 @@ import com.ject.exchange.api.dto.request.AcceptAppointmentRequest;
 import com.ject.exchange.api.dto.request.ConfirmationRequest;
 import com.ject.exchange.api.dto.request.ProposeAppointmentRequest;
 import com.ject.exchange.api.dto.request.UpdateReminderRequest;
-import com.ject.exchange.api.dto.response.AppointmentChangeResponse;
 import com.ject.exchange.api.dto.response.AppointmentResponse;
 import com.ject.exchange.api.dto.response.ConfirmationResponse;
 import com.ject.exchange.application.dto.dto.AppointmentResult;
@@ -23,10 +21,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import static com.ject.exchange.api.controller.ExchangeStubData.APPOINTMENT_CREATED_AT;
 import static com.ject.exchange.api.controller.ExchangeStubData.APPOINTMENT_ID;
-import static com.ject.exchange.api.controller.ExchangeStubData.CHANGED_SCHEDULED_AT;
-import static com.ject.exchange.api.controller.ExchangeStubData.CHANGE_ID;
-import static com.ject.exchange.api.controller.ExchangeStubData.CHANGE_OFFERED_ITEM_IDS;
-import static com.ject.exchange.api.controller.ExchangeStubData.CHANGE_REQUESTED_AT;
 import static com.ject.exchange.api.controller.ExchangeStubData.EXCHANGE_ID;
 import static com.ject.exchange.api.controller.ExchangeStubData.OWNER_ID;
 import static com.ject.exchange.api.controller.ExchangeStubData.REQUESTER_ID;
@@ -51,14 +45,9 @@ public class AppointmentController implements AppointmentApi {
     }
 
     @Override
-    public ApiResponse<AppointmentResponse> getAppointment(Long appointmentId) {
-        AppointmentChangeResponse pendingChange = new AppointmentChangeResponse(
-                CHANGE_ID, appointmentId, OWNER_ID, AppointmentChangeStatus.PENDING,
-                AppointmentTimeType.SCHEDULED, CHANGED_SCHEDULED_AT, place(), CHANGE_OFFERED_ITEM_IDS,
-                CHANGE_REQUESTED_AT, null);
-        ConfirmationResponse confirmation = new ConfirmationResponse(at(27, 15, 30), null, false, null, null);
-        return ApiResponse.success(confirmedAppointment(
-                appointmentId, EXCHANGE_ID, AppointmentStatus.CONFIRMED, SCHEDULED_AT, 30, pendingChange, confirmation));
+    public ApiResponse<AppointmentResponse> getAppointment(Long memberId, Long appointmentId) {
+        AppointmentResult result = queryBus.send(new GetAppointmentQuery(appointmentId, memberId));
+        return ApiResponse.success(AppointmentResponse.from(result));
     }
 
     @Override
