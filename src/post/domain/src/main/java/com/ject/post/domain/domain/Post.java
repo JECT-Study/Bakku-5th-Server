@@ -78,6 +78,10 @@ public class Post {
     }
 
     public boolean isNowExchange(Instant now) {
+        return isNowExchange(status, nowExchangeEndsAt, now);
+    }
+
+    public static boolean isNowExchange(PostStatus status, Instant nowExchangeEndsAt, Instant now) {
         return status == PostStatus.AVAILABLE
                 && nowExchangeEndsAt != null
                 && now.isBefore(nowExchangeEndsAt);

@@ -11,6 +11,10 @@ public record Place(
     private static final String SEJONG = "세종특별자치시";
 
     public String displayRegionName() {
+        return displayRegionName(regionName);
+    }
+
+    public static String displayRegionName(String regionName) {
         String[] words = regionName.strip().split("\\s+");
         if (words.length <= 2) {
             return String.join(" ", words).replace(SEJONG, "세종시");

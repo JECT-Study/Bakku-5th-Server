@@ -1,6 +1,8 @@
 package com.ject.post.api.dto.response;
 
+import com.ject.common.web.image.ImageUrlResolver;
 import com.ject.post.api.dto.enums.PostStatus;
+import com.ject.post.application.dto.PostSummaryResult;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.OffsetDateTime;
@@ -19,7 +21,7 @@ public record PostSummaryResponse(
         @Schema(description = "구+동. 구가 없으면 시+동", example = "마포구 동교동")
         String regionName,
 
-        @Schema(description = "교환글 상태. AVAILABLE 또는 RESERVED", example = "AVAILABLE")
+        @Schema(description = "교환글 상태. 홈 목록은 AVAILABLE만", example = "AVAILABLE")
         PostStatus status,
 
         @Schema(description = "교환 가능이고 종료 시각 전이면 true", example = "true")
@@ -37,4 +39,18 @@ public record PostSummaryResponse(
         @Schema(description = "작성 시각", example = "2026-11-02T14:30:00+09:00")
         OffsetDateTime createdAt
 ) {
+
+    public static PostSummaryResponse from(PostSummaryResult result, ImageUrlResolver imageUrlResolver) {
+        return new PostSummaryResponse(
+                result.id(),
+                result.thumbnailKey() == null ? null : imageUrlResolver.resolve(result.thumbnailKey()),
+                result.title(),
+                result.regionName(),
+                PostStatus.valueOf(result.status()),
+                result.nowExchange(),
+                result.nowExchangeEndsAt(),
+                result.wantedItem(),
+                result.isMine(),
+                result.createdAt());
+    }
 }
