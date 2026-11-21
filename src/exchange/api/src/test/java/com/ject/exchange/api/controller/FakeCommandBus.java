@@ -2,6 +2,7 @@ package com.ject.exchange.api.controller;
 
 import com.ject.common.core.cqrs.command.Command;
 import com.ject.common.core.cqrs.command.CommandBus;
+import com.ject.exchange.application.dto.command.AcceptAppointmentCommand;
 import com.ject.exchange.application.dto.command.ProposeAppointmentCommand;
 import com.ject.exchange.application.dto.command.UpdateNewItemCommand;
 import com.ject.exchange.application.service.command.UpdateNewItemHandler;
@@ -19,6 +20,7 @@ class FakeCommandBus implements CommandBus {
     private final UpdateNewItemHandler updateNewItemHandler;
     private final List<Command<?>> sentCommands = new ArrayList<>();
     private Function<ProposeAppointmentCommand, Long> proposeAppointmentResponder;
+    private Function<AcceptAppointmentCommand, Long> acceptAppointmentResponder;
 
     FakeCommandBus(UpdateNewItemHandler updateNewItemHandler) {
         this.updateNewItemHandler = updateNewItemHandler;
@@ -32,6 +34,11 @@ class FakeCommandBus implements CommandBus {
         this.proposeAppointmentResponder = responder;
     }
 
+    /** A-4 커맨드 응답(약속 id 또는 예외)을 정한다. */
+    void onAcceptAppointment(Function<AcceptAppointmentCommand, Long> responder) {
+        this.acceptAppointmentResponder = responder;
+    }
+
     @Override
     @SuppressWarnings("unchecked")
     public <R> R send(Command<R> command) {
@@ -42,6 +49,10 @@ class FakeCommandBus implements CommandBus {
         if (command instanceof ProposeAppointmentCommand proposeAppointmentCommand
                 && proposeAppointmentResponder != null) {
             return (R) proposeAppointmentResponder.apply(proposeAppointmentCommand);
+        }
+        if (command instanceof AcceptAppointmentCommand acceptAppointmentCommand
+                && acceptAppointmentResponder != null) {
+            return (R) acceptAppointmentResponder.apply(acceptAppointmentCommand);
         }
         throw new IllegalStateException("이 테스트가 다루지 않는 커맨드: " + command);
     }

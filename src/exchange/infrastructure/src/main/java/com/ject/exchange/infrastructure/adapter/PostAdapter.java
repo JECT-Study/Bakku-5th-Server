@@ -30,6 +30,11 @@ public class PostAdapter implements PostPort {
     }
 
     @Override
+    public void reserve(List<Long> postIds) {
+        // Todo: post BC 예약중 전환 계약이 생기면 실제 호출로 교체 (지금은 같은 글 중복 확정을 exchange 데이터와 글 잠금으로 막는다)
+    }
+
+    @Override
     public List<PostInfo> findAllByIds(List<Long> postIds) {
         return postIds.stream().map(posts::get).filter(Objects::nonNull).toList();
     }

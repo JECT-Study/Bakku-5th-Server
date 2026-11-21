@@ -18,4 +18,10 @@ public interface PostPort {
      * @return
      */
     List<PostInfo> findAllByIds(List<Long> postIds);
+
+    /**
+     * 글들을 예약중으로 바꾸도록 post BC에 요청한다 (약속 확정 시 교환글과 고른 첨부 글).
+     * 실패하면 예외를 던지고, 호출한 트랜잭션은 롤백된다
+     */
+    void reserve(List<Long> postIds);
 }

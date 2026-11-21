@@ -3,6 +3,7 @@ package com.ject.exchange.application.service.command;
 import com.ject.exchange.application.dto.dto.PostInfo;
 import com.ject.exchange.application.port.PostPort;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +16,8 @@ import java.util.Optional;
 class FakePostPort implements PostPort {
 
     private final Map<Long, PostInfo> posts = new HashMap<>();
+    private final List<List<Long>> reserveRequests = new ArrayList<>();
+    private RuntimeException reserveFailure;
 
     @Override
     public Optional<PostInfo> findById(Long postId) {
@@ -27,6 +30,23 @@ class FakePostPort implements PostPort {
                 .map(posts::get)
                 .filter(Objects::nonNull)
                 .toList();
+    }
+
+    /** 예약중 요청을 기록한다. 실패를 정해 두면 기록 후 그 예외를 던진다. */
+    @Override
+    public void reserve(List<Long> postIds) {
+        reserveRequests.add(List.copyOf(postIds));
+        if (reserveFailure != null) {
+            throw reserveFailure;
+        }
+    }
+
+    void failReserveWith(RuntimeException failure) {
+        this.reserveFailure = failure;
+    }
+
+    List<List<Long>> reserveRequests() {
+        return reserveRequests;
     }
 
     void register(PostInfo post) {

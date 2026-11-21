@@ -13,10 +13,13 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Repository
 @RequiredArgsConstructor
@@ -67,5 +70,60 @@ public class JpaAppointmentRepository implements AppointmentRepository {
     public boolean existsPendingProposalOnPost(Long postId, Long excludedExchangeId, Instant now) {
         return appointmentEntityRepository.existsByPostAndStatusAfter(
                 postId, excludedExchangeId, AppointmentStatus.PROPOSED, now);
+    }
+
+    @Override
+    public Optional<Appointment> findByIdForUpdate(Long id) {
+        return appointmentEntityRepository.findWithLockById(id)
+                .map(entity -> AppointmentMapper.toDomain(
+                        entity, appointmentItemEntityRepository.findByAppointmentIdOrderBySortOrder(id)));
+    }
+
+    @Override
+    public List<Long> findPostIdsOf(Long appointmentId) {
+        // 잠금 전에 쓰므로 엔티티를 읽지 않고 ID만 조회한다. 엔티티가 영속성 컨텍스트에 남으면 잠금 뒤 다시 읽어도 이전 상태가 보인다
+        return appointmentEntityRepository.findExchangePostIdByAppointmentId(appointmentId)
+                .map(postId -> Stream.concat(Stream.of(postId),
+                                appointmentEntityRepository.findChosenSourcePostIdsByAppointmentId(appointmentId).stream())
+                        .distinct()
+                        .toList())
+                .orElse(List.of());
+    }
+
+    @Override
+    public Set<Long> findPostIdsBoundBy(Collection<Long> postIds, AppointmentStatus status, Long excludedExchangeId) {
+        if (postIds.isEmpty()) {
+            return Set.of();
+        }
+        return Stream.concat(
+                        appointmentEntityRepository.findBoundExchangePostIds(postIds, status, excludedExchangeId).stream(),
+                        appointmentEntityRepository.findBoundChosenSourcePostIds(postIds, status, excludedExchangeId).stream())
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    @Override
+    public List<Appointment> findPendingProposalsInvolving(Collection<Long> postIds, Long excludedExchangeId, Instant now) {
+        if (postIds.isEmpty()) {
+            return List.of();
+        }
+        List<Long> appointmentIds = Stream.concat(
+                        appointmentEntityRepository.findIdsByExchangePostAndStatusAfter(
+                                postIds, excludedExchangeId, AppointmentStatus.PROPOSED, now).stream(),
+                        appointmentEntityRepository.findIdsByChosenSourcePostAndStatusAfter(
+                                postIds, excludedExchangeId, AppointmentStatus.PROPOSED, now).stream())
+                .distinct()
+                .sorted()
+                .toList();
+        if (appointmentIds.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, List<AppointmentItemEntity>> itemsByAppointmentId = appointmentItemEntityRepository
+                .findByAppointmentIdInOrderBySortOrder(appointmentIds)
+                .stream()
+                .collect(Collectors.groupingBy(item -> item.getAppointment().getId()));
+        return appointmentEntityRepository.findAllById(appointmentIds).stream()
+                .map(entity -> AppointmentMapper.toDomain(
+                        entity, itemsByAppointmentId.getOrDefault(entity.getId(), List.of())))
+                .toList();
     }
 }

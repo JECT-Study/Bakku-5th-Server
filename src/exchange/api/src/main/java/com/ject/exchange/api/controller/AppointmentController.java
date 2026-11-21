@@ -14,6 +14,7 @@ import com.ject.exchange.api.dto.request.ProposeAppointmentRequest;
 import com.ject.exchange.api.dto.request.UpdateReminderRequest;
 import com.ject.exchange.api.dto.response.AppointmentResponse;
 import com.ject.exchange.api.dto.response.ConfirmationResponse;
+import com.ject.exchange.application.dto.command.AcceptAppointmentCommand;
 import com.ject.exchange.application.dto.dto.AppointmentResult;
 import com.ject.exchange.application.dto.query.GetAppointmentQuery;
 import com.ject.exchange.application.dto.query.GetCurrentAppointmentQuery;
@@ -60,9 +61,14 @@ public class AppointmentController implements AppointmentApi {
     }
 
     @Override
-    public ApiResponse<AppointmentResponse> acceptAppointment(Long appointmentId, AcceptAppointmentRequest request) {
-        return ApiResponse.success(confirmedAppointment(
-                appointmentId, EXCHANGE_ID, AppointmentStatus.CONFIRMED, SCHEDULED_AT, 30, null, null));
+    public ApiResponse<AppointmentResponse> acceptAppointment(Long memberId, Long appointmentId, AcceptAppointmentRequest request) {
+        // 본문은 생략할 수 있고, 생략하면 받는 사람 알림을 끈 채로 수락한다
+        AcceptAppointmentCommand command = request == null
+                ? new AcceptAppointmentCommand(appointmentId, memberId, null)
+                : request.toCommand(appointmentId, memberId);
+        Long acceptedId = commandBus.send(command);
+        AppointmentResult result = queryBus.send(new GetAppointmentQuery(acceptedId, memberId));
+        return ApiResponse.success(AppointmentResponse.from(result));
     }
 
     @Override

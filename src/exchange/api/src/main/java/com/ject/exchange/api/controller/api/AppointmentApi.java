@@ -43,7 +43,8 @@ public interface AppointmentApi {
 
     @Operation(summary = "A-4 약속 수락", description = "제안받은 사람이 약속을 수락합니다. 약속이 확정됩니다. 본문은 생략할 수 있습니다.")
     @PostMapping("/appointments/{appointmentId}/accept")
-    ApiResponse<AppointmentResponse> acceptAppointment(@PathVariable("appointmentId") Long appointmentId,
+    ApiResponse<AppointmentResponse> acceptAppointment(@Parameter(hidden = true) @LoginMember Long memberId,
+                                                       @PathVariable("appointmentId") Long appointmentId,
                                                        @Valid @RequestBody(required = false) AcceptAppointmentRequest request);
 
     @Operation(summary = "A-5 약속 제안 거절", description = "제안을 무효로 하고 제안자에게 알림을 보냅니다.")
