@@ -1,5 +1,8 @@
 package com.ject.post.domain.domain;
 
+import com.ject.post.domain.exception.NotPostAuthorException;
+import com.ject.post.domain.exception.PostCompletedException;
+import com.ject.post.domain.exception.PostReservedException;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -68,6 +71,27 @@ public class Post {
                 .nowExchangeEndsAt(nowExchangeEndsAt)
                 .viewCount(0)
                 .build();
+    }
+
+    public void update(Long editorId, List<String> imageKeys, String title, PostCategory category, boolean opened,
+                       List<String> tags, String description, String wantedItem, Place place) {
+        if (!isWrittenBy(editorId)) {
+            throw new NotPostAuthorException(id);
+        }
+        if (status == PostStatus.RESERVED) {
+            throw new PostReservedException(id);
+        }
+        if (status == PostStatus.COMPLETED) {
+            throw new PostCompletedException(id);
+        }
+        this.imageKeys = List.copyOf(imageKeys);
+        this.title = title;
+        this.category = category;
+        this.opened = opened;
+        this.tags = distinctTags(tags);
+        this.description = description;
+        this.wantedItem = wantedItem;
+        this.place = place;
     }
 
     public void attachImages(List<String> finalKeys) {

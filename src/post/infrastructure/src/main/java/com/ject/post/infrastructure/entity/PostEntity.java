@@ -13,6 +13,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -60,6 +61,10 @@ public class PostEntity extends BaseEntity {
 
     @Column(name = "view_count", nullable = false)
     private int viewCount;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
 
     public static PostEntity from(Post post) {
         PostEntity entity = new PostEntity();

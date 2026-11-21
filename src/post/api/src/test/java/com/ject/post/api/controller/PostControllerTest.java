@@ -12,6 +12,7 @@ import com.ject.post.application.dto.AuthorInfo;
 import com.ject.post.application.dto.PostResult;
 import com.ject.post.application.dto.command.CreatePostCommand;
 import com.ject.post.application.dto.command.IncreaseViewCountCommand;
+import com.ject.post.application.dto.command.UpdatePostCommand;
 import com.ject.post.application.dto.query.GetPostQuery;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -233,16 +234,45 @@ class PostControllerTest {
     }
 
     @Test
-    @DisplayName("PO-4 수정 응답에는 canRequest가 없고, 보내지 않은 memo는 null이다")
-    void updatePost_omitsCanRequest() throws Exception {
+    @DisplayName("PO-4 수정하면 다시 조회한 결과를 반환하고, canRequest는 없다")
+    void updatePost_returnsQueriedPost() throws Exception {
+        updatePost(UPDATE_BODY, 3L)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(10))
+                .andExpect(jsonPath("$.data.images[0].url")
+                        .value("http://localhost:8080/api/v1/images/post/10/8f14e45f.jpg"))
+                .andExpect(jsonPath("$.data.canRequest").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("PO-4 수정자는 토큰의 회원이고, 요청 값을 Command로 넘긴 뒤 조회한다")
+    void updatePost_sendsCommandThenQuery() throws Exception {
+        updatePost(UPDATE_BODY, 3L);
+
+        UpdatePostCommand command = (UpdatePostCommand) sent.get(0);
+        assertEquals(10L, command.postId());
+        assertEquals(3L, command.editorId());
+        assertEquals(List.of("post/10/8f14e45f.jpg", "post/tmp/3/c9f0f895.jpg"), command.imageKeys());
+        assertEquals("CHARACTER", command.category());
+        assertNull(command.wantedItem());
+        assertNull(command.place().memo());
+        assertEquals(new GetPostQuery(10L, 3L), sent.get(1));
+    }
+
+    @Test
+    @DisplayName("PO-4 로그인 정보가 없으면 AUTH_001")
+    void updatePost_withoutLogin_returnsAuth001() throws Exception {
         mockMvc.perform(put("/api/v1/posts/10")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(UPDATE_BODY))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.images[0].key").value("post/10/8f14e45f.jpg"))
-                .andExpect(jsonPath("$.data.images[1].key").value("post/10/c9f0f895.jpg"))
-                .andExpect(jsonPath("$.data.place", hasEntry(equalTo("memo"), nullValue())))
-                .andExpect(jsonPath("$.data.canRequest").doesNotExist());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTH_001"));
+    }
+
+    @Test
+    @DisplayName("PO-4 제품명이 비어 있으면 COMMON_001")
+    void updatePost_blankTitle_returnsCommon001() throws Exception {
+        expectCommon001(updatePost(UPDATE_BODY.replace("\"치이카와 하치와레 가챠 키링\"", "\"  \""), 3L));
     }
 
     @Test
@@ -279,6 +309,13 @@ class PostControllerTest {
         return mockMvc.perform(post("/api/v1/posts")
                 .requestAttr(LoginMember.ATTRIBUTE, 3L)
                 .header("Idempotency-Key", UUID.randomUUID().toString())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body));
+    }
+
+    private ResultActions updatePost(String body, Long memberId) throws Exception {
+        return mockMvc.perform(put("/api/v1/posts/10")
+                .requestAttr(LoginMember.ATTRIBUTE, memberId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body));
     }
