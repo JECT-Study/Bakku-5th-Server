@@ -24,6 +24,14 @@ spring:
 
 app:
   time-zone: ${APP_TIME_ZONE:Asia/Seoul}
+  version:
+    # 앱 최소 지원 버전 · 스토어 주소 (AP-1). 이보다 낮은 앱은 강제 업데이트. 배포 없이 환경변수로 바꾼다
+    ios:
+      minimum-version: ${APP_IOS_MINIMUM_VERSION:1.0.0}
+      store-url: ${APP_IOS_STORE_URL:https://apps.apple.com/app/id0000000000}
+    android:
+      minimum-version: ${APP_ANDROID_MINIMUM_VERSION:1.0.0}
+      store-url: ${APP_ANDROID_STORE_URL:https://play.google.com/store/apps/details?id=com.bakku.app}
   terms:
     # 약관 본문 웹뷰 주소 앞부분. 도메인이 정해지면 환경마다 TERMS_DOCUMENT_BASE_URL로 넣는다
     document-base-url: ${TERMS_DOCUMENT_BASE_URL:https://{도메인}}
