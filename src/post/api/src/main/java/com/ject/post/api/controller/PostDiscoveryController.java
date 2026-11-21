@@ -65,7 +65,7 @@ public class PostDiscoveryController implements PostDiscoveryApi {
 
     private static CursorPageResponse<PostSummaryResponse> page() {
         PostSummaryResponse post = new PostSummaryResponse(
-                POST_ID, "https://{api}/api/v1/images/post/10/8f14e45f.jpg", "치이카와 하치와레 가챠 키링", "마포구 동교동",
+                POST_ID, "https://{api}/api/v1/images/post/10/8f14e45f.jpg", "치이카와 하치와레 가챠 키링", "서울특별시 마포구 동교동",
                 PostStatus.AVAILABLE, true, NOW_EXCHANGE_ENDS_AT, "치이카와 가챠 키링 (하치와레, 모몽가 제외)",
                 false, CREATED_AT);
         return new CursorPageResponse<>(List.of(post), "eyJpZCI6MTB9", true);

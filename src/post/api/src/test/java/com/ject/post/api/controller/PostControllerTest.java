@@ -17,6 +17,8 @@ import com.ject.post.application.dto.query.GetPostQuery;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.MediaType;
 import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
@@ -110,7 +112,7 @@ class PostControllerTest {
                 .andExpect(jsonPath("$.data.images[0].key").value("post/10/8f14e45f.jpg"))
                 .andExpect(jsonPath("$.data.images[0].url")
                         .value("http://localhost:8080/api/v1/images/post/10/8f14e45f.jpg"))
-                .andExpect(jsonPath("$.data.place.regionName").value("마포구 동교동"))
+                .andExpect(jsonPath("$.data.place.regionName").value("서울특별시 마포구 동교동"))
                 .andExpect(jsonPath("$.data.isMine").value(true))
                 .andExpect(jsonPath("$.data.nowExchangeEndsAt").value("2026-11-02T15:30:00+09:00"))
                 .andExpect(jsonPath("$.data.author.completedCount").value(12))
@@ -181,6 +183,22 @@ class PostControllerTest {
     @DisplayName("PO-1 태그에 #이 있으면 COMMON_001")
     void createPost_tagWithHash_returnsCommon001() throws Exception {
         expectCommon001(createPost(CREATE_BODY.replace("[\"치이카와\", \"하치와레\"]", "[\"#치이카와\"]")));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"용산", "마포구 동교동", "서울 마포구 동교동", "서울특별시", "서울특별시 a b c d"})
+    @DisplayName("PO-1 지역이 시/도 + 1~3단어 형식이 아니면 COMMON_001")
+    void createPost_invalidRegionName_returnsCommon001(String regionName) throws Exception {
+        expectCommon001(createPost(CREATE_BODY.replace("서울특별시 마포구 동교동", regionName)));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"경기도 성남시 분당구 정자동", "세종특별자치시 조치원읍", "강원도 춘천시 효자동",
+            "강원특별자치도 춘천시 효자동", "전북특별자치도 전주시 완산구 중앙동"})
+    @DisplayName("PO-1 지역이 시/도로 시작하는 2~4단어면 받는다")
+    void createPost_validRegionName_returns201(String regionName) throws Exception {
+        createPost(CREATE_BODY.replace("서울특별시 마포구 동교동", regionName))
+                .andExpect(status().isCreated());
     }
 
     @Test
@@ -276,6 +294,12 @@ class PostControllerTest {
     }
 
     @Test
+    @DisplayName("PO-4 지역이 시/도로 시작하지 않으면 COMMON_001")
+    void updatePost_invalidRegionName_returnsCommon001() throws Exception {
+        expectCommon001(updatePost(UPDATE_BODY.replace("서울특별시 마포구 동교동", "마포구 동교동"), 3L));
+    }
+
+    @Test
     @DisplayName("PO-5 삭제하면 data는 null이다")
     void deletePost_returnsNullData() throws Exception {
         mockMvc.perform(delete("/api/v1/posts/10"))
@@ -356,7 +380,7 @@ class PostControllerTest {
                     List.of("post/10/8f14e45f.jpg", "post/10/c9f0f895.jpg"),
                     "치이카와 하치와레 가챠 키링", "CHARACTER", false, List.of("치이카와", "하치와레"),
                     "치이카와 가챠 3탄에서 뽑았어요.", "치이카와 가챠 키링",
-                    new PostResult.PlaceResult(37.5563, 126.9236, "스타벅스 홍대동교점", "마포구 동교동", "AK플라자 주변"),
+                    new PostResult.PlaceResult(37.5563, 126.9236, "스타벅스 홍대동교점", "서울특별시 마포구 동교동", "AK플라자 주변"),
                     true, OffsetDateTime.parse("2026-11-02T15:30:00+09:00"), 0, 0,
                     new AuthorInfo(3L, "하치와레러버", 12), mine, null, !mine,
                     OffsetDateTime.parse("2026-11-02T14:30:00+09:00"));

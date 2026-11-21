@@ -60,7 +60,7 @@ class PostDiscoveryControllerTest {
                 .andExpect(jsonPath("$.data.content[0].id").value(11))
                 .andExpect(jsonPath("$.data.content[0].thumbnailUrl")
                         .value("http://localhost:8080/api/v1/images/post/11/8f14e45f.jpg"))
-                .andExpect(jsonPath("$.data.content[0].regionName").value("마포구 동교동"))
+                .andExpect(jsonPath("$.data.content[0].regionName").value("서울특별시 마포구 동교동"))
                 .andExpect(jsonPath("$.data.content[0].status").value("AVAILABLE"))
                 .andExpect(jsonPath("$.data.content[0].nowExchangeEndsAt").value("2026-11-02T15:30:00+09:00"))
                 .andExpect(jsonPath("$.data.content[0]", hasEntry(equalTo("wantedItem"), nullValue())))
@@ -163,7 +163,7 @@ class PostDiscoveryControllerTest {
 
     private static PostSummaryResult summary(Long id) {
         return new PostSummaryResult(id, "post/" + id + "/8f14e45f.jpg", "치이카와 하치와레 가챠 키링",
-                "마포구 동교동", "AVAILABLE", true, OffsetDateTime.parse("2026-11-02T15:30:00+09:00"),
+                "서울특별시 마포구 동교동", "AVAILABLE", true, OffsetDateTime.parse("2026-11-02T15:30:00+09:00"),
                 null, false, OffsetDateTime.parse("2026-11-02T14:30:00+09:00"));
     }
 

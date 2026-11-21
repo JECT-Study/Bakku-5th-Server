@@ -75,7 +75,7 @@ class GetPostsHandlerTest {
     }
 
     @Test
-    @DisplayName("카드: 지역은 구+동, 지금 교환은 종료 전일 때만, 시각은 +09:00, 내 글 여부")
+    @DisplayName("카드: 지역은 저장한 원본, 지금 교환은 종료 전일 때만, 시각은 +09:00, 내 글 여부")
     void handle_mapsCard() {
         // given
         Instant endsAt = NOW.plus(Duration.ofMinutes(30));
@@ -89,7 +89,7 @@ class GetPostsHandlerTest {
 
         // then
         PostSummaryResult mine = content.get(0);
-        assertEquals("마포구 동교동", mine.regionName());
+        assertEquals("서울특별시 마포구 동교동", mine.regionName());
         assertEquals("post/2/8f14e45f.jpg", mine.thumbnailKey());
         assertTrue(mine.nowExchange());
         assertEquals(OffsetDateTime.parse("2026-11-02T15:00:00+09:00"), mine.nowExchangeEndsAt());

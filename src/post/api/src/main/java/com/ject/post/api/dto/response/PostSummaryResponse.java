@@ -18,7 +18,7 @@ public record PostSummaryResponse(
         @Schema(description = "제품명", example = "치이카와 하치와레 가챠 키링")
         String title,
 
-        @Schema(description = "구+동. 구가 없으면 시+동", example = "마포구 동교동")
+        @Schema(description = "저장한 원본 (시/도 + 구 + 동)", example = "서울특별시 마포구 동교동")
         String regionName,
 
         @Schema(description = "교환글 상태. 홈 목록은 AVAILABLE만", example = "AVAILABLE")
