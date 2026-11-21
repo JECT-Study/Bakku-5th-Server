@@ -1,6 +1,7 @@
 package com.ject.post.infrastructure.entity;
 
 import com.ject.common.jpa.BaseEntity;
+import com.ject.post.domain.domain.Hub;
 import com.ject.post.domain.domain.Post;
 import com.ject.post.domain.domain.PostCategory;
 import com.ject.post.domain.domain.PostStatus;
@@ -56,6 +57,10 @@ public class PostEntity extends BaseEntity {
     @Embedded
     private PlaceEmbeddable place;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "hub", nullable = false, length = 20)
+    private Hub hub;
+
     @Column(name = "now_exchange_ends_at")
     private Instant nowExchangeEndsAt;
 
@@ -87,6 +92,7 @@ public class PostEntity extends BaseEntity {
                 .regionName(post.getPlace().regionName())
                 .memo(post.getPlace().memo())
                 .build();
+        this.hub = post.getPlace().hub();
         this.nowExchangeEndsAt = post.getNowExchangeEndsAt();
         this.viewCount = post.getViewCount();
     }

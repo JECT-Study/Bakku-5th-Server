@@ -10,6 +10,10 @@ public record Place(
 
     private static final String SEJONG = "세종특별자치시";
 
+    public Hub hub() {
+        return Hub.of(lat, lng);
+    }
+
     public String displayRegionName() {
         return displayRegionName(regionName);
     }
