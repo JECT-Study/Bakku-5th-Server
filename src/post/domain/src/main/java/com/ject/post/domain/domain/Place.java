@@ -8,21 +8,7 @@ public record Place(
         String memo
 ) {
 
-    private static final String SEJONG = "세종특별자치시";
-
     public Hub hub() {
         return Hub.of(lat, lng);
-    }
-
-    public String displayRegionName() {
-        return displayRegionName(regionName);
-    }
-
-    public static String displayRegionName(String regionName) {
-        String[] words = regionName.strip().split("\\s+");
-        if (words.length <= 2) {
-            return String.join(" ", words).replace(SEJONG, "세종시");
-        }
-        return words[words.length - 2] + " " + words[words.length - 1];
     }
 }
