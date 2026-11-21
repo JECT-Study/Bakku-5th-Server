@@ -3,12 +3,14 @@ package com.ject.exchange.api.controller;
 import com.ject.common.core.cqrs.command.Command;
 import com.ject.common.core.cqrs.command.CommandBus;
 import com.ject.exchange.application.dto.command.AcceptAppointmentCommand;
+import com.ject.exchange.application.dto.command.CreateExchangeCommand;
 import com.ject.exchange.application.dto.command.ProposeAppointmentCommand;
 import com.ject.exchange.application.dto.command.RejectAppointmentCommand;
 import com.ject.exchange.application.dto.command.RespondConfirmationCommand;
 import com.ject.exchange.application.dto.command.UpdateNewItemCommand;
 import com.ject.exchange.application.dto.command.UpdateReminderCommand;
 import com.ject.exchange.application.dto.command.WithdrawAppointmentCommand;
+import com.ject.exchange.application.service.command.CreateExchangeHandler;
 import com.ject.exchange.application.service.command.UpdateNewItemHandler;
 
 import java.util.ArrayList;
@@ -16,12 +18,13 @@ import java.util.List;
 import java.util.function.Function;
 
 /**
- * 테스트용 가짜 커맨드 버스. 받은 커맨드를 기록하고, E-3 커맨드는 실제 Handler로 넘긴다.
+ * 테스트용 가짜 커맨드 버스. 받은 커맨드를 기록하고, E-1 · E-3 커맨드는 실제 Handler로 넘긴다.
  * A-1 커맨드는 테스트가 정한 응답(약속 id 또는 예외)을 돌려준다.
  */
 class FakeCommandBus implements CommandBus {
 
     private final UpdateNewItemHandler updateNewItemHandler;
+    private final CreateExchangeHandler createExchangeHandler;
     private final List<Command<?>> sentCommands = new ArrayList<>();
     private Function<ProposeAppointmentCommand, Long> proposeAppointmentResponder;
     private Function<AcceptAppointmentCommand, Long> acceptAppointmentResponder;
@@ -30,8 +33,13 @@ class FakeCommandBus implements CommandBus {
     private Function<UpdateReminderCommand, Long> updateReminderResponder;
     private Function<RespondConfirmationCommand, Long> respondConfirmationResponder;
 
-    FakeCommandBus(UpdateNewItemHandler updateNewItemHandler) {
+    FakeCommandBus(UpdateNewItemHandler updateNewItemHandler, CreateExchangeHandler createExchangeHandler) {
         this.updateNewItemHandler = updateNewItemHandler;
+        this.createExchangeHandler = createExchangeHandler;
+    }
+
+    FakeCommandBus(UpdateNewItemHandler updateNewItemHandler) {
+        this(updateNewItemHandler, null);
     }
 
     FakeCommandBus() {
@@ -73,6 +81,9 @@ class FakeCommandBus implements CommandBus {
         sentCommands.add(command);
         if (command instanceof UpdateNewItemCommand updateNewItemCommand) {
             return (R) updateNewItemHandler.handle(updateNewItemCommand);
+        }
+        if (command instanceof CreateExchangeCommand createExchangeCommand && createExchangeHandler != null) {
+            return (R) createExchangeHandler.handle(createExchangeCommand);
         }
         if (command instanceof ProposeAppointmentCommand proposeAppointmentCommand
                 && proposeAppointmentResponder != null) {

@@ -21,26 +21,21 @@ public class ExchangeController implements ExchangeApi {
     private final QueryBus queryBus;
 
     @Override
-    public ApiResponse<ExchangeResponse> createExchange(CreateExchangeRequest request) {
-        Long requesterId = 200L; // Todo: 인증된 사용자 ID 가져오기
-        Long exchangeId = commandBus.send(request.toCommand(requesterId));
-
+    public ApiResponse<ExchangeResponse> createExchange(Long memberId, CreateExchangeRequest request) {
+        Long exchangeId = commandBus.send(request.toCommand(memberId));
         ExchangeResult result = queryBus.send(GetExchangeQuery.builder()
-                        .exchangeId(exchangeId)
-                        .viewerId(requesterId)
-                        .build()
-        );
+                .exchangeId(exchangeId)
+                .viewerId(memberId)
+                .build());
         return ApiResponse.created(ExchangeResponse.from(result));
     }
 
     @Override
-    public ApiResponse<ExchangeResponse> getExchange(Long exchangeId) {
-        Long viewerId = 200L; // Todo: 인증된 사용자 ID 가져오기
+    public ApiResponse<ExchangeResponse> getExchange(Long memberId, Long exchangeId) {
         ExchangeResult result = queryBus.send(GetExchangeQuery.builder()
                 .exchangeId(exchangeId)
-                .viewerId(viewerId)
-                .build()
-        );
+                .viewerId(memberId)
+                .build());
         return ApiResponse.success(ExchangeResponse.from(result));
     }
 
