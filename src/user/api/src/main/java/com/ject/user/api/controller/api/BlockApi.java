@@ -1,5 +1,6 @@
 package com.ject.user.api.controller.api;
 
+import com.ject.common.web.auth.LoginMember;
 import com.ject.common.web.response.ApiResponse;
 import com.ject.user.api.dto.request.BlockRequest;
 import com.ject.user.api.dto.response.BlockResponse;
@@ -31,12 +32,13 @@ public interface BlockApi {
                     + "에러: MEMBER_401 자기 자신을 차단 · MEMBER_201 회원 없음 · 탈퇴한 회원")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    ApiResponse<BlockResponse> block(@Valid @RequestBody BlockRequest request);
+    ApiResponse<BlockResponse> block(@LoginMember Long memberId, @Valid @RequestBody BlockRequest request);
 
     @Operation(summary = "BL-2 차단 목록",
             description = "최근 차단한 순서로 보여줍니다. 그사이 탈퇴한 회원은 목록에서 뺍니다.")
     @GetMapping
     ApiResponse<CursorPageResponse<BlockedMemberResponse>> getBlocks(
+            @LoginMember Long memberId,
             @Parameter(description = "이전 응답의 nextCursor. 첫 요청은 생략")
             @RequestParam(value = "cursor", required = false) String cursor,
             @Parameter(description = "1~50, 기본 20")
@@ -45,5 +47,6 @@ public interface BlockApi {
     @Operation(summary = "BL-3 차단 해제",
             description = "확인 팝업 없이 바로 해제하고 상대 글이 다시 보입니다. 차단으로 취소된 약속은 되살리지 않습니다. 차단하지 않은 회원이어도 성공으로 처리합니다.")
     @DeleteMapping("/{userId}")
-    ApiResponse<Void> unblock(@Parameter(description = "차단 해제할 회원 ID") @PathVariable("userId") Long userId);
+    ApiResponse<Void> unblock(@LoginMember Long memberId,
+                              @Parameter(description = "차단 해제할 회원 ID") @PathVariable("userId") Long userId);
 }

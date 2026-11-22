@@ -1,0 +1,77 @@
+package com.ject.user.application;
+
+import com.ject.user.application.port.BlockRepository;
+import com.ject.user.domain.domain.Block;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+
+class FakeBlockRepository implements BlockRepository {
+
+    private final List<Block> store = new ArrayList<>();
+    private final FakeMemberRepository memberRepository;
+    private long sequence = 0;
+
+    FakeBlockRepository(FakeMemberRepository memberRepository) {
+        this.memberRepository = memberRepository;
+    }
+
+    @Override
+    public boolean saveIfAbsent(Block block) {
+        if (find(block.getBlockerId(), block.getBlockedId()).isPresent()) {
+            return false;
+        }
+        store.add(Block.restore(++sequence, block.getBlockerId(), block.getBlockedId(), block.getBlockedAt()));
+        return true;
+    }
+
+    @Override
+    public Optional<Block> find(Long blockerId, Long blockedId) {
+        return store.stream()
+                .filter(block -> Objects.equals(block.getBlockerId(), blockerId)
+                        && Objects.equals(block.getBlockedId(), blockedId))
+                .findFirst();
+    }
+
+    @Override
+    public boolean delete(Long blockerId, Long blockedId) {
+        return store.removeIf(block -> Objects.equals(block.getBlockerId(), blockerId)
+                && Objects.equals(block.getBlockedId(), blockedId));
+    }
+
+    @Override
+    public List<Block> findPageOfActiveMembers(Long blockerId, Long cursorId, int limit) {
+        return store.stream()
+                .filter(block -> Objects.equals(block.getBlockerId(), blockerId))
+                .filter(block -> cursorId == null || block.getId() < cursorId)
+                .filter(block -> memberRepository.findById(block.getBlockedId())
+                        .map(member -> !member.isWithdrawn())
+                        .orElse(false))
+                .sorted(Comparator.comparing(Block::getId).reversed())
+                .limit(limit)
+                .toList();
+    }
+
+    @Override
+    public List<Long> findRelatedMemberIds(Long memberId) {
+        return store.stream()
+                .filter(block -> Objects.equals(block.getBlockerId(), memberId)
+                        || Objects.equals(block.getBlockedId(), memberId))
+                .map(block -> Objects.equals(block.getBlockerId(), memberId)
+                        ? block.getBlockedId()
+                        : block.getBlockerId())
+                .toList();
+    }
+
+    @Override
+    public boolean existsBetween(Long memberId, Long otherMemberId) {
+        return find(memberId, otherMemberId).isPresent() || find(otherMemberId, memberId).isPresent();
+    }
+
+    int count() {
+        return store.size();
+    }
+}
