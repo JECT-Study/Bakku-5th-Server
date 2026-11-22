@@ -82,10 +82,10 @@ public class AppointmentController implements AppointmentApi {
     }
 
     @Override
-    public ApiResponse<AppointmentResponse> updateReminder(Long appointmentId, UpdateReminderRequest request) {
-        return ApiResponse.success(confirmedAppointment(
-                appointmentId, EXCHANGE_ID, AppointmentStatus.CONFIRMED, SCHEDULED_AT,
-                request.reminderOffsetMinutes(), null, null));
+    public ApiResponse<AppointmentResponse> updateReminder(Long memberId, Long appointmentId, UpdateReminderRequest request) {
+        Long changedId = commandBus.send(request.toCommand(appointmentId, memberId));
+        AppointmentResult result = queryBus.send(new GetAppointmentQuery(changedId, memberId));
+        return ApiResponse.success(AppointmentResponse.from(result));
     }
 
     @Override

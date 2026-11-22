@@ -177,6 +177,39 @@ public class Appointment {
     }
 
     /**
+     * 내 약속 전 알림 변경. 확정 약속의 참여자가 자기 알림만 바꾼다. 알림 시각이 이미 지났어도 저장한다
+     * @param memberId 바꾸는 회원 ID (제안자 또는 받는 사람)
+     * @param reminderOffsetMinutes 내 약속 전 알림(분). null이면 끄기
+     * @param now 변경 시각
+     */
+    public Appointment changeReminder(Long memberId, Integer reminderOffsetMinutes, Instant now) {
+        boolean proposer = proposerUserId.equals(memberId);
+        if (!proposer && !receiverUserId.equals(memberId)) {
+            throw new ExchangeException(ExchangeErrorCode.NOT_EXCHANGE_PARTICIPANT);
+        }
+        validateReminderChangeable(now);
+        // 상대 설정에는 영향을 주지 않는다 (E-06-1 "내 알림만 설정돼요")
+        Integer proposerReminder = proposer ? reminderOffsetMinutes : proposerReminderOffsetMinutes;
+        Integer receiverReminder = proposer ? receiverReminderOffsetMinutes : reminderOffsetMinutes;
+        return new Appointment(id, exchangeId, proposerUserId, receiverUserId, status,
+                time, place, itemIds, expiresAt, proposerReminder, receiverReminder,
+                confirmedAt, createdAt, updatedAt);
+    }
+
+    private void validateReminderChangeable(Instant now) {
+        if (status != AppointmentStatus.CONFIRMED) {
+            throw new ExchangeException(ExchangeErrorCode.INVALID_APPOINTMENT_STATUS);
+        }
+        // 지금 바로 약속은 알림 설정이 숨겨져 있어 끄기 요청도 받지 않는다 (spec 결정 3)
+        if (time.type() == AppointmentTimeType.NOW) {
+            throw new ExchangeException(ExchangeErrorCode.REMINDER_NOT_ALLOWED);
+        }
+        if (!time.scheduledAt().isAfter(now)) {
+            throw new ExchangeException(ExchangeErrorCode.SCHEDULED_AT_PASSED);
+        }
+    }
+
+    /**
      * 같은 글(또는 고른 첨부 글)의 다른 약속이 확정되어 자동 거절된 제안
      */
     public Appointment autoReject() {
