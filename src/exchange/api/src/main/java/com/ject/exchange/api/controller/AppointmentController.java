@@ -15,6 +15,7 @@ import com.ject.exchange.api.dto.request.UpdateReminderRequest;
 import com.ject.exchange.api.dto.response.AppointmentResponse;
 import com.ject.exchange.api.dto.response.ConfirmationResponse;
 import com.ject.exchange.application.dto.command.AcceptAppointmentCommand;
+import com.ject.exchange.application.dto.command.RejectAppointmentCommand;
 import com.ject.exchange.application.dto.dto.AppointmentResult;
 import com.ject.exchange.application.dto.query.GetAppointmentQuery;
 import com.ject.exchange.application.dto.query.GetCurrentAppointmentQuery;
@@ -72,8 +73,10 @@ public class AppointmentController implements AppointmentApi {
     }
 
     @Override
-    public ApiResponse<AppointmentResponse> rejectAppointment(Long appointmentId) {
-        return ApiResponse.success(closedProposal(appointmentId, AppointmentStatus.REJECTED));
+    public ApiResponse<AppointmentResponse> rejectAppointment(Long memberId, Long appointmentId) {
+        Long rejectedId = commandBus.send(new RejectAppointmentCommand(appointmentId, memberId));
+        AppointmentResult result = queryBus.send(new GetAppointmentQuery(rejectedId, memberId));
+        return ApiResponse.success(AppointmentResponse.from(result));
     }
 
     @Override
