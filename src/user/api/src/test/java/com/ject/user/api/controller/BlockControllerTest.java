@@ -1,14 +1,23 @@
 package com.ject.user.api.controller;
 
+import com.ject.common.core.time.ServiceTime;
+import com.ject.common.web.auth.LoginMember;
+import com.ject.common.web.auth.LoginMemberArgumentResolver;
 import com.ject.user.api.exception.UserExceptionHandler;
+import com.ject.user.application.dto.BlockResult;
+import com.ject.user.application.service.BlockService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -19,33 +28,43 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class BlockControllerTest {
 
+    private static final Long MEMBER_ID = 7L;
+    private static final Instant BLOCKED_AT = Instant.parse("2026-11-22T05:30:00Z");
+
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new BlockController())
+        ServiceTime serviceTime = new ServiceTime(Clock.fixed(BLOCKED_AT, ZoneId.of("Asia/Seoul")));
+        mockMvc = MockMvcBuilders.standaloneSetup(new BlockController(new StubBlockService(), serviceTime))
                 .setControllerAdvice(new UserExceptionHandler())
+                .setCustomArgumentResolvers(new LoginMemberArgumentResolver())
                 .defaultResponseCharacterEncoding(StandardCharsets.UTF_8)
                 .build();
     }
 
     @Test
-    @DisplayName("BL-1 차단하면 201과 차단한 회원 · 시각을 반환한다")
+    @DisplayName("BL-1 새로 차단하면 201과 차단한 회원 · 시각을 반환한다")
     void block_returns201() throws Exception {
-        mockMvc.perform(post("/api/v1/members/me/blocks")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"userId\": 202}"))
+        mockMvc.perform(blockRequest("{\"userId\": 202}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.userId").value(202))
-                .andExpect(jsonPath("$.data.blockedAt").value("2026-11-27T14:30:00+09:00"));
+                .andExpect(jsonPath("$.data.blockedAt").value("2026-11-22T14:30:00+09:00"));
+    }
+
+    @Test
+    @DisplayName("BL-1 이미 차단한 회원이면 200과 기존 차단 시각을 반환한다")
+    void block_alreadyBlocked_returns200() throws Exception {
+        mockMvc.perform(blockRequest("{\"userId\": 203}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.userId").value(203))
+                .andExpect(jsonPath("$.data.blockedAt").value("2026-11-21T14:30:00+09:00"));
     }
 
     @Test
     @DisplayName("BL-1 userId가 없으면 COMMON_001")
     void block_missingUserId_returnsCommon001() throws Exception {
-        mockMvc.perform(post("/api/v1/members/me/blocks")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+        mockMvc.perform(blockRequest("{}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("COMMON_001"));
     }
@@ -74,5 +93,30 @@ class BlockControllerTest {
         mockMvc.perform(delete("/api/v1/members/me/blocks/202"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
+    }
+
+    private static MockHttpServletRequestBuilder blockRequest(String body) {
+        return post("/api/v1/members/me/blocks")
+                .requestAttr(LoginMember.ATTRIBUTE, MEMBER_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body);
+    }
+
+    /**
+     * 202는 새로 차단, 203은 이미 차단한 회원.
+     */
+    private static class StubBlockService extends BlockService {
+
+        StubBlockService() {
+            super(null, null, null, null);
+        }
+
+        @Override
+        public BlockResult block(Long blockerId, Long blockedId) {
+            if (blockedId == 203L) {
+                return new BlockResult(blockedId, BLOCKED_AT.minusSeconds(86400), false);
+            }
+            return new BlockResult(blockedId, BLOCKED_AT, true);
+        }
     }
 }

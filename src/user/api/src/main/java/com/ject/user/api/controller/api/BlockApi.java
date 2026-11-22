@@ -1,5 +1,6 @@
 package com.ject.user.api.controller.api;
 
+import com.ject.common.web.auth.LoginMember;
 import com.ject.common.web.response.ApiResponse;
 import com.ject.user.api.dto.request.BlockRequest;
 import com.ject.user.api.dto.response.BlockResponse;
@@ -31,7 +32,7 @@ public interface BlockApi {
                     + "에러: MEMBER_401 자기 자신을 차단 · MEMBER_201 회원 없음 · 탈퇴한 회원")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    ApiResponse<BlockResponse> block(@Valid @RequestBody BlockRequest request);
+    ApiResponse<BlockResponse> block(@LoginMember Long memberId, @Valid @RequestBody BlockRequest request);
 
     @Operation(summary = "BL-2 차단 목록",
             description = "최근 차단한 순서로 보여줍니다. 그사이 탈퇴한 회원은 목록에서 뺍니다.")
