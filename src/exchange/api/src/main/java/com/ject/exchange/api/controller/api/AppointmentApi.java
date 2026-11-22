@@ -65,6 +65,7 @@ public interface AppointmentApi {
 
     @Operation(summary = "F-1 교환 확인 응답", description = "한 명만 답해도 처리되고, 응답은 1인 1회이며 바꿀 수 없습니다.")
     @PostMapping("/appointments/{appointmentId}/confirmation")
-    ApiResponse<AppointmentResponse> respondConfirmation(@PathVariable("appointmentId") Long appointmentId,
+    ApiResponse<AppointmentResponse> respondConfirmation(@Parameter(hidden = true) @LoginMember Long memberId,
+                                                         @PathVariable("appointmentId") Long appointmentId,
                                                          @Valid @RequestBody ConfirmationRequest request);
 }

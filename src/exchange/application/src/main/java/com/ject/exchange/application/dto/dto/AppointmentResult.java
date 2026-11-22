@@ -3,6 +3,7 @@ package com.ject.exchange.application.dto.dto;
 import com.ject.exchange.domain.domain.appointment.Appointment;
 import com.ject.exchange.domain.domain.appointment.AppointmentStatus;
 import com.ject.exchange.domain.domain.appointment.AppointmentTimeType;
+import com.ject.exchange.domain.domain.appointment.vo.ConfirmationReply;
 import com.ject.exchange.domain.domain.appointment.vo.Place;
 import com.ject.exchange.domain.domain.exchange.Exchange;
 import com.ject.exchange.domain.domain.exchange.OfferType;
@@ -29,8 +30,21 @@ public record AppointmentResult(
         Integer myReminderOffsetMinutes,
         boolean otherActiveProposalsOnPost,
         Instant confirmedAt,
-        Instant createdAt
+        Instant createdAt,
+        ConfirmationSummary confirmation        // 확정 전이거나 취소된 약속이면 null
 ) {
+
+    /**
+     * 교환 확인 정보 없이 만드는 결과 (교환 확인 전 기능의 테스트 호환용)
+     */
+    public AppointmentResult(Long id, Long exchangeId, Long proposerUserId, Long receiverUserId,
+                             AppointmentStatus status, AppointmentTimeType timeType, Instant scheduledAt,
+                             Place place, List<AppointmentItemResult> items, Instant expiresAt,
+                             Integer myReminderOffsetMinutes, boolean otherActiveProposalsOnPost,
+                             Instant confirmedAt, Instant createdAt) {
+        this(id, exchangeId, proposerUserId, receiverUserId, status, timeType, scheduledAt, place, items,
+                expiresAt, myReminderOffsetMinutes, otherActiveProposalsOnPost, confirmedAt, createdAt, null);
+    }
 
     /**
      * 조회자 기준 약속 결과. 상태는 조회 시점에 보여 줄 상태(만료 시각이 지난 제안은 EXPIRED)
@@ -56,8 +70,28 @@ public record AppointmentResult(
                 appointment.reminderOffsetMinutesOf(viewerId),
                 otherActiveProposalsOnPost,
                 appointment.getConfirmedAt(),
-                appointment.getCreatedAt()
+                appointment.getCreatedAt(),
+                confirmationOf(appointment, viewerId, now)
         );
+    }
+
+    /**
+     * 조회자 기준 교환 확인 정보. 확정 · 완료 · 못 만남 약속에만 있다 (확정 전이거나 취소된 약속은 null)
+     */
+    private static ConfirmationSummary confirmationOf(Appointment appointment, Long viewerId, Instant now) {
+        AppointmentStatus status = appointment.getStatus();
+        if (status != AppointmentStatus.CONFIRMED && status != AppointmentStatus.COMPLETED
+                && status != AppointmentStatus.NOT_MET) {
+            return null;
+        }
+        // 카드 발송 스케줄이 없어 열림 시각이 지났으면 질문이 간 것으로 본다 (spec 가정 4)
+        Instant opensAt = appointment.confirmationOpensAt();
+        Instant askedAt = opensAt != null && !opensAt.isAfter(now) ? opensAt : null;
+        AppointmentStatus result = status == AppointmentStatus.CONFIRMED ? null : status;
+        // Todo: 3일 무응답 자동 완료(F-03-1)가 생기면 자동 완료 여부 반영
+        return new ConfirmationSummary(askedAt, result, false,
+                appointment.replyOf(viewerId).map(ConfirmationReply::answer).orElse(null),
+                appointment.getResolvedAt());
     }
 
     /**

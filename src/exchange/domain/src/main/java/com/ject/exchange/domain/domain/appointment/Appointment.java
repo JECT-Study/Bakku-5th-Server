@@ -2,6 +2,7 @@ package com.ject.exchange.domain.domain.appointment;
 
 import com.ject.exchange.domain.domain.appointment.vo.AppointmentItemIds;
 import com.ject.exchange.domain.domain.appointment.vo.AppointmentTime;
+import com.ject.exchange.domain.domain.appointment.vo.ConfirmationReply;
 import com.ject.exchange.domain.domain.appointment.vo.Place;
 import com.ject.exchange.domain.exception.ExchangeErrorCode;
 import com.ject.exchange.domain.exception.ExchangeException;
@@ -9,6 +10,7 @@ import lombok.Getter;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -17,6 +19,10 @@ import java.util.Optional;
 public class Appointment {
 
     private static final Duration PROPOSAL_LIFETIME = Duration.ofHours(24);
+    // 교환 확인은 약속 시각(지금 바로는 확정 시각) 30분 뒤에 열린다 (F-01-1)
+    private static final Duration CONFIRMATION_DELAY = Duration.ofMinutes(30);
+    // 못 만남 뒤 이유 남기기 기한. 자동 완료와 같은 기준인 질문 뒤 3일 (F-04-1, spec 결정 5)
+    private static final Duration REPLY_DEADLINE = Duration.ofDays(3);
 
     private final Long id;
     private final Long exchangeId;
@@ -30,13 +36,16 @@ public class Appointment {
     private final Integer proposerReminderOffsetMinutes;
     private final Integer receiverReminderOffsetMinutes;
     private final Instant confirmedAt;
+    private final Instant resolvedAt;
+    private final List<ConfirmationReply> confirmationReplies;
     private final Instant createdAt;
     private final Instant updatedAt;
 
     private Appointment(Long id, Long exchangeId, Long proposerUserId, Long receiverUserId, AppointmentStatus status,
                         AppointmentTime time, Place place, AppointmentItemIds itemIds, Instant expiresAt,
                         Integer proposerReminderOffsetMinutes, Integer receiverReminderOffsetMinutes,
-                        Instant confirmedAt, Instant createdAt, Instant updatedAt) {
+                        Instant confirmedAt, Instant resolvedAt, List<ConfirmationReply> confirmationReplies,
+                        Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.exchangeId = exchangeId;
         this.proposerUserId = proposerUserId;
@@ -49,6 +58,8 @@ public class Appointment {
         this.proposerReminderOffsetMinutes = proposerReminderOffsetMinutes;
         this.receiverReminderOffsetMinutes = receiverReminderOffsetMinutes;
         this.confirmedAt = confirmedAt;
+        this.resolvedAt = resolvedAt;
+        this.confirmationReplies = List.copyOf(confirmationReplies);
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -65,7 +76,7 @@ public class Appointment {
         // 지금 바로 약속은 알림을 쓰지 않는다
         Integer reminder = time.type() == AppointmentTimeType.NOW ? null : proposerReminderOffsetMinutes;
         return new Appointment(null, exchangeId, proposerUserId, receiverUserId, AppointmentStatus.PROPOSED,
-                time, place, itemIds, expiresAt, reminder, null, null, null, null);
+                time, place, itemIds, expiresAt, reminder, null, null, null, List.of(), null, null);
     }
 
     private static Instant expiresAtOf(AppointmentTime time, Instant now) {
@@ -84,8 +95,23 @@ public class Appointment {
                                  AppointmentItemIds itemIds, Instant expiresAt,
                                  Integer proposerReminderOffsetMinutes, Integer receiverReminderOffsetMinutes,
                                  Instant confirmedAt, Instant createdAt, Instant updatedAt) {
+        return of(id, exchangeId, proposerUserId, receiverUserId, status, time, place, itemIds, expiresAt,
+                proposerReminderOffsetMinutes, receiverReminderOffsetMinutes, confirmedAt, null, List.of(),
+                createdAt, updatedAt);
+    }
+
+    /**
+     * 불러온 도메인 데이터 객체화 (교환 확인 결과 시각 · 응답 포함)
+     */
+    public static Appointment of(Long id, Long exchangeId, Long proposerUserId, Long receiverUserId,
+                                 AppointmentStatus status, AppointmentTime time, Place place,
+                                 AppointmentItemIds itemIds, Instant expiresAt,
+                                 Integer proposerReminderOffsetMinutes, Integer receiverReminderOffsetMinutes,
+                                 Instant confirmedAt, Instant resolvedAt, List<ConfirmationReply> confirmationReplies,
+                                 Instant createdAt, Instant updatedAt) {
         return new Appointment(id, exchangeId, proposerUserId, receiverUserId, status, time, place, itemIds,
-                expiresAt, proposerReminderOffsetMinutes, receiverReminderOffsetMinutes, confirmedAt, createdAt, updatedAt);
+                expiresAt, proposerReminderOffsetMinutes, receiverReminderOffsetMinutes, confirmedAt, resolvedAt,
+                confirmationReplies, createdAt, updatedAt);
     }
 
     /**
@@ -111,7 +137,7 @@ public class Appointment {
         Integer receiverReminder = time.type() == AppointmentTimeType.NOW ? null : reminderOffsetMinutes;
         return new Appointment(id, exchangeId, proposerUserId, receiverUserId, AppointmentStatus.CONFIRMED,
                 time, place, itemIds, expiresAt, proposerReminderOffsetMinutes, receiverReminder,
-                now, createdAt, updatedAt);
+                now, resolvedAt, confirmationReplies, createdAt, updatedAt);
     }
 
     private void validateAcceptableStatus() {
@@ -148,7 +174,7 @@ public class Appointment {
         }
         return new Appointment(id, exchangeId, proposerUserId, receiverUserId, AppointmentStatus.REJECTED,
                 time, place, itemIds, expiresAt, proposerReminderOffsetMinutes, receiverReminderOffsetMinutes,
-                confirmedAt, createdAt, updatedAt);
+                confirmedAt, resolvedAt, confirmationReplies, createdAt, updatedAt);
     }
 
     /**
@@ -173,7 +199,7 @@ public class Appointment {
         }
         return new Appointment(id, exchangeId, proposerUserId, receiverUserId, AppointmentStatus.WITHDRAWN,
                 time, place, itemIds, expiresAt, proposerReminderOffsetMinutes, receiverReminderOffsetMinutes,
-                confirmedAt, createdAt, updatedAt);
+                confirmedAt, resolvedAt, confirmationReplies, createdAt, updatedAt);
     }
 
     /**
@@ -193,7 +219,7 @@ public class Appointment {
         Integer receiverReminder = proposer ? receiverReminderOffsetMinutes : reminderOffsetMinutes;
         return new Appointment(id, exchangeId, proposerUserId, receiverUserId, status,
                 time, place, itemIds, expiresAt, proposerReminder, receiverReminder,
-                confirmedAt, createdAt, updatedAt);
+                confirmedAt, resolvedAt, confirmationReplies, createdAt, updatedAt);
     }
 
     private void validateReminderChangeable(Instant now) {
@@ -210,12 +236,102 @@ public class Appointment {
     }
 
     /**
+     * 교환 확인 응답. 확정 약속은 먼저 답한 사람 기준으로 교환 완료(DONE) 또는 못 만남(NOT_MET)이 되고,
+     * 못 만남 뒤에는 상대가 기한 안에 자기 이유를 한 번 남긴다
+     * @param memberId 응답하는 회원 ID (제안자 또는 받는 사람)
+     * @param notMetReason 못 만난 이유. DONE이면 null
+     * @param notMetDetail 직접 입력 (OTHER일 때만)
+     * @param now 응답 시각
+     */
+    public Appointment answerConfirmation(Long memberId, ConfirmationAnswer answer, NotMetReason notMetReason,
+                                          String notMetDetail, Instant now) {
+        if (!proposerUserId.equals(memberId) && !receiverUserId.equals(memberId)) {
+            throw new ExchangeException(ExchangeErrorCode.NOT_EXCHANGE_PARTICIPANT);
+        }
+        if (status != AppointmentStatus.CONFIRMED && status != AppointmentStatus.COMPLETED
+                && status != AppointmentStatus.NOT_MET) {
+            throw new ExchangeException(ExchangeErrorCode.INVALID_APPOINTMENT_STATUS);
+        }
+        // 응답은 1인 1회, 바꿀 수 없다 (F-01-1)
+        if (replyOf(memberId).isPresent()) {
+            throw new ExchangeException(ExchangeErrorCode.CONFIRMATION_ALREADY_ANSWERED);
+        }
+        ConfirmationReply reply = answer == ConfirmationAnswer.DONE
+                ? new ConfirmationReply(memberId, answer, null, null, now)
+                : new ConfirmationReply(memberId, answer, notMetReason, notMetDetail, now);
+        if (status == AppointmentStatus.COMPLETED) {
+            // 완료가 우선이라 상대의 못 만났어요도 처리하지 않는다 (F-01-1 "응답이 엇갈림")
+            throw new ExchangeException(ExchangeErrorCode.CONFIRMATION_ALREADY_DECIDED);
+        }
+        if (status == AppointmentStatus.NOT_MET) {
+            return leaveNotMetReason(answer, reply, now);
+        }
+        Instant opensAt = confirmationOpensAt();
+        // 열림 시각을 정할 수 없는 데이터(지금 바로인데 확정 시각 없음)는 열리지 않은 것으로 본다
+        if (opensAt == null || now.isBefore(opensAt)) {
+            throw new ExchangeException(ExchangeErrorCode.CONFIRMATION_NOT_OPEN);
+        }
+        AppointmentStatus decided = answer == ConfirmationAnswer.DONE
+                ? AppointmentStatus.COMPLETED
+                : AppointmentStatus.NOT_MET;
+        return new Appointment(id, exchangeId, proposerUserId, receiverUserId, decided,
+                time, place, itemIds, expiresAt, proposerReminderOffsetMinutes, receiverReminderOffsetMinutes,
+                confirmedAt, now, withReply(reply), createdAt, updatedAt);
+    }
+
+    /**
+     * 못 만남으로 정해진 뒤 상대가 자기 이유를 남긴다. 결과는 바뀌지 않는다 (F-04-1 동작 3)
+     */
+    private Appointment leaveNotMetReason(ConfirmationAnswer answer, ConfirmationReply reply, Instant now) {
+        // 상대 카드에는 [이유 남기기]만 있다. 기한이 지나면 카드가 닫힌다 (spec 결정 4 · 5)
+        Instant opensAt = confirmationOpensAt();
+        if (answer == ConfirmationAnswer.DONE || opensAt == null || !now.isBefore(opensAt.plus(REPLY_DEADLINE))) {
+            throw new ExchangeException(ExchangeErrorCode.CONFIRMATION_ALREADY_DECIDED);
+        }
+        return new Appointment(id, exchangeId, proposerUserId, receiverUserId, status,
+                time, place, itemIds, expiresAt, proposerReminderOffsetMinutes, receiverReminderOffsetMinutes,
+                confirmedAt, resolvedAt, withReply(reply), createdAt, updatedAt);
+    }
+
+    private List<ConfirmationReply> withReply(ConfirmationReply reply) {
+        List<ConfirmationReply> replies = new ArrayList<>(confirmationReplies);
+        replies.add(reply);
+        return replies;
+    }
+
+    /**
+     * 교환 확인이 열리는 시각. 확정된 적 없는 약속이면 null, 지금 바로는 확정 시각 + 30분, 그 외는 약속 시각 + 30분
+     */
+    public Instant confirmationOpensAt() {
+        if (!wasConfirmed()) {
+            return null;
+        }
+        // 지금 바로 약속은 약속 시각이 없어 확정 시각을 기준으로 한다 (F-01-1 진입, 11/16)
+        Instant base = time.type() == AppointmentTimeType.NOW ? confirmedAt : time.scheduledAt();
+        return base == null ? null : base.plus(CONFIRMATION_DELAY);
+    }
+
+    private boolean wasConfirmed() {
+        return status == AppointmentStatus.CONFIRMED || status == AppointmentStatus.COMPLETED
+                || status == AppointmentStatus.NOT_MET || status == AppointmentStatus.CANCELED;
+    }
+
+    /**
+     * 회원의 교환 확인 응답
+     */
+    public Optional<ConfirmationReply> replyOf(Long userId) {
+        return confirmationReplies.stream()
+                .filter(reply -> reply.userId().equals(userId))
+                .findFirst();
+    }
+
+    /**
      * 같은 글(또는 고른 첨부 글)의 다른 약속이 확정되어 자동 거절된 제안
      */
     public Appointment autoReject() {
         return new Appointment(id, exchangeId, proposerUserId, receiverUserId, AppointmentStatus.AUTO_REJECTED,
                 time, place, itemIds, expiresAt, proposerReminderOffsetMinutes, receiverReminderOffsetMinutes,
-                confirmedAt, createdAt, updatedAt);
+                confirmedAt, resolvedAt, confirmationReplies, createdAt, updatedAt);
     }
 
     /**

@@ -35,6 +35,16 @@ public class PostAdapter implements PostPort {
     }
 
     @Override
+    public void complete(List<Long> postIds) {
+        // Todo: post BC 교환 완료 전환 계약이 생기면 연결 (지금은 완료 약속에 묶인 글 판정으로 다른 방 확정을 막는다)
+    }
+
+    @Override
+    public void release(List<Long> postIds) {
+        // Todo: post BC 예약 해제 계약이 생기면 연결 (지금은 못 만남 약속이 글을 묶지 않는 것으로 다시 약속할 수 있다)
+    }
+
+    @Override
     public List<PostInfo> findAllByIds(List<Long> postIds) {
         return postIds.stream().map(posts::get).filter(Objects::nonNull).toList();
     }
