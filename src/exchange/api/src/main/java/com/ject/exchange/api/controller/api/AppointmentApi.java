@@ -49,7 +49,8 @@ public interface AppointmentApi {
 
     @Operation(summary = "A-5 약속 제안 거절", description = "제안을 무효로 하고 제안자에게 알림을 보냅니다.")
     @PostMapping("/appointments/{appointmentId}/reject")
-    ApiResponse<AppointmentResponse> rejectAppointment(@PathVariable("appointmentId") Long appointmentId);
+    ApiResponse<AppointmentResponse> rejectAppointment(@Parameter(hidden = true) @LoginMember Long memberId,
+                                                       @PathVariable("appointmentId") Long appointmentId);
 
     @Operation(summary = "A-6 제안 철회", description = "제안자가 자기 제안을 취소합니다. 새로 제안하려면 진행 중인 제안을 먼저 철회해야 합니다.")
     @PostMapping("/appointments/{appointmentId}/withdraw")

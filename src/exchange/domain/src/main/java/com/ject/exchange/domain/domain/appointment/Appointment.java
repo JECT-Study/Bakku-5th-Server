@@ -136,6 +136,22 @@ public class Appointment {
     }
 
     /**
+     * 제안 거절. 받는 사람이 만료 전 제안을 거절하면 무효가 된다
+     * @param rejecterId 거절하는 회원 ID (받는 사람)
+     * @param now 거절 시각
+     */
+    public Appointment reject(Long rejecterId, Instant now) {
+        validateReceiver(rejecterId);
+        // 거절은 결과가 "무효"로 같아 끝난 상태(자동 거절 포함) · 만료를 모두 같은 코드로 안내한다 (spec 결정 2)
+        if (!isPendingProposalAt(now)) {
+            throw new ExchangeException(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE);
+        }
+        return new Appointment(id, exchangeId, proposerUserId, receiverUserId, AppointmentStatus.REJECTED,
+                time, place, itemIds, expiresAt, proposerReminderOffsetMinutes, receiverReminderOffsetMinutes,
+                confirmedAt, createdAt, updatedAt);
+    }
+
+    /**
      * 같은 글(또는 고른 첨부 글)의 다른 약속이 확정되어 자동 거절된 제안
      */
     public Appointment autoReject() {
