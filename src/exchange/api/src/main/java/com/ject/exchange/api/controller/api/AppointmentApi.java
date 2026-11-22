@@ -59,7 +59,8 @@ public interface AppointmentApi {
 
     @Operation(summary = "A-7 내 약속 전 알림 변경", description = "상대의 설정에는 영향을 주지 않습니다. 알림 시각이 이미 지났으면 저장은 하되 발송하지 않습니다.")
     @PutMapping("/appointments/{appointmentId}/reminder")
-    ApiResponse<AppointmentResponse> updateReminder(@PathVariable("appointmentId") Long appointmentId,
+    ApiResponse<AppointmentResponse> updateReminder(@Parameter(hidden = true) @LoginMember Long memberId,
+                                                    @PathVariable("appointmentId") Long appointmentId,
                                                     @Valid @RequestBody UpdateReminderRequest request);
 
     @Operation(summary = "F-1 교환 확인 응답", description = "한 명만 답해도 처리되고, 응답은 1인 1회이며 바꿀 수 없습니다.")
