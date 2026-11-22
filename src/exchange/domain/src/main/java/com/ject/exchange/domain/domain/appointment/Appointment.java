@@ -152,6 +152,31 @@ public class Appointment {
     }
 
     /**
+     * 제안자인지 확인한다. 받는 사람이나 다른 사람이면 NOT_APPOINTMENT_PROPOSER
+     */
+    public void validateProposer(Long userId) {
+        if (!proposerUserId.equals(userId)) {
+            throw new ExchangeException(ExchangeErrorCode.NOT_APPOINTMENT_PROPOSER);
+        }
+    }
+
+    /**
+     * 제안 철회. 제안자가 만료 전 자기 제안을 철회하면 무효가 된다
+     * @param withdrawerId 철회하는 회원 ID (제안자)
+     * @param now 철회 시각
+     */
+    public Appointment withdraw(Long withdrawerId, Instant now) {
+        validateProposer(withdrawerId);
+        // 철회도 결과가 "무효"로 같아 끝난 상태(자동 거절 포함) · 만료를 모두 같은 코드로 안내한다 (spec 결정 2)
+        if (!isPendingProposalAt(now)) {
+            throw new ExchangeException(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE);
+        }
+        return new Appointment(id, exchangeId, proposerUserId, receiverUserId, AppointmentStatus.WITHDRAWN,
+                time, place, itemIds, expiresAt, proposerReminderOffsetMinutes, receiverReminderOffsetMinutes,
+                confirmedAt, createdAt, updatedAt);
+    }
+
+    /**
      * 같은 글(또는 고른 첨부 글)의 다른 약속이 확정되어 자동 거절된 제안
      */
     public Appointment autoReject() {

@@ -54,7 +54,8 @@ public interface AppointmentApi {
 
     @Operation(summary = "A-6 제안 철회", description = "제안자가 자기 제안을 취소합니다. 새로 제안하려면 진행 중인 제안을 먼저 철회해야 합니다.")
     @PostMapping("/appointments/{appointmentId}/withdraw")
-    ApiResponse<AppointmentResponse> withdrawAppointment(@PathVariable("appointmentId") Long appointmentId);
+    ApiResponse<AppointmentResponse> withdrawAppointment(@Parameter(hidden = true) @LoginMember Long memberId,
+                                                         @PathVariable("appointmentId") Long appointmentId);
 
     @Operation(summary = "A-7 내 약속 전 알림 변경", description = "상대의 설정에는 영향을 주지 않습니다. 알림 시각이 이미 지났으면 저장은 하되 발송하지 않습니다.")
     @PutMapping("/appointments/{appointmentId}/reminder")

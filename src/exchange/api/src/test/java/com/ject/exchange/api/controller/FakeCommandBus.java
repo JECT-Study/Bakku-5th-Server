@@ -6,6 +6,7 @@ import com.ject.exchange.application.dto.command.AcceptAppointmentCommand;
 import com.ject.exchange.application.dto.command.ProposeAppointmentCommand;
 import com.ject.exchange.application.dto.command.RejectAppointmentCommand;
 import com.ject.exchange.application.dto.command.UpdateNewItemCommand;
+import com.ject.exchange.application.dto.command.WithdrawAppointmentCommand;
 import com.ject.exchange.application.service.command.UpdateNewItemHandler;
 
 import java.util.ArrayList;
@@ -23,6 +24,7 @@ class FakeCommandBus implements CommandBus {
     private Function<ProposeAppointmentCommand, Long> proposeAppointmentResponder;
     private Function<AcceptAppointmentCommand, Long> acceptAppointmentResponder;
     private Function<RejectAppointmentCommand, Long> rejectAppointmentResponder;
+    private Function<WithdrawAppointmentCommand, Long> withdrawAppointmentResponder;
 
     FakeCommandBus(UpdateNewItemHandler updateNewItemHandler) {
         this.updateNewItemHandler = updateNewItemHandler;
@@ -46,6 +48,11 @@ class FakeCommandBus implements CommandBus {
         this.rejectAppointmentResponder = responder;
     }
 
+    /** A-6 커맨드 응답(약속 id 또는 예외)을 정한다. */
+    void onWithdrawAppointment(Function<WithdrawAppointmentCommand, Long> responder) {
+        this.withdrawAppointmentResponder = responder;
+    }
+
     @Override
     @SuppressWarnings("unchecked")
     public <R> R send(Command<R> command) {
@@ -64,6 +71,10 @@ class FakeCommandBus implements CommandBus {
         if (command instanceof RejectAppointmentCommand rejectAppointmentCommand
                 && rejectAppointmentResponder != null) {
             return (R) rejectAppointmentResponder.apply(rejectAppointmentCommand);
+        }
+        if (command instanceof WithdrawAppointmentCommand withdrawAppointmentCommand
+                && withdrawAppointmentResponder != null) {
+            return (R) withdrawAppointmentResponder.apply(withdrawAppointmentCommand);
         }
         throw new IllegalStateException("이 테스트가 다루지 않는 커맨드: " + command);
     }
