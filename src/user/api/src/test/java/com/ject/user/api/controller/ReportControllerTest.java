@@ -1,6 +1,10 @@
 package com.ject.user.api.controller;
 
+import com.ject.common.web.auth.LoginMember;
+import com.ject.common.web.auth.LoginMemberArgumentResolver;
 import com.ject.user.api.exception.UserExceptionHandler;
+import com.ject.user.application.dto.ReportCommand;
+import com.ject.user.application.service.ReportService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -11,18 +15,25 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.nio.charset.StandardCharsets;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class ReportControllerTest {
 
+    private static final Long MEMBER_ID = 7L;
+
     private MockMvc mockMvc;
+    private StubReportService reportService;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new ReportController())
+        reportService = new StubReportService();
+        mockMvc = MockMvcBuilders.standaloneSetup(new ReportController(reportService))
                 .setControllerAdvice(new UserExceptionHandler())
+                .setCustomArgumentResolvers(new LoginMemberArgumentResolver())
                 .defaultResponseCharacterEncoding(StandardCharsets.UTF_8)
                 .build();
     }
@@ -33,6 +44,16 @@ class ReportControllerTest {
         report("{\"targetType\": \"CHAT_ROOM\", \"targetId\": 5, \"reason\": \"EXTERNAL_TRADE\", \"detail\": null}")
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.reportId").value(31));
+        assertEquals(new ReportCommand(MEMBER_ID, "CHAT_ROOM", 5L, "EXTERNAL_TRADE", null), reportService.received);
+    }
+
+    @Test
+    @DisplayName("RP-1 채팅 메시지 신고는 2차라 COMMON_001")
+    void report_chatMessage_returnsCommon001() throws Exception {
+        report("{\"targetType\": \"CHAT_MESSAGE\", \"targetId\": 5, \"reason\": \"EXTERNAL_TRADE\"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_001"));
+        assertNull(reportService.received);
     }
 
     @Test
@@ -60,7 +81,23 @@ class ReportControllerTest {
 
     private ResultActions report(String body) throws Exception {
         return mockMvc.perform(post("/api/v1/reports")
+                .requestAttr(LoginMember.ATTRIBUTE, MEMBER_ID)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body));
+    }
+
+    private static class StubReportService extends ReportService {
+
+        ReportCommand received;
+
+        StubReportService() {
+            super(null, null, null);
+        }
+
+        @Override
+        public Long report(ReportCommand command) {
+            received = command;
+            return 31L;
+        }
     }
 }
