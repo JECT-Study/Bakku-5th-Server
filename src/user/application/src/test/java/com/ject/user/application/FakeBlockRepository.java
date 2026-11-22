@@ -55,6 +55,22 @@ class FakeBlockRepository implements BlockRepository {
                 .toList();
     }
 
+    @Override
+    public List<Long> findRelatedMemberIds(Long memberId) {
+        return store.stream()
+                .filter(block -> Objects.equals(block.getBlockerId(), memberId)
+                        || Objects.equals(block.getBlockedId(), memberId))
+                .map(block -> Objects.equals(block.getBlockerId(), memberId)
+                        ? block.getBlockedId()
+                        : block.getBlockerId())
+                .toList();
+    }
+
+    @Override
+    public boolean existsBetween(Long memberId, Long otherMemberId) {
+        return find(memberId, otherMemberId).isPresent() || find(otherMemberId, memberId).isPresent();
+    }
+
     int count() {
         return store.size();
     }

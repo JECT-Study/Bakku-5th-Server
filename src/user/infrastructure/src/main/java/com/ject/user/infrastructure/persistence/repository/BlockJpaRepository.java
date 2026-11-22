@@ -43,4 +43,18 @@ public interface BlockJpaRepository extends JpaRepository<BlockJpaEntity, Long> 
             """)
     List<BlockJpaEntity> findPage(@Param("blockerId") Long blockerId, @Param("cursorId") Long cursorId,
                                   @Param("excludedStatus") MemberStatus excludedStatus, Limit limit);
+
+    @Query("""
+            SELECT CASE WHEN b.blockerId = :memberId THEN b.blockedId ELSE b.blockerId END
+            FROM BlockJpaEntity b
+            WHERE b.blockerId = :memberId OR b.blockedId = :memberId
+            """)
+    List<Long> findRelatedMemberIds(@Param("memberId") Long memberId);
+
+    @Query("""
+            SELECT COUNT(b) > 0 FROM BlockJpaEntity b
+            WHERE (b.blockerId = :memberId AND b.blockedId = :otherMemberId)
+               OR (b.blockerId = :otherMemberId AND b.blockedId = :memberId)
+            """)
+    boolean existsBetween(@Param("memberId") Long memberId, @Param("otherMemberId") Long otherMemberId);
 }

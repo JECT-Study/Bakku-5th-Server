@@ -30,4 +30,14 @@ public interface BlockRepository {
      * @param cursorId 이 id보다 작은 것부터. null이면 처음부터
      */
     List<Block> findPageOfActiveMembers(Long blockerId, Long cursorId, int limit);
+
+    /**
+     * 이 회원이 차단했거나 이 회원을 차단한 회원 id. 중복이 있을 수 있다.
+     */
+    List<Long> findRelatedMemberIds(Long memberId);
+
+    /**
+     * 두 회원 중 한쪽이라도 상대를 차단했는지.
+     */
+    boolean existsBetween(Long memberId, Long otherMemberId);
 }

@@ -27,7 +27,8 @@ public class BlockRepositoryAdapter implements BlockRepository {
 
     @Override
     public Optional<Block> find(Long blockerId, Long blockedId) {
-        return blockJpaRepository.findByBlockerIdAndBlockedId(blockerId, blockedId).map(BlockRepositoryAdapter::toDomain);
+        return blockJpaRepository.findByBlockerIdAndBlockedId(blockerId, blockedId)
+                .map(BlockRepositoryAdapter::toDomain);
     }
 
     @Override
@@ -41,6 +42,16 @@ public class BlockRepositoryAdapter implements BlockRepository {
         return blockJpaRepository.findPage(blockerId, before, MemberStatus.WITHDRAWN, Limit.of(limit)).stream()
                 .map(BlockRepositoryAdapter::toDomain)
                 .toList();
+    }
+
+    @Override
+    public List<Long> findRelatedMemberIds(Long memberId) {
+        return blockJpaRepository.findRelatedMemberIds(memberId);
+    }
+
+    @Override
+    public boolean existsBetween(Long memberId, Long otherMemberId) {
+        return blockJpaRepository.existsBetween(memberId, otherMemberId);
     }
 
     private static Block toDomain(BlockJpaEntity entity) {
