@@ -8,12 +8,11 @@ import com.ject.user.api.dto.response.BlockResponse;
 import com.ject.user.api.dto.response.BlockedMemberResponse;
 import com.ject.user.api.dto.response.CursorPageResponse;
 import com.ject.user.application.dto.BlockResult;
+import com.ject.user.application.dto.BlockedMemberPage;
 import com.ject.user.application.service.BlockService;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-
-import static com.ject.user.api.controller.UserStubData.NOW;
 
 @RestController
 public class BlockController implements BlockApi {
@@ -34,10 +33,15 @@ public class BlockController implements BlockApi {
     }
 
     @Override
-    public ApiResponse<CursorPageResponse<BlockedMemberResponse>> getBlocks(String cursor, Integer size) {
-        return ApiResponse.success(new CursorPageResponse<>(List.of(
-                new BlockedMemberResponse(202L, "하치와레러버", NOW),
-                new BlockedMemberResponse(203L, "우사기", NOW.minusDays(3))), null, false));
+    public ApiResponse<CursorPageResponse<BlockedMemberResponse>> getBlocks(Long memberId, String cursor,
+                                                                           Integer size) {
+        BlockedMemberPage page = blockService.getBlocks(memberId, BlockCursor.decode(cursor), size);
+        List<BlockedMemberResponse> content = page.content().stream()
+                .map(member -> new BlockedMemberResponse(member.userId(), member.nickname(),
+                        serviceTime.toOffset(member.blockedAt())))
+                .toList();
+        return ApiResponse.success(new CursorPageResponse<>(content, BlockCursor.encode(page.nextCursorId()),
+                page.hasNext()));
     }
 
     @Override

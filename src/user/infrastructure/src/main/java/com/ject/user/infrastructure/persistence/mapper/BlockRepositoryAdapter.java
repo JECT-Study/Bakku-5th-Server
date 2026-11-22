@@ -2,10 +2,13 @@ package com.ject.user.infrastructure.persistence.mapper;
 
 import com.ject.user.application.port.BlockRepository;
 import com.ject.user.domain.domain.Block;
+import com.ject.user.domain.domain.MemberStatus;
 import com.ject.user.infrastructure.persistence.entity.BlockJpaEntity;
 import com.ject.user.infrastructure.persistence.repository.BlockJpaRepository;
+import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -25,6 +28,14 @@ public class BlockRepositoryAdapter implements BlockRepository {
     @Override
     public Optional<Block> find(Long blockerId, Long blockedId) {
         return blockJpaRepository.findByBlockerIdAndBlockedId(blockerId, blockedId).map(BlockRepositoryAdapter::toDomain);
+    }
+
+    @Override
+    public List<Block> findPageOfActiveMembers(Long blockerId, Long cursorId, int limit) {
+        Long before = cursorId == null ? Long.MAX_VALUE : cursorId;
+        return blockJpaRepository.findPage(blockerId, before, MemberStatus.WITHDRAWN, Limit.of(limit)).stream()
+                .map(BlockRepositoryAdapter::toDomain)
+                .toList();
     }
 
     private static Block toDomain(BlockJpaEntity entity) {

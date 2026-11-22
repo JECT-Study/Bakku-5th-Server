@@ -2,6 +2,7 @@ package com.ject.user.application.port;
 
 import com.ject.user.domain.domain.Block;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -17,4 +18,11 @@ public interface BlockRepository {
     boolean saveIfAbsent(Block block);
 
     Optional<Block> find(Long blockerId, Long blockedId);
+
+    /**
+     * 이 회원이 차단한 목록 중 탈퇴하지 않은 회원만, 최근 차단 순(id 내림차순)으로 (결정 A10).
+     *
+     * @param cursorId 이 id보다 작은 것부터. null이면 처음부터
+     */
+    List<Block> findPageOfActiveMembers(Long blockerId, Long cursorId, int limit);
 }

@@ -1,12 +1,15 @@
 package com.ject.user.infrastructure.persistence.repository;
 
+import com.ject.user.domain.domain.MemberStatus;
 import com.ject.user.infrastructure.persistence.entity.BlockJpaEntity;
+import org.springframework.data.domain.Limit;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 public interface BlockJpaRepository extends JpaRepository<BlockJpaEntity, Long> {
@@ -24,4 +27,13 @@ public interface BlockJpaRepository extends JpaRepository<BlockJpaEntity, Long> 
                        @Param("blockedAt") Instant blockedAt);
 
     Optional<BlockJpaEntity> findByBlockerIdAndBlockedId(Long blockerId, Long blockedId);
+
+    @Query("""
+            SELECT b FROM BlockJpaEntity b
+            WHERE b.blockerId = :blockerId AND b.id < :cursorId
+              AND EXISTS (SELECT 1 FROM MemberJpaEntity m WHERE m.id = b.blockedId AND m.status <> :excludedStatus)
+            ORDER BY b.id DESC
+            """)
+    List<BlockJpaEntity> findPage(@Param("blockerId") Long blockerId, @Param("cursorId") Long cursorId,
+                                  @Param("excludedStatus") MemberStatus excludedStatus, Limit limit);
 }

@@ -38,6 +38,7 @@ public interface BlockApi {
             description = "최근 차단한 순서로 보여줍니다. 그사이 탈퇴한 회원은 목록에서 뺍니다.")
     @GetMapping
     ApiResponse<CursorPageResponse<BlockedMemberResponse>> getBlocks(
+            @LoginMember Long memberId,
             @Parameter(description = "이전 응답의 nextCursor. 첫 요청은 생략")
             @RequestParam(value = "cursor", required = false) String cursor,
             @Parameter(description = "1~50, 기본 20")

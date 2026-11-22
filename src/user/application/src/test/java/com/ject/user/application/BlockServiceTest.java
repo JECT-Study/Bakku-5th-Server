@@ -3,6 +3,8 @@ package com.ject.user.application;
 import com.ject.common.core.time.ServiceTime;
 import com.ject.common.event.member.MemberBlocked;
 import com.ject.user.application.dto.BlockResult;
+import com.ject.user.application.dto.BlockedMemberPage;
+import com.ject.user.application.dto.BlockedMemberPage.BlockedMember;
 import com.ject.user.application.service.BlockService;
 import com.ject.user.domain.domain.BirthDate;
 import com.ject.user.domain.domain.Block;
@@ -25,6 +27,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -43,7 +46,7 @@ class BlockServiceTest {
     @BeforeEach
     void setUp() {
         memberRepository = new FakeMemberRepository();
-        blockRepository = new FakeBlockRepository();
+        blockRepository = new FakeBlockRepository(memberRepository);
         publishedEvents = new ArrayList<>();
         blockService = new BlockService(blockRepository, memberRepository, publishedEvents::add,
                 new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul"))));
@@ -104,6 +107,60 @@ class BlockServiceTest {
         // when & then
         assertThrows(MemberNotFoundException.class, () -> blockService.block(me, other));
         assertFalse(blockRepository.find(me, other).isPresent());
+    }
+
+    @Test
+    @DisplayName("BL-2 최근 차단한 순서로 보여 준다")
+    void getBlocks() {
+        // given
+        Long third = memberRepository.save(member("우사기")).getId();
+        blockService.block(me, other);
+        blockService.block(me, third);
+        blockService.block(other, third);
+
+        // when
+        BlockedMemberPage page = blockService.getBlocks(me, null, 20);
+
+        // then
+        assertEquals(List.of(new BlockedMember(third, "우사기", NOW), new BlockedMember(other, "하치와레러버", NOW)),
+                page.content());
+        assertFalse(page.hasNext());
+        assertNull(page.nextCursorId());
+    }
+
+    @Test
+    @DisplayName("BL-2 size보다 많으면 다음 커서를 주고, 그 커서로 이어서 조회한다")
+    void getBlocks_nextPage() {
+        // given
+        Long third = memberRepository.save(member("우사기")).getId();
+        blockService.block(me, other);
+        blockService.block(me, third);
+
+        // when
+        BlockedMemberPage first = blockService.getBlocks(me, null, 1);
+        BlockedMemberPage second = blockService.getBlocks(me, first.nextCursorId(), 1);
+
+        // then
+        assertEquals(List.of(third), first.content().stream().map(BlockedMember::userId).toList());
+        assertTrue(first.hasNext());
+        assertEquals(List.of(other), second.content().stream().map(BlockedMember::userId).toList());
+        assertFalse(second.hasNext());
+    }
+
+    @Test
+    @DisplayName("BL-2 그사이 탈퇴한 회원은 목록에서 뺀다")
+    void getBlocks_excludesWithdrawnMember() {
+        // given
+        blockService.block(me, other);
+        Member withdrawn = memberRepository.findById(other).orElseThrow();
+        withdrawn.withdraw(NOW);
+        memberRepository.save(withdrawn);
+
+        // when
+        BlockedMemberPage page = blockService.getBlocks(me, null, 20);
+
+        // then
+        assertTrue(page.content().isEmpty());
     }
 
     private static Member member(String nickname) {

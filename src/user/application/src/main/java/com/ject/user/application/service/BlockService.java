@@ -3,18 +3,25 @@ package com.ject.user.application.service;
 import com.ject.common.core.time.ServiceTime;
 import com.ject.common.event.member.MemberBlocked;
 import com.ject.user.application.dto.BlockResult;
+import com.ject.user.application.dto.BlockedMemberPage;
+import com.ject.user.application.dto.BlockedMemberPage.BlockedMember;
 import com.ject.user.application.port.BlockRepository;
 import com.ject.user.application.port.MemberRepository;
 import com.ject.user.domain.domain.Block;
+import com.ject.user.domain.domain.Member;
 import com.ject.user.domain.exception.MemberNotFoundException;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
- * 차단 (BL-1).
+ * 차단 · 차단 목록 (BL-1 · BL-2).
  */
 @Service
 public class BlockService {
@@ -52,5 +59,30 @@ public class BlockService {
         }
         Block existing = blockRepository.find(blockerId, blockedId).orElseThrow();
         return new BlockResult(blockedId, existing.getBlockedAt(), false);
+    }
+
+    /**
+     * 최근 차단 순. 그사이 탈퇴한 회원은 닉네임이 없어 뺀다 (결정 A10).
+     */
+    @Transactional(readOnly = true)
+    public BlockedMemberPage getBlocks(Long blockerId, Long cursorId, int size) {
+        List<Block> rows = blockRepository.findPageOfActiveMembers(blockerId, cursorId, size + 1);
+        boolean hasNext = rows.size() > size;
+        List<Block> page = hasNext ? rows.subList(0, size) : rows;
+        Map<Long, Member> members = memberRepository.findAllByIds(page.stream().map(Block::getBlockedId).toList())
+                .stream()
+                .collect(Collectors.toMap(Member::getId, Function.identity()));
+        List<BlockedMember> content = page.stream()
+                .filter(block -> isActive(members.get(block.getBlockedId())))
+                .map(block -> new BlockedMember(block.getBlockedId(),
+                        members.get(block.getBlockedId()).getNickname().value(), block.getBlockedAt()))
+                .toList();
+        Long nextCursorId = hasNext ? page.get(page.size() - 1).getId() : null;
+        return new BlockedMemberPage(content, nextCursorId, hasNext);
+    }
+
+    // 목록 조회와 회원 조회 사이에 탈퇴한 회원
+    private static boolean isActive(Member member) {
+        return member != null && !member.isWithdrawn();
     }
 }
