@@ -17,7 +17,7 @@ public record ReportRequest(
         @NotNull
         Long targetId,
 
-        @Schema(description = "신고 사유. ITEM_PROBLEM은 교환을 완료한 상대에게만", example = "EXTERNAL_TRADE")
+        @Schema(description = "신고 사유. ITEM_PROBLEM은 FE가 교환을 완료한 상대에게만 보여 줌", example = "EXTERNAL_TRADE")
         @NotNull
         ReportReason reason,
 
@@ -30,5 +30,11 @@ public record ReportRequest(
     @Schema(hidden = true)
     public boolean isDetailPresentForOther() {
         return reason != ReportReason.OTHER || (detail != null && !detail.isBlank());
+    }
+
+    @AssertTrue(message = "채팅 메시지 신고는 2차입니다.")
+    @Schema(hidden = true)
+    public boolean isSupportedTargetType() {
+        return targetType != ReportTargetType.CHAT_MESSAGE;
     }
 }
