@@ -120,9 +120,10 @@ class BlockControllerTest {
     @Test
     @DisplayName("BL-3 차단 해제하면 성공만 반환한다")
     void unblock() throws Exception {
-        mockMvc.perform(delete("/api/v1/members/me/blocks/202"))
+        mockMvc.perform(delete("/api/v1/members/me/blocks/202").requestAttr(LoginMember.ATTRIBUTE, MEMBER_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
+        assertEquals(List.of(MEMBER_ID, 202L), blockService.unblocked);
     }
 
     private static MockHttpServletRequestBuilder blockRequest(String body) {
@@ -140,6 +141,7 @@ class BlockControllerTest {
         Long requestedBlockerId;
         Long requestedCursorId;
         Integer requestedSize;
+        List<Long> unblocked;
 
         StubBlockService() {
             super(null, null, null, null);
@@ -151,6 +153,11 @@ class BlockControllerTest {
                 return new BlockResult(blockedId, BLOCKED_AT.minusSeconds(86400), false);
             }
             return new BlockResult(blockedId, BLOCKED_AT, true);
+        }
+
+        @Override
+        public void unblock(Long blockerId, Long blockedId) {
+            unblocked = List.of(blockerId, blockedId);
         }
 
         @Override

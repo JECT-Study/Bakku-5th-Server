@@ -28,6 +28,13 @@ public interface BlockJpaRepository extends JpaRepository<BlockJpaEntity, Long> 
 
     Optional<BlockJpaEntity> findByBlockerIdAndBlockedId(Long blockerId, Long blockedId);
 
+    /**
+     * @return 지운 행 수. 차단하지 않은 회원이면 0
+     */
+    @Modifying(flushAutomatically = true)
+    @Query("DELETE FROM BlockJpaEntity b WHERE b.blockerId = :blockerId AND b.blockedId = :blockedId")
+    int delete(@Param("blockerId") Long blockerId, @Param("blockedId") Long blockedId);
+
     @Query("""
             SELECT b FROM BlockJpaEntity b
             WHERE b.blockerId = :blockerId AND b.id < :cursorId

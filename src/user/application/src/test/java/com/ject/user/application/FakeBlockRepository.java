@@ -37,6 +37,12 @@ class FakeBlockRepository implements BlockRepository {
     }
 
     @Override
+    public boolean delete(Long blockerId, Long blockedId) {
+        return store.removeIf(block -> Objects.equals(block.getBlockerId(), blockerId)
+                && Objects.equals(block.getBlockedId(), blockedId));
+    }
+
+    @Override
     public List<Block> findPageOfActiveMembers(Long blockerId, Long cursorId, int limit) {
         return store.stream()
                 .filter(block -> Objects.equals(block.getBlockerId(), blockerId))

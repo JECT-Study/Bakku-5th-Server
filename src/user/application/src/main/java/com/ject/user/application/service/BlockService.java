@@ -2,6 +2,7 @@ package com.ject.user.application.service;
 
 import com.ject.common.core.time.ServiceTime;
 import com.ject.common.event.member.MemberBlocked;
+import com.ject.common.event.member.MemberUnblocked;
 import com.ject.user.application.dto.BlockResult;
 import com.ject.user.application.dto.BlockedMemberPage;
 import com.ject.user.application.dto.BlockedMemberPage.BlockedMember;
@@ -21,7 +22,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * 차단 · 차단 목록 (BL-1 · BL-2).
+ * 차단 · 차단 목록 · 차단 해제 (BL-1 · BL-2 · BL-3).
  */
 @Service
 public class BlockService {
@@ -59,6 +60,17 @@ public class BlockService {
         }
         Block existing = blockRepository.find(blockerId, blockedId).orElseThrow();
         return new BlockResult(blockedId, existing.getBlockedAt(), false);
+    }
+
+    /**
+     * 지웠으면 커밋 뒤 MemberUnblocked를 받은 채팅이 숨긴 채팅방을 다시 보이게 한다. 취소된 약속은 되살리지 않는다 (결정 B4).
+     * 차단하지 않은 회원이어도 성공으로 처리하고 이벤트는 발행하지 않는다 (결정 A11).
+     */
+    @Transactional
+    public void unblock(Long blockerId, Long blockedId) {
+        if (blockRepository.delete(blockerId, blockedId)) {
+            eventPublisher.publishEvent(new MemberUnblocked(blockerId, blockedId));
+        }
     }
 
     /**

@@ -2,6 +2,7 @@ package com.ject.user.application;
 
 import com.ject.common.core.time.ServiceTime;
 import com.ject.common.event.member.MemberBlocked;
+import com.ject.common.event.member.MemberUnblocked;
 import com.ject.user.application.dto.BlockResult;
 import com.ject.user.application.dto.BlockedMemberPage;
 import com.ject.user.application.dto.BlockedMemberPage.BlockedMember;
@@ -107,6 +108,36 @@ class BlockServiceTest {
         // when & then
         assertThrows(MemberNotFoundException.class, () -> blockService.block(me, other));
         assertFalse(blockRepository.find(me, other).isPresent());
+    }
+
+    @Test
+    @DisplayName("BL-3 차단 해제하면 지우고 MemberUnblocked를 발행한다")
+    void unblock() {
+        // given
+        blockService.block(me, other);
+        publishedEvents.clear();
+
+        // when
+        blockService.unblock(me, other);
+
+        // then
+        assertFalse(blockRepository.find(me, other).isPresent());
+        assertEquals(List.of(new MemberUnblocked(me, other)), publishedEvents);
+    }
+
+    @Test
+    @DisplayName("BL-3 차단하지 않은 회원이면 아무것도 하지 않는다")
+    void unblock_notBlocked() {
+        // given
+        blockService.block(other, me);
+        publishedEvents.clear();
+
+        // when
+        blockService.unblock(me, other);
+
+        // then
+        assertTrue(blockRepository.find(other, me).isPresent());
+        assertTrue(publishedEvents.isEmpty());
     }
 
     @Test

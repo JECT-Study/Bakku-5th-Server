@@ -31,6 +31,11 @@ public class BlockRepositoryAdapter implements BlockRepository {
     }
 
     @Override
+    public boolean delete(Long blockerId, Long blockedId) {
+        return blockJpaRepository.delete(blockerId, blockedId) > 0;
+    }
+
+    @Override
     public List<Block> findPageOfActiveMembers(Long blockerId, Long cursorId, int limit) {
         Long before = cursorId == null ? Long.MAX_VALUE : cursorId;
         return blockJpaRepository.findPage(blockerId, before, MemberStatus.WITHDRAWN, Limit.of(limit)).stream()

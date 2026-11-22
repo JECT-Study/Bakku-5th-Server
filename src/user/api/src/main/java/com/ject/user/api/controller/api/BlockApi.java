@@ -47,5 +47,6 @@ public interface BlockApi {
     @Operation(summary = "BL-3 차단 해제",
             description = "확인 팝업 없이 바로 해제하고 상대 글이 다시 보입니다. 차단으로 취소된 약속은 되살리지 않습니다. 차단하지 않은 회원이어도 성공으로 처리합니다.")
     @DeleteMapping("/{userId}")
-    ApiResponse<Void> unblock(@Parameter(description = "차단 해제할 회원 ID") @PathVariable("userId") Long userId);
+    ApiResponse<Void> unblock(@LoginMember Long memberId,
+                              @Parameter(description = "차단 해제할 회원 ID") @PathVariable("userId") Long userId);
 }

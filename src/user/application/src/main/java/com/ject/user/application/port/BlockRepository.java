@@ -20,6 +20,11 @@ public interface BlockRepository {
     Optional<Block> find(Long blockerId, Long blockedId);
 
     /**
+     * @return 지웠으면 true, 차단하지 않은 회원이면 false
+     */
+    boolean delete(Long blockerId, Long blockedId);
+
+    /**
      * 이 회원이 차단한 목록 중 탈퇴하지 않은 회원만, 최근 차단 순(id 내림차순)으로 (결정 A10).
      *
      * @param cursorId 이 id보다 작은 것부터. null이면 처음부터

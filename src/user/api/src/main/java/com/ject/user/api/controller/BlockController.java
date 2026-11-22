@@ -45,7 +45,8 @@ public class BlockController implements BlockApi {
     }
 
     @Override
-    public ApiResponse<Void> unblock(Long userId) {
+    public ApiResponse<Void> unblock(Long memberId, Long userId) {
+        blockService.unblock(memberId, userId);
         return ApiResponse.success(null);
     }
 }
