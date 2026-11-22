@@ -8,7 +8,7 @@ import java.time.OffsetDateTime;
 
 @Schema(description = "교환 확인 정보")
 public record ConfirmationResponse(
-        @Schema(description = "교환 확인 카드 발송 시각 (약속 시각 + 30분). 발송 전이면 null", example = "2026-10-27T15:30:00+09:00")
+        @Schema(description = "교환 확인이 열리는 시각 (약속 시각 + 30분, 지금 바로는 확정 시각 + 30분). 열리기 전이면 null", example = "2026-10-27T15:30:00+09:00")
         OffsetDateTime askedAt,
 
         @Schema(description = "교환 확인 결과. 결과 전이면 null")

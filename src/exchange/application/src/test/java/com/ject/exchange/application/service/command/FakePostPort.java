@@ -17,6 +17,8 @@ class FakePostPort implements PostPort {
 
     private final Map<Long, PostInfo> posts = new HashMap<>();
     private final List<List<Long>> reserveRequests = new ArrayList<>();
+    private final List<List<Long>> completeRequests = new ArrayList<>();
+    private final List<List<Long>> releaseRequests = new ArrayList<>();
     private RuntimeException reserveFailure;
 
     @Override
@@ -39,6 +41,26 @@ class FakePostPort implements PostPort {
         if (reserveFailure != null) {
             throw reserveFailure;
         }
+    }
+
+    /** 교환 완료 요청을 기록한다. */
+    @Override
+    public void complete(List<Long> postIds) {
+        completeRequests.add(List.copyOf(postIds));
+    }
+
+    /** 예약 해제 요청을 기록한다. */
+    @Override
+    public void release(List<Long> postIds) {
+        releaseRequests.add(List.copyOf(postIds));
+    }
+
+    List<List<Long>> completeRequests() {
+        return completeRequests;
+    }
+
+    List<List<Long>> releaseRequests() {
+        return releaseRequests;
     }
 
     void failReserveWith(RuntimeException failure) {

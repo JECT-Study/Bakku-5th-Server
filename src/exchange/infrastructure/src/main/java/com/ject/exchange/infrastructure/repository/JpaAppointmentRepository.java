@@ -3,8 +3,10 @@ package com.ject.exchange.infrastructure.repository;
 import com.ject.exchange.domain.domain.appointment.Appointment;
 import com.ject.exchange.domain.domain.appointment.AppointmentStatus;
 import com.ject.exchange.domain.repository.AppointmentRepository;
+import com.ject.exchange.infrastructure.entity.AppointmentConfirmationEntity;
 import com.ject.exchange.infrastructure.entity.AppointmentEntity;
 import com.ject.exchange.infrastructure.entity.AppointmentItemEntity;
+import com.ject.exchange.infrastructure.jpa.AppointmentConfirmationEntityRepository;
 import com.ject.exchange.infrastructure.jpa.AppointmentEntityRepository;
 import com.ject.exchange.infrastructure.jpa.AppointmentItemEntityRepository;
 import com.ject.exchange.infrastructure.mapper.AppointmentMapper;
@@ -27,6 +29,7 @@ public class JpaAppointmentRepository implements AppointmentRepository {
 
     private final AppointmentEntityRepository appointmentEntityRepository;
     private final AppointmentItemEntityRepository appointmentItemEntityRepository;
+    private final AppointmentConfirmationEntityRepository appointmentConfirmationEntityRepository;
 
     @Override
     @Transactional
@@ -36,15 +39,20 @@ public class JpaAppointmentRepository implements AppointmentRepository {
         List<AppointmentItemEntity> items = appointment.getId() == null
                 ? appointmentItemEntityRepository.saveAll(AppointmentMapper.toItemEntities(saved, appointment))
                 : appointmentItemEntityRepository.findByAppointmentIdOrderBySortOrder(saved.getId());
-        return AppointmentMapper.toDomain(saved, items);
+        List<AppointmentConfirmationEntity> stored = appointment.getId() == null
+                ? List.of()
+                : appointmentConfirmationEntityRepository.findByAppointmentIdOrderByAnsweredAtAscIdAsc(saved.getId());
+        // 같은 사람의 응답이 동시에 들어와도 유일 제약으로 하나만 남는다. 즉시 반영해 그 위반이 이 트랜잭션에서 드러나게 한다
+        appointmentConfirmationEntityRepository.saveAllAndFlush(
+                AppointmentMapper.toNewConfirmationEntities(saved, appointment, stored));
+        return AppointmentMapper.toDomain(saved, items,
+                appointmentConfirmationEntityRepository.findByAppointmentIdOrderByAnsweredAtAscIdAsc(saved.getId()));
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<Appointment> findById(Long id) {
-        return appointmentEntityRepository.findById(id)
-                .map(entity -> AppointmentMapper.toDomain(
-                        entity, appointmentItemEntityRepository.findByAppointmentIdOrderBySortOrder(id)));
+        return appointmentEntityRepository.findById(id).map(this::toDomain);
     }
 
     @Override
@@ -59,9 +67,12 @@ public class JpaAppointmentRepository implements AppointmentRepository {
                 .findByAppointmentIdInOrderBySortOrder(appointments.stream().map(AppointmentEntity::getId).toList())
                 .stream()
                 .collect(Collectors.groupingBy(item -> item.getAppointment().getId()));
+        Map<Long, List<AppointmentConfirmationEntity>> confirmationsByAppointmentId =
+                confirmationsByAppointmentId(appointments.stream().map(AppointmentEntity::getId).toList());
         return appointments.stream()
                 .map(entity -> AppointmentMapper.toDomain(
-                        entity, itemsByAppointmentId.getOrDefault(entity.getId(), List.of())))
+                        entity, itemsByAppointmentId.getOrDefault(entity.getId(), List.of()),
+                        confirmationsByAppointmentId.getOrDefault(entity.getId(), List.of())))
                 .toList();
     }
 
@@ -74,9 +85,7 @@ public class JpaAppointmentRepository implements AppointmentRepository {
 
     @Override
     public Optional<Appointment> findByIdForUpdate(Long id) {
-        return appointmentEntityRepository.findWithLockById(id)
-                .map(entity -> AppointmentMapper.toDomain(
-                        entity, appointmentItemEntityRepository.findByAppointmentIdOrderBySortOrder(id)));
+        return appointmentEntityRepository.findWithLockById(id).map(this::toDomain);
     }
 
     @Override
@@ -121,9 +130,24 @@ public class JpaAppointmentRepository implements AppointmentRepository {
                 .findByAppointmentIdInOrderBySortOrder(appointmentIds)
                 .stream()
                 .collect(Collectors.groupingBy(item -> item.getAppointment().getId()));
+        Map<Long, List<AppointmentConfirmationEntity>> confirmationsByAppointmentId =
+                confirmationsByAppointmentId(appointmentIds);
         return appointmentEntityRepository.findAllById(appointmentIds).stream()
                 .map(entity -> AppointmentMapper.toDomain(
-                        entity, itemsByAppointmentId.getOrDefault(entity.getId(), List.of())))
+                        entity, itemsByAppointmentId.getOrDefault(entity.getId(), List.of()),
+                        confirmationsByAppointmentId.getOrDefault(entity.getId(), List.of())))
                 .toList();
+    }
+
+    private Appointment toDomain(AppointmentEntity entity) {
+        return AppointmentMapper.toDomain(entity,
+                appointmentItemEntityRepository.findByAppointmentIdOrderBySortOrder(entity.getId()),
+                appointmentConfirmationEntityRepository.findByAppointmentIdOrderByAnsweredAtAscIdAsc(entity.getId()));
+    }
+
+    private Map<Long, List<AppointmentConfirmationEntity>> confirmationsByAppointmentId(List<Long> appointmentIds) {
+        return appointmentConfirmationEntityRepository.findByAppointmentIdInOrderByAnsweredAtAscIdAsc(appointmentIds)
+                .stream()
+                .collect(Collectors.groupingBy(confirmation -> confirmation.getAppointment().getId()));
     }
 }

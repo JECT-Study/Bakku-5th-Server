@@ -69,6 +69,9 @@ public class AppointmentEntity extends BaseEntity {
     @Column(name = "confirmed_at")
     private Instant confirmedAt;
 
+    @Column(name = "resolved_at")
+    private Instant resolvedAt;
+
     protected AppointmentEntity() {}
 
     @Builder
@@ -76,7 +79,7 @@ public class AppointmentEntity extends BaseEntity {
                              AppointmentStatus status, AppointmentTimeType timeType, Instant scheduledAt,
                              String placeName, String placeAddress, Double placeLat, Double placeLng,
                              Instant expiresAt, Integer proposerReminderOffsetMinutes,
-                             Integer receiverReminderOffsetMinutes, Instant confirmedAt) {
+                             Integer receiverReminderOffsetMinutes, Instant confirmedAt, Instant resolvedAt) {
         this.id = id;
         this.exchangeId = exchangeId;
         this.proposerUserId = proposerUserId;
@@ -92,5 +95,6 @@ public class AppointmentEntity extends BaseEntity {
         this.proposerReminderOffsetMinutes = proposerReminderOffsetMinutes;
         this.receiverReminderOffsetMinutes = receiverReminderOffsetMinutes;
         this.confirmedAt = confirmedAt;
+        this.resolvedAt = resolvedAt;
     }
 }

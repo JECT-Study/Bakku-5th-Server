@@ -2,7 +2,10 @@ package com.ject.exchange.api.dto.response;
 
 import com.ject.exchange.api.dto.enums.AppointmentStatus;
 import com.ject.exchange.api.dto.enums.AppointmentTimeType;
+import com.ject.exchange.api.dto.enums.ConfirmationAnswer;
+import com.ject.exchange.api.dto.enums.ConfirmationResult;
 import com.ject.exchange.application.dto.dto.AppointmentResult;
+import com.ject.exchange.application.dto.dto.ConfirmationSummary;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
@@ -54,7 +57,7 @@ public record AppointmentResponse(
         @Schema(description = "처리 대기 중인 취소 요청 (REQUESTED 또는 REJECTED). 없으면 null")
         CancellationResponse pendingCancellation,
 
-        @Schema(description = "교환 확인 정보. 확정 전이면 null")
+        @Schema(description = "교환 확인 정보. 확정 전이거나 취소된 약속이면 null")
         ConfirmationResponse confirmation,
 
         @Schema(description = "확정 시각. 확정 전이면 null", example = "2026-10-26T17:00:00+09:00")
@@ -64,7 +67,7 @@ public record AppointmentResponse(
         OffsetDateTime createdAt
 ) {
     /**
-     * 약속 제안 응답. 변경 제안 · 취소 요청 · 교환 확인은 아직 없으므로 null
+     * 약속 응답. 변경 제안 · 취소 요청은 아직 없으므로 null
      */
     public static AppointmentResponse from(AppointmentResult result) {
         return new AppointmentResponse(
@@ -84,9 +87,21 @@ public record AppointmentResponse(
                 result.otherActiveProposalsOnPost(),
                 null,   // Todo: 약속 변경 제안 구현 후 반영
                 null,   // Todo: 약속 취소 구현 후 반영
-                null,   // Todo: 교환 확인 구현 후 반영
+                confirmationOf(result.confirmation()),
                 toSeoul(result.confirmedAt()),
                 toSeoul(result.createdAt()));
+    }
+
+    private static ConfirmationResponse confirmationOf(ConfirmationSummary confirmation) {
+        if (confirmation == null) {
+            return null;
+        }
+        return new ConfirmationResponse(
+                toSeoul(confirmation.askedAt()),
+                EnumMapper.map(confirmation.result(), ConfirmationResult.class),
+                confirmation.autoCompleted(),
+                EnumMapper.map(confirmation.myAnswer(), ConfirmationAnswer.class),
+                toSeoul(confirmation.resolvedAt()));
     }
 
     private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");

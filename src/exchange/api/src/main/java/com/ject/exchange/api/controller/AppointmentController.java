@@ -4,15 +4,11 @@ import com.ject.common.core.cqrs.command.CommandBus;
 import com.ject.common.core.cqrs.query.QueryBus;
 import com.ject.common.web.response.ApiResponse;
 import com.ject.exchange.api.controller.api.AppointmentApi;
-import com.ject.exchange.api.dto.enums.AppointmentStatus;
-import com.ject.exchange.api.dto.enums.ConfirmationAnswer;
-import com.ject.exchange.api.dto.enums.ConfirmationResult;
 import com.ject.exchange.api.dto.request.AcceptAppointmentRequest;
 import com.ject.exchange.api.dto.request.ConfirmationRequest;
 import com.ject.exchange.api.dto.request.ProposeAppointmentRequest;
 import com.ject.exchange.api.dto.request.UpdateReminderRequest;
 import com.ject.exchange.api.dto.response.AppointmentResponse;
-import com.ject.exchange.api.dto.response.ConfirmationResponse;
 import com.ject.exchange.application.dto.command.AcceptAppointmentCommand;
 import com.ject.exchange.application.dto.command.RejectAppointmentCommand;
 import com.ject.exchange.application.dto.command.WithdrawAppointmentCommand;
@@ -23,11 +19,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Optional;
-
-import static com.ject.exchange.api.controller.ExchangeStubData.EXCHANGE_ID;
-import static com.ject.exchange.api.controller.ExchangeStubData.SCHEDULED_AT;
-import static com.ject.exchange.api.controller.ExchangeStubData.at;
-import static com.ject.exchange.api.controller.ExchangeStubData.confirmedAppointment;
 
 @RestController
 @RequiredArgsConstructor
@@ -89,10 +80,9 @@ public class AppointmentController implements AppointmentApi {
     }
 
     @Override
-    public ApiResponse<AppointmentResponse> respondConfirmation(Long appointmentId, ConfirmationRequest request) {
-        ConfirmationResponse confirmation = new ConfirmationResponse(
-                at(27, 15, 30), ConfirmationResult.COMPLETED, false, ConfirmationAnswer.DONE, at(27, 15, 42));
-        return ApiResponse.success(confirmedAppointment(
-                appointmentId, EXCHANGE_ID, AppointmentStatus.COMPLETED, SCHEDULED_AT, 30, null, confirmation));
+    public ApiResponse<AppointmentResponse> respondConfirmation(Long memberId, Long appointmentId, ConfirmationRequest request) {
+        Long answeredId = commandBus.send(request.toCommand(appointmentId, memberId));
+        AppointmentResult result = queryBus.send(new GetAppointmentQuery(answeredId, memberId));
+        return ApiResponse.success(AppointmentResponse.from(result));
     }
 }

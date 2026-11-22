@@ -129,6 +129,15 @@ public class Exchange {
         return receiverId;
     }
 
+    /**
+     * 교환 완료. 교환 확인에서 한 명이 교환했어요로 답하면 완료된다 (F-01-2)
+     * @param now 완료 시각
+     */
+    public Exchange complete(Instant now) {
+        return new Exchange(id, postId, requestUserId, ownerId, offerType, offeredItems,
+                ExchangeStatus.COMPLETED, now, createdAt, updatedAt);
+    }
+
     public Exchange updateNewItem(Long requesterId, ItemName name, Boolean opened, ItemDescription description) {
         if (!this.requestUserId.equals(requesterId)) {
             throw new ExchangeException(ExchangeErrorCode.NOT_REQUESTER);
