@@ -3,6 +3,7 @@ package com.ject.notification.domain.domain;
 import com.ject.common.event.notification.NotificationTargetType;
 import com.ject.common.event.notification.NotificationType;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 
@@ -11,6 +12,9 @@ import java.util.Objects;
  * 제목 · 내용은 보낸 때의 닉네임 · 제품명으로 만들어 그대로 보관한다.
  */
 public class Notification {
+
+    /** 목록 보관 기간. 지난 알림은 목록 · 안 읽은 수 · 읽음 처리에서 없는 것으로 본다 (X-01-1) */
+    public static final Duration RETENTION = Duration.ofDays(30);
 
     private final Long id;
     private final Long receiverId;
@@ -53,6 +57,13 @@ public class Notification {
 
     public boolean isRead() {
         return readAt != null;
+    }
+
+    /**
+     * @return 이 시각 이후에 받은 알림만 보인다
+     */
+    public static Instant visibleFrom(Instant now) {
+        return now.minus(RETENTION);
     }
 
     /** 저장 전이면 null */

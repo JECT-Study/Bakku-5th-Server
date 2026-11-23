@@ -1,5 +1,6 @@
 package com.ject.notification.api.controller.api;
 
+import com.ject.common.web.auth.LoginMember;
 import com.ject.common.web.response.ApiResponse;
 import com.ject.notification.api.dto.response.CursorPageResponse;
 import com.ject.notification.api.dto.response.NotificationReadResponse;
@@ -22,10 +23,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 public interface NotificationApi {
 
     @Operation(summary = "NT-1 알림 목록",
-            description = "최신순, 30일 지난 알림은 보이지 않습니다. 알림은 이벤트마다 1건씩 저장합니다 (채팅도 메시지마다). 문구(title · body)는 서버가 만듭니다. "
-                    + "누르면 NT-3으로 읽음 처리 후 target으로 이동합니다. 1차 알림은 9종이고 모두 CHAT_ROOM으로 이동합니다.")
+            description = "최신순, 30일 지난 알림은 보이지 않습니다. 채팅 메시지는 푸시로만 보내고 목록에 없습니다 (X-01-1). "
+                    + "문구(title · body)는 서버가 만듭니다. 누르면 NT-3으로 읽음 처리 후 target으로 이동하고, target이 null이면 이동하지 않습니다. "
+                    + "에러: COMMON_001 cursor 형식 오류 · size 범위 밖")
     @GetMapping
     ApiResponse<CursorPageResponse<NotificationResponse>> getNotifications(
+            @LoginMember Long memberId,
             @Parameter(description = "이전 응답의 nextCursor. 첫 요청은 생략")
             @RequestParam(value = "cursor", required = false) String cursor,
             @Parameter(description = "1~50, 기본 20")
