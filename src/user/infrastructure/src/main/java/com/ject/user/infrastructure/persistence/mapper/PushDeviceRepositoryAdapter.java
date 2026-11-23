@@ -5,6 +5,9 @@ import com.ject.user.domain.domain.PushDevice;
 import com.ject.user.infrastructure.persistence.repository.PushDeviceJpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+import java.util.List;
+
 @Repository
 public class PushDeviceRepositoryAdapter implements PushDeviceRepository {
 
@@ -38,5 +41,10 @@ public class PushDeviceRepositoryAdapter implements PushDeviceRepository {
     @Override
     public void deleteAllByMemberId(Long memberId) {
         pushDeviceJpaRepository.deleteAllByMemberId(memberId);
+    }
+
+    @Override
+    public List<String> findPushTokensByMemberIds(Collection<Long> memberIds) {
+        return pushDeviceJpaRepository.findPushTokensByMemberIds(memberIds);
     }
 }

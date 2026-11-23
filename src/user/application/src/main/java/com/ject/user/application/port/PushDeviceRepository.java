@@ -2,6 +2,9 @@ package com.ject.user.application.port;
 
 import com.ject.user.domain.domain.PushDevice;
 
+import java.util.Collection;
+import java.util.List;
+
 /**
  * 푸시 기기 저장소 출력 포트. 기기 ID마다 한 행이다 (결정 A12).
  */
@@ -28,4 +31,6 @@ public interface PushDeviceRepository {
      * 회원의 모든 푸시 기기를 지운다. 탈퇴한 회원의 기기로 알림이 가지 않게 한다.
      */
     void deleteAllByMemberId(Long memberId);
+
+    List<String> findPushTokensByMemberIds(Collection<Long> memberIds);
 }

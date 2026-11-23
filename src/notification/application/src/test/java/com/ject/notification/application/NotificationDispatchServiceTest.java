@@ -3,6 +3,8 @@ package com.ject.notification.application;
 import com.ject.common.event.notification.NotificationRequested;
 import com.ject.common.event.notification.NotificationTargetType;
 import com.ject.common.event.notification.NotificationType;
+import com.ject.notification.application.dto.PushMessage;
+import com.ject.notification.application.port.PushTokenPort;
 import com.ject.notification.application.service.NotificationDispatchService;
 import com.ject.notification.domain.domain.Notification;
 import com.ject.notification.domain.domain.NotificationMessages;
@@ -21,19 +23,24 @@ class NotificationDispatchServiceTest {
     private static final Long SENDER_ID = 202L;
     private static final NotificationRequested.Target CHAT_ROOM =
             new NotificationRequested.Target(NotificationTargetType.CHAT_ROOM, 5L);
+    private static final Map<Long, List<String>> TOKENS = Map.of(101L, List.of("fcm-101"), 303L, List.of("fcm-303"));
 
     private FakeNotificationRepository notificationRepository;
+    private FakePushSender pushSender;
     private NotificationDispatchService dispatchService;
 
     @BeforeEach
     void setUp() {
         notificationRepository = new FakeNotificationRepository();
-        dispatchService = new NotificationDispatchService(notificationRepository, memberId -> "하치와레러버");
+        pushSender = new FakePushSender();
+        dispatchService = service(memberIds -> memberIds.stream()
+                .flatMap(memberId -> TOKENS.getOrDefault(memberId, List.of()).stream())
+                .toList());
     }
 
     @Test
-    @DisplayName("교환 요청은 받는 사람 알림 목록에 닉네임 · 제품명으로 저장한다")
-    void saveExchangeRequested() {
+    @DisplayName("교환 요청은 받는 사람 알림 목록에 닉네임 · 제품명으로 저장하고 푸시를 보낸다")
+    void exchangeRequested() {
         // when
         dispatchService.dispatch(request(NotificationType.EXCHANGE_REQUESTED, List.of(101L), SENDER_ID));
 
@@ -47,16 +54,23 @@ class NotificationDispatchServiceTest {
         assertEquals("[포켓몬 카드] 교환 요청이 왔어요", notification.getBody());
         assertEquals(NotificationTargetType.CHAT_ROOM, notification.getTargetType());
         assertEquals(5L, notification.getTargetId());
+
+        assertEquals(1, pushSender.sent().size());
+        FakePushSender.Sent sent = pushSender.sent().getFirst();
+        assertEquals(List.of("fcm-101"), sent.pushTokens());
+        assertEquals(new PushMessage(NotificationType.EXCHANGE_REQUESTED, "하치와레러버",
+                "[포켓몬 카드] 교환 요청이 왔어요", NotificationTargetType.CHAT_ROOM, 5L), sent.message());
     }
 
     @Test
-    @DisplayName("채팅 메시지는 알림 목록에 저장하지 않는다")
-    void chatMessageIsNotSaved() {
+    @DisplayName("채팅 메시지는 알림 목록에 저장하지 않고 푸시만 보낸다")
+    void chatMessageIsPushOnly() {
         // when
         dispatchService.dispatch(request(NotificationType.CHAT_MESSAGE, List.of(101L), SENDER_ID));
 
         // then
         assertTrue(notificationRepository.findAll().isEmpty());
+        assertEquals(1, pushSender.sent().size());
     }
 
     @Test
@@ -73,25 +87,58 @@ class NotificationDispatchServiceTest {
     }
 
     @Test
-    @DisplayName("보낸 회원이 없으면 제목은 앱 이름이다")
+    @DisplayName("보낸 회원이 없으면 제목은 앱 이름이고, 여러 명이면 기기 토큰을 모아 한 번에 보낸다")
     void systemNotification() {
         // when
-        dispatchService.dispatch(request(NotificationType.EXCHANGE_CONFIRMATION, List.of(101L, 202L), null));
+        dispatchService.dispatch(request(NotificationType.EXCHANGE_CONFIRMATION, List.of(101L, 303L), null));
 
         // then
         List<Notification> saved = notificationRepository.findAll();
         assertEquals(2, saved.size());
         assertEquals(NotificationMessages.SYSTEM_TITLE, saved.getFirst().getTitle());
+        assertEquals(List.of("fcm-101", "fcm-303"), pushSender.sent().getFirst().pushTokens());
     }
 
     @Test
-    @DisplayName("문장이 없는 종류(출시 후 알림)는 저장하지 않는다")
+    @DisplayName("기기가 없으면(로그아웃 등) 저장만 하고 푸시는 보내지 않는다")
+    void noDevice() {
+        // when
+        dispatchService.dispatch(request(NotificationType.APPOINTMENT_CANCELED, List.of(404L), SENDER_ID));
+
+        // then
+        assertEquals(1, notificationRepository.findAll().size());
+        assertTrue(pushSender.sent().isEmpty());
+    }
+
+    @Test
+    @DisplayName("푸시가 실패해도 알림 목록 저장은 남는다")
+    void pushFailureKeepsSaved() {
+        // given
+        NotificationDispatchService failingPush = service(memberIds -> {
+            throw new IllegalStateException("토큰 조회 실패");
+        });
+
+        // when
+        failingPush.dispatch(request(NotificationType.APPOINTMENT_CANCELED, List.of(101L), SENDER_ID));
+
+        // then
+        assertEquals(1, notificationRepository.findAll().size());
+    }
+
+    @Test
+    @DisplayName("문장이 없는 종류(출시 후 알림)는 저장도 푸시도 하지 않는다")
     void unsupportedType() {
         // when
         dispatchService.dispatch(request(NotificationType.WISHLIST_KEYWORD, List.of(101L), null));
 
         // then
         assertTrue(notificationRepository.findAll().isEmpty());
+        assertTrue(pushSender.sent().isEmpty());
+    }
+
+    private NotificationDispatchService service(PushTokenPort pushTokenPort) {
+        return new NotificationDispatchService(notificationRepository, memberId -> "하치와레러버", pushTokenPort,
+                pushSender);
     }
 
     private static NotificationRequested request(NotificationType type, List<Long> receiverIds, Long senderId) {

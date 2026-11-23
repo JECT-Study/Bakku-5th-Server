@@ -2,8 +2,11 @@ package com.ject.notification.application.service;
 
 import com.ject.common.event.notification.NotificationRequested;
 import com.ject.common.event.notification.NotificationTargetType;
+import com.ject.notification.application.dto.PushMessage;
 import com.ject.notification.application.port.MemberNicknamePort;
 import com.ject.notification.application.port.NotificationRepository;
+import com.ject.notification.application.port.PushSender;
+import com.ject.notification.application.port.PushTokenPort;
 import com.ject.notification.domain.domain.Notification;
 import com.ject.notification.domain.domain.NotificationContent;
 import com.ject.notification.domain.domain.NotificationMessages;
@@ -16,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 /**
- * 다른 파트의 알림 요청을 받는 사람별 알림으로 만든다. 문장 · 저장 여부는 알림 쪽이 정한다 (결정 B2).
+ * 다른 파트의 알림 요청을 받는 사람별 알림으로 만들어 저장하고 푸시를 보낸다. 문장 · 저장 여부는 알림 쪽이 정한다 (결정 B2).
  */
 @Service
 public class NotificationDispatchService {
@@ -25,11 +28,16 @@ public class NotificationDispatchService {
 
     private final NotificationRepository notificationRepository;
     private final MemberNicknamePort memberNicknamePort;
+    private final PushTokenPort pushTokenPort;
+    private final PushSender pushSender;
 
     public NotificationDispatchService(NotificationRepository notificationRepository,
-                                       MemberNicknamePort memberNicknamePort) {
+                                       MemberNicknamePort memberNicknamePort, PushTokenPort pushTokenPort,
+                                       PushSender pushSender) {
         this.notificationRepository = notificationRepository;
         this.memberNicknamePort = memberNicknamePort;
+        this.pushTokenPort = pushTokenPort;
+        this.pushSender = pushSender;
     }
 
     /**
@@ -47,11 +55,15 @@ public class NotificationDispatchService {
         }
         NotificationContent content = NotificationMessages.content(request.type(), senderNickname(request.senderId()),
                 request.params().get(NotificationMessages.PRODUCT_NAME));
+        NotificationTargetType targetType = request.target() == null ? null : request.target().type();
+        Long targetId = request.target() == null ? null : request.target().id();
+
         if (NotificationMessages.savesToList(request.type())) {
             notificationRepository.saveAll(receiverIds.stream()
-                    .map(receiverId -> toNotification(receiverId, request, content))
+                    .map(receiverId -> Notification.create(receiverId, request.type(), content, targetType, targetId))
                     .toList());
         }
+        push(receiverIds, new PushMessage(request.type(), content.title(), content.body(), targetType, targetId));
     }
 
     /**
@@ -68,11 +80,17 @@ public class NotificationDispatchService {
         return senderId == null ? null : memberNicknamePort.getNickname(senderId);
     }
 
-    private static Notification toNotification(Long receiverId, NotificationRequested request,
-                                               NotificationContent content) {
-        NotificationRequested.Target target = request.target();
-        NotificationTargetType targetType = target == null ? null : target.type();
-        Long targetId = target == null ? null : target.id();
-        return Notification.create(receiverId, request.type(), content, targetType, targetId);
+    /**
+     * 푸시가 실패해도 알림 목록 저장은 남긴다.
+     */
+    private void push(List<Long> receiverIds, PushMessage message) {
+        try {
+            List<String> pushTokens = pushTokenPort.getPushTokens(receiverIds);
+            if (!pushTokens.isEmpty()) {
+                pushSender.send(pushTokens, message);
+            }
+        } catch (RuntimeException e) {
+            log.warn("푸시 발송 실패. type={}, receiverIds={}", message.type(), receiverIds, e);
+        }
     }
 }
