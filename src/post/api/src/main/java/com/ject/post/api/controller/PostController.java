@@ -11,6 +11,7 @@ import com.ject.post.api.dto.request.UpdatePostRequest;
 import com.ject.post.api.dto.response.PostResponse;
 import com.ject.post.api.dto.response.RelatedChatResponse;
 import com.ject.post.application.dto.PostResult;
+import com.ject.post.application.dto.command.DeletePostCommand;
 import com.ject.post.application.dto.command.IncreaseViewCountCommand;
 import com.ject.post.application.dto.query.GetPostQuery;
 import lombok.RequiredArgsConstructor;
@@ -49,7 +50,8 @@ public class PostController implements PostApi {
     }
 
     @Override
-    public ApiResponse<Void> deletePost(Long postId) {
+    public ApiResponse<Void> deletePost(Long memberId, Long postId) {
+        commandBus.send(new DeletePostCommand(postId, memberId));
         return ApiResponse.success(null);
     }
 

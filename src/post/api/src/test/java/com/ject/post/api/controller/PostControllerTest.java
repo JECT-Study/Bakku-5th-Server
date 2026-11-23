@@ -11,6 +11,7 @@ import com.ject.post.api.exception.PostExceptionHandler;
 import com.ject.post.application.dto.AuthorInfo;
 import com.ject.post.application.dto.PostResult;
 import com.ject.post.application.dto.command.CreatePostCommand;
+import com.ject.post.application.dto.command.DeletePostCommand;
 import com.ject.post.application.dto.command.IncreaseViewCountCommand;
 import com.ject.post.application.dto.command.UpdatePostCommand;
 import com.ject.post.application.dto.query.GetPostQuery;
@@ -302,15 +303,31 @@ class PostControllerTest {
     @Test
     @DisplayName("PO-5 삭제하면 data는 null이다")
     void deletePost_returnsNullData() throws Exception {
-        mockMvc.perform(delete("/api/v1/posts/10"))
+        deletePost("10", 3L)
                 .andExpect(status().isOk())
                 .andExpect(content().json("{\"success\":true,\"data\":null}", JsonCompareMode.STRICT));
     }
 
     @Test
+    @DisplayName("PO-5 삭제자는 토큰의 회원이고, Command만 보낸다")
+    void deletePost_sendsCommandWithLoginMember() throws Exception {
+        deletePost("10", 3L);
+
+        assertEquals(List.of(new DeletePostCommand(10L, 3L)), sent);
+    }
+
+    @Test
+    @DisplayName("PO-5 로그인 정보가 없으면 AUTH_001")
+    void deletePost_withoutLogin_returnsAuth001() throws Exception {
+        mockMvc.perform(delete("/api/v1/posts/10"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTH_001"));
+    }
+
+    @Test
     @DisplayName("PO-5 postId 형식이 틀리면 COMMON_001")
     void deletePost_invalidId_returnsCommon001() throws Exception {
-        expectCommon001(mockMvc.perform(delete("/api/v1/posts/abc")));
+        expectCommon001(deletePost("abc", 3L));
     }
 
     @Test
@@ -342,6 +359,11 @@ class PostControllerTest {
                 .requestAttr(LoginMember.ATTRIBUTE, memberId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body));
+    }
+
+    private ResultActions deletePost(String postId, Long memberId) throws Exception {
+        return mockMvc.perform(delete("/api/v1/posts/" + postId)
+                .requestAttr(LoginMember.ATTRIBUTE, memberId));
     }
 
     private ResultActions getPost(String postId, Long memberId) throws Exception {
