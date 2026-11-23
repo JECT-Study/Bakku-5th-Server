@@ -39,6 +39,17 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
         return notificationJpaRepository.countUnread(receiverId, createdFrom);
     }
 
+    @Override
+    public boolean markRead(Long notificationId, Long receiverId, Instant readAt, Instant createdFrom) {
+        return notificationJpaRepository.markRead(notificationId, receiverId, readAt, createdFrom) > 0;
+    }
+
+    @Override
+    public boolean exists(Long notificationId, Long receiverId, Instant createdFrom) {
+        return notificationJpaRepository.existsByIdAndReceiverIdAndCreatedAtGreaterThanEqual(notificationId,
+                receiverId, createdFrom);
+    }
+
     private static NotificationJpaEntity toEntity(Notification notification) {
         return new NotificationJpaEntity(notification.getReceiverId(), notification.getType(),
                 notification.getTitle(), notification.getBody(), notification.getTargetType(),

@@ -12,16 +12,20 @@ import com.ject.notification.api.dto.response.UnreadCountResponse;
 import com.ject.notification.application.dto.NotificationPage;
 import com.ject.notification.application.dto.NotificationPage.NotificationItem;
 import com.ject.notification.application.service.NotificationQueryService;
+import com.ject.notification.application.service.NotificationReadService;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class NotificationController implements NotificationApi {
 
     private final NotificationQueryService notificationQueryService;
+    private final NotificationReadService notificationReadService;
     private final ServiceTime serviceTime;
 
-    public NotificationController(NotificationQueryService notificationQueryService, ServiceTime serviceTime) {
+    public NotificationController(NotificationQueryService notificationQueryService,
+                                  NotificationReadService notificationReadService, ServiceTime serviceTime) {
         this.notificationQueryService = notificationQueryService;
+        this.notificationReadService = notificationReadService;
         this.serviceTime = serviceTime;
     }
 
@@ -40,7 +44,8 @@ public class NotificationController implements NotificationApi {
     }
 
     @Override
-    public ApiResponse<NotificationReadResponse> read(Long notificationId) {
+    public ApiResponse<NotificationReadResponse> read(Long memberId, Long notificationId) {
+        notificationReadService.read(memberId, notificationId);
         return ApiResponse.success(new NotificationReadResponse(notificationId, true));
     }
 

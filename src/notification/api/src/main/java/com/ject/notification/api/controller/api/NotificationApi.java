@@ -44,6 +44,7 @@ public interface NotificationApi {
                     + "에러: NOTIFICATION_001 알림 없음 (남의 알림 · 30일 지나 삭제됨 포함) → 목록 새로고침")
     @PostMapping("/{notificationId}/read")
     ApiResponse<NotificationReadResponse> read(
+            @LoginMember Long memberId,
             @Parameter(description = "알림 ID") @PathVariable("notificationId") Long notificationId);
 
     @Operation(summary = "NT-4 모두 읽음", description = "안 읽은 알림을 전부 읽음 처리합니다.")

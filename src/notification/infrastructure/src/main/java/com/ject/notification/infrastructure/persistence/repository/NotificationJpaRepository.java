@@ -3,6 +3,7 @@ package com.ject.notification.infrastructure.persistence.repository;
 import com.ject.notification.infrastructure.persistence.entity.NotificationJpaEntity;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -30,4 +31,17 @@ public interface NotificationJpaRepository extends JpaRepository<NotificationJpa
             WHERE n.receiverId = :receiverId AND n.readAt IS NULL AND n.createdAt >= :createdFrom
             """)
     long countUnread(@Param("receiverId") Long receiverId, @Param("createdFrom") Instant createdFrom);
+
+    /**
+     * 안 읽은 알림만 바꿔서 동시에 눌러도 읽은 시각이 한 번만 정해진다.
+     */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("""
+            UPDATE NotificationJpaEntity n SET n.readAt = :readAt, n.updatedAt = :readAt
+            WHERE n.id = :id AND n.receiverId = :receiverId AND n.readAt IS NULL AND n.createdAt >= :createdFrom
+            """)
+    int markRead(@Param("id") Long id, @Param("receiverId") Long receiverId, @Param("readAt") Instant readAt,
+                 @Param("createdFrom") Instant createdFrom);
+
+    boolean existsByIdAndReceiverIdAndCreatedAtGreaterThanEqual(Long id, Long receiverId, Instant createdFrom);
 }

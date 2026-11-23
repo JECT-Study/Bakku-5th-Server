@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Predicate;
 
 class FakeNotificationRepository implements NotificationRepository {
 
@@ -35,6 +36,35 @@ class FakeNotificationRepository implements NotificationRepository {
                 .filter(notification -> !notification.getCreatedAt().isBefore(createdFrom))
                 .filter(notification -> !notification.isRead())
                 .count();
+    }
+
+    @Override
+    public boolean markRead(Long notificationId, Long receiverId, Instant readAt, Instant createdFrom) {
+        return markReadWhere(notification -> notification.getId().equals(notificationId)
+                && notification.getReceiverId().equals(receiverId), readAt, createdFrom) > 0;
+    }
+
+    @Override
+    public boolean exists(Long notificationId, Long receiverId, Instant createdFrom) {
+        return store.stream().anyMatch(notification -> notification.getId().equals(notificationId)
+                && notification.getReceiverId().equals(receiverId)
+                && !notification.getCreatedAt().isBefore(createdFrom));
+    }
+
+    private int markReadWhere(Predicate<Notification> condition, Instant readAt, Instant createdFrom) {
+        int updated = 0;
+        for (int i = 0; i < store.size(); i++) {
+            Notification notification = store.get(i);
+            if (condition.test(notification) && !notification.isRead()
+                    && !notification.getCreatedAt().isBefore(createdFrom)) {
+                store.set(i, Notification.restore(notification.getId(), notification.getReceiverId(),
+                        notification.getType(), notification.getTitle(), notification.getBody(),
+                        notification.getTargetType(), notification.getTargetId(), readAt,
+                        notification.getCreatedAt()));
+                updated++;
+            }
+        }
+        return updated;
     }
 
     /** id · 받은 시각이 정해진 저장된 알림을 넣는다 */

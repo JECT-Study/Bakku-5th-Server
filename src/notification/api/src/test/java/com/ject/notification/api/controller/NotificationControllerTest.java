@@ -9,6 +9,8 @@ import com.ject.notification.api.exception.NotificationExceptionHandler;
 import com.ject.notification.application.dto.NotificationPage;
 import com.ject.notification.application.dto.NotificationPage.NotificationItem;
 import com.ject.notification.application.service.NotificationQueryService;
+import com.ject.notification.application.service.NotificationReadService;
+import com.ject.notification.domain.exception.NotificationNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,12 +38,14 @@ class NotificationControllerTest {
 
     private MockMvc mockMvc;
     private StubNotificationQueryService queryService;
+    private StubNotificationReadService readService;
 
     @BeforeEach
     void setUp() {
         ServiceTime serviceTime = new ServiceTime(Clock.fixed(CREATED_AT, ZoneId.of("Asia/Seoul")));
         queryService = new StubNotificationQueryService();
-        mockMvc = MockMvcBuilders.standaloneSetup(new NotificationController(queryService, serviceTime))
+        readService = new StubNotificationReadService();
+        mockMvc = MockMvcBuilders.standaloneSetup(new NotificationController(queryService, readService, serviceTime))
                 .setControllerAdvice(new NotificationExceptionHandler())
                 .setCustomArgumentResolvers(new LoginMemberArgumentResolver())
                 .defaultResponseCharacterEncoding(StandardCharsets.UTF_8)
@@ -109,10 +113,19 @@ class NotificationControllerTest {
     @Test
     @DisplayName("NT-3 읽음 처리하면 200과 read=true를 반환한다")
     void read() throws Exception {
-        mockMvc.perform(post("/api/v1/notifications/9001/read"))
+        mockMvc.perform(post("/api/v1/notifications/9001/read").requestAttr(LoginMember.ATTRIBUTE, MEMBER_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.notificationId").value(9001))
                 .andExpect(jsonPath("$.data.read").value(true));
+        assertEquals(List.of(MEMBER_ID, 9001L), readService.read);
+    }
+
+    @Test
+    @DisplayName("NT-3 없는 알림 · 남의 알림이면 404 NOTIFICATION_001")
+    void read_notFound_returnsNotification001() throws Exception {
+        mockMvc.perform(post("/api/v1/notifications/404/read").requestAttr(LoginMember.ATTRIBUTE, MEMBER_ID))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NOTIFICATION_001"));
     }
 
     @Test
@@ -121,6 +134,26 @@ class NotificationControllerTest {
         mockMvc.perform(post("/api/v1/notifications/read-all"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.readCount").value(3));
+    }
+
+    /**
+     * 404는 없는 알림.
+     */
+    private static class StubNotificationReadService extends NotificationReadService {
+
+        List<Long> read;
+
+        StubNotificationReadService() {
+            super(null, null);
+        }
+
+        @Override
+        public void read(Long memberId, Long notificationId) {
+            if (notificationId == 404L) {
+                throw new NotificationNotFoundException(notificationId);
+            }
+            read = List.of(memberId, notificationId);
+        }
     }
 
     private static class StubNotificationQueryService extends NotificationQueryService {
