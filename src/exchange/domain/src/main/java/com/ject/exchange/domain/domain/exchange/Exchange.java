@@ -155,6 +155,17 @@ public class Exchange {
                 List.of(updatedItem), status, completedAt, createdAt, updatedAt);
     }
 
+    /**
+     * 새로 작성한 아이템의 사진을 바꾼다 (정식 key, 순서대로)
+     */
+    public Exchange withNewItemImages(List<String> imageKeys) {
+        if (offerType != OfferType.NEW) {
+            throw new ExchangeException(ExchangeErrorCode.NOT_NEW_ITEM_OFFER);
+        }
+        return new Exchange(id, postId, requestUserId, ownerId, offerType,
+                List.of(newItem().withImageKeys(imageKeys)), status, completedAt, createdAt, updatedAt);
+    }
+
     private static void validateNotOwnPost(Long requesterId, Long ownerId) {
         if (requesterId.equals(ownerId)) {
             throw new ExchangeException(ExchangeErrorCode.OWN_POST_REQUEST);

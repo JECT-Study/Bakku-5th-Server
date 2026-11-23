@@ -57,7 +57,7 @@ public record ExchangeResult(
                             item.getName() == null ? null : item.getName().value(),
                             item.getOpened(),
                             item.getDescription() == null ? null : item.getDescription().value(),
-                            List.of() // Todo: 이미지 모듈 전까지 빈 리스트
+                            exchange.getOfferType() == OfferType.NEW ? item.getImageKeys() : null
                     );
                 })
                 .toList();

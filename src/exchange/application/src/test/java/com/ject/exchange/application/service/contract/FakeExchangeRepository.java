@@ -1,0 +1,35 @@
+package com.ject.exchange.application.service.contract;
+
+import com.ject.exchange.domain.domain.exchange.Exchange;
+import com.ject.exchange.domain.repository.ExchangeRepository;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+
+/**
+ * 테스트용 가짜 교환 저장소. 참여자 확인 계약은 조회만 하므로 미리 넣은 교환을 그대로 돌려준다.
+ */
+class FakeExchangeRepository implements ExchangeRepository {
+
+    private final Map<Long, Exchange> store = new HashMap<>();
+
+    @Override
+    public Exchange save(Exchange exchange) {
+        throw new IllegalStateException("참여자 확인은 교환을 저장하지 않는다");
+    }
+
+    @Override
+    public Optional<Exchange> findById(Long id) {
+        return Optional.ofNullable(store.get(id));
+    }
+
+    @Override
+    public Optional<Exchange> findByIdForUpdate(Long id) {
+        return findById(id);
+    }
+
+    void preload(Exchange exchange) {
+        store.put(exchange.getId(), exchange);
+    }
+}

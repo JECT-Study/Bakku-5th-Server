@@ -6,6 +6,7 @@ import com.ject.exchange.infrastructure.entity.ExchangeEntity;
 import com.ject.exchange.infrastructure.entity.OfferedItemEntity;
 
 import java.util.List;
+import java.util.Map;
 
 public class ExchangeMapper {
 
@@ -21,14 +22,20 @@ public class ExchangeMapper {
                 .build();
     }
 
-    public static Exchange toDomain(ExchangeEntity entity, List<OfferedItemEntity> offeredItems) {
+    /**
+     * @param imageKeysByItemId 아이템 ID별 사진 key (순서대로). 없는 아이템은 사진 없음
+     */
+    public static Exchange toDomain(ExchangeEntity entity, List<OfferedItemEntity> offeredItems,
+                                    Map<Long, List<String>> imageKeysByItemId) {
         return Exchange.of(
                 entity.getId(),
                 entity.getPostId(),
                 entity.getRequestUserId(),
                 entity.getOwnerId(),
                 entity.getOfferType(),
-                offeredItems.stream().map(OfferedItemMapper::toDomain).toList(),
+                offeredItems.stream()
+                        .map(item -> OfferedItemMapper.toDomain(item, imageKeysByItemId.getOrDefault(item.getId(), List.of())))
+                        .toList(),
                 entity.getStatus(),
                 entity.getCompletedAt(),
                 entity.getCreatedAt(),

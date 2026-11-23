@@ -3,9 +3,12 @@ package com.ject.exchange.application.service.command;
 import com.ject.common.core.cqrs.command.CommandHandler;
 import com.ject.exchange.application.dto.command.CreateExchangeCommand;
 import com.ject.exchange.application.dto.dto.PostInfo;
+import com.ject.exchange.application.port.ExchangeImageRejectedException;
+import com.ject.exchange.application.port.ImagePort;
 import com.ject.exchange.application.port.PostPort;
 import com.ject.exchange.application.port.UserPort;
 import com.ject.exchange.domain.domain.exchange.Exchange;
+import com.ject.exchange.domain.domain.exchange.OfferType;
 import com.ject.exchange.domain.domain.exchange.vo.ItemDescription;
 import com.ject.exchange.domain.domain.exchange.vo.ItemName;
 import com.ject.exchange.domain.domain.exchange.vo.OfferedPostIds;
@@ -25,6 +28,7 @@ public class CreateExchangeHandler implements CommandHandler<CreateExchangeComma
     private final ExchangeRepository exchangeRepository;
     private final PostPort postPort;
     private final UserPort userPort;
+    private final ImagePort imagePort;
 
     @Transactional
     public Long handle(CreateExchangeCommand command) {
@@ -45,7 +49,6 @@ public class CreateExchangeHandler implements CommandHandler<CreateExchangeComma
                         validAttachedPostIds(command.requesterId(), command.offeredPostIds());
                         yield request;
                     }
-                    // Todo: 이미지 tmp key 검증 및 저장
                     case NEW -> {
                         Exchange request = Exchange.createWithNewItem(
                                 post.id(),
@@ -60,7 +63,22 @@ public class CreateExchangeHandler implements CommandHandler<CreateExchangeComma
                     }
                 };
         // Todo: 채팅방 생성
-        return exchangeRepository.save(exchange).getId();
+        Exchange saved = exchangeRepository.save(exchange);
+        if (saved.getOfferType() == OfferType.NEW) {
+            // 정식 사진 경로에 교환 ID가 들어가므로 저장한 뒤 확정한다 (spec 결정 4). 거부되면 트랜잭션째 롤백된다
+            List<String> imageKeys = attachImages(command.requesterId(), saved.getId(), command.newItem().imageKeys());
+            saved = exchangeRepository.save(saved.withNewItemImages(imageKeys));
+        }
+        return saved.getId();
+    }
+
+    private List<String> attachImages(Long requesterId, Long exchangeId, List<String> imageKeys) {
+        try {
+            return imagePort.attachToExchange(requesterId, exchangeId, imageKeys);
+        } catch (ExchangeImageRejectedException rejected) {
+            throw new ExchangeException(ExchangeErrorCode.INVALID_IMAGE_KEY,
+                    rejected.getOrder() + "번째 이미지를 사용할 수 없습니다.");
+        }
     }
 
     /**

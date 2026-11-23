@@ -54,13 +54,22 @@ class FakeExchangeRepository implements ExchangeRepository {
         return saveCount;
     }
 
+    /** 저장소에 남아 있는 교환 수. NEW 방식 E-1은 사진 확정 전후로 두 번 저장할 수 있어 저장 횟수 대신 쓴다. */
+    int storedCount() {
+        return store.size();
+    }
+
+    List<Exchange> storedExchanges() {
+        return List.copyOf(store.values());
+    }
+
     private Exchange assignIds(Exchange exchange) {
         List<OfferedItem> items = exchange.getOfferedItems();
         List<OfferedItem> itemsWithId = IntStream.range(0, items.size())
                 .mapToObj(index -> {
                     OfferedItem item = items.get(index);
                     return OfferedItem.of(nextItemId++, item.getSourcePostId(), item.getName(), item.getOpened(),
-                            item.getDescription(), item.getSortOrder());
+                            item.getDescription(), item.getSortOrder(), item.getImageKeys());
                 })
                 .toList();
         return Exchange.of(nextExchangeId++, exchange.getPostId(), exchange.getRequestUserId(),

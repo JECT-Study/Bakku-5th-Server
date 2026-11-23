@@ -122,8 +122,9 @@ public record AppointmentResult(
             }
             return new AppointmentItemResult(item.getId(), OfferType.POST, sourcePost.title(), sourcePost.thumbnailKey());
         }
-        // Todo: 이미지 모듈 전까지 새로 작성한 아이템의 대표 사진은 null
+        // 첫 장이 대표 사진이다 (C-07-1)
+        String thumbnailKey = item.getImageKeys().isEmpty() ? null : item.getImageKeys().get(0);
         return new AppointmentItemResult(item.getId(), OfferType.NEW,
-                item.getName() == null ? null : item.getName().value(), null);
+                item.getName() == null ? null : item.getName().value(), thumbnailKey);
     }
 }

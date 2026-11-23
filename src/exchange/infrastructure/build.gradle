@@ -6,6 +6,8 @@ dependencies {
     implementation project(':user-application')
     // 글 정보 · 글 상태를 post 계약(PostLookup · PostStatusChanger)으로 조회 · 변경한다
     implementation project(':post-application')
+    // 새로 작성한 아이템 사진을 image 계약(ImageAttachment)으로 확정한다
+    implementation project(':image-application')
 
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 }

@@ -41,7 +41,7 @@ class CreateExchangeHandlerLoginMemberTest {
         exchangeRepository = new FakeExchangeRepository();
         postPort = new FakePostPort();
         userPort = new FakeUserPort();
-        handler = new CreateExchangeHandler(exchangeRepository, postPort, userPort);
+        handler = new CreateExchangeHandler(exchangeRepository, postPort, userPort, new FakeImagePort());
 
         postPort.register(new PostInfo(POST_P, "치이카와 교환해요", null, MEMBER_B, PostInfo.Status.AVAILABLE));
         postPort.register(new PostInfo(POST_Q_OF_A, "우사기 미니 피규어", null, MEMBER_A, PostInfo.Status.AVAILABLE));
@@ -59,7 +59,7 @@ class CreateExchangeHandlerLoginMemberTest {
         Exchange saved = exchangeRepository.findById(exchangeId).orElseThrow();
         assertEquals(MEMBER_A, saved.getRequestUserId());
         assertEquals(MEMBER_B, saved.getOwnerId());
-        assertEquals(1, exchangeRepository.saveCount());
+        assertEquals(1, exchangeRepository.storedCount());
     }
 
     @Test
@@ -121,7 +121,7 @@ class CreateExchangeHandlerLoginMemberTest {
         Long exchangeId = handler.handle(newItemCommand(MEMBER_A, POST_P));
 
         assertEquals(MEMBER_A, exchangeRepository.findById(exchangeId).orElseThrow().getRequestUserId());
-        assertEquals(1, exchangeRepository.saveCount());
+        assertEquals(1, exchangeRepository.storedCount());
     }
 
     @Test
@@ -140,7 +140,7 @@ class CreateExchangeHandlerLoginMemberTest {
         Long exchangeId = handler.handle(newItemCommand(MEMBER_A, POST_P));
 
         assertNotNull(exchangeId);
-        assertEquals(1, exchangeRepository.saveCount());
+        assertEquals(1, exchangeRepository.storedCount());
     }
 
     // ---- AC-10 판정 순서 009 → 108 · 005 → 003 → 008 → 007 ----
@@ -196,7 +196,7 @@ class CreateExchangeHandlerLoginMemberTest {
 
     private static CreateExchangeCommand newItemCommand(Long requesterId, Long postId) {
         return new CreateExchangeCommand(requesterId, postId, OfferType.NEW, null,
-                new NewItem("치이카와 아크릴 스탠드", false, "가챠에서 두 개 나와서 하나 교환해요"));
+                new NewItem("치이카와 아크릴 스탠드", false, "가챠에서 두 개 나와서 하나 교환해요", List.of("exchange/tmp/100/item-1.jpg")));
     }
 
     private static CreateExchangeCommand postCommand(Long requesterId, Long postId, Long offeredPostId) {
