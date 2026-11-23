@@ -1,8 +1,8 @@
 package com.ject.post.infrastructure.repository;
 
 import com.ject.post.domain.domain.Post;
+import com.ject.post.domain.exception.PostConflictException;
 import com.ject.post.domain.exception.PostNotFoundException;
-import com.ject.post.domain.exception.PostUpdateConflictException;
 import com.ject.post.domain.repository.PostRepository;
 import com.ject.post.infrastructure.entity.PostEntity;
 import com.ject.post.infrastructure.entity.PostImageEntity;
@@ -61,6 +61,19 @@ public class JpaPostRepository implements PostRepository {
         postEntityRepository.increaseViewCount(id);
     }
 
+    @Override
+    @Transactional
+    public void delete(Post post) {
+        PostEntity entity = postEntityRepository.findById(post.getId())
+                .orElseThrow(() -> new PostNotFoundException(post.getId()));
+        entity.markDeleted(post.getDeletedAt());
+        try {
+            postEntityRepository.flush();
+        } catch (ObjectOptimisticLockingFailureException e) {
+            throw PostConflictException.onDelete(post.getId());
+        }
+    }
+
     private PostEntity update(Post post) {
         PostEntity entity = postEntityRepository.findById(post.getId())
                 .orElseThrow(() -> new PostNotFoundException(post.getId()));
@@ -69,7 +82,7 @@ public class JpaPostRepository implements PostRepository {
         try {
             postEntityRepository.flush();
         } catch (ObjectOptimisticLockingFailureException e) {
-            throw new PostUpdateConflictException(post.getId());
+            throw PostConflictException.onUpdate(post.getId());
         }
         return entity;
     }

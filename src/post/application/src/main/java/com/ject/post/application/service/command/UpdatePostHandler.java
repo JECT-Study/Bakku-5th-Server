@@ -7,8 +7,6 @@ import com.ject.post.application.port.PostImagePort;
 import com.ject.post.domain.domain.Place;
 import com.ject.post.domain.domain.Post;
 import com.ject.post.domain.domain.PostCategory;
-import com.ject.post.domain.domain.PostStatus;
-import com.ject.post.domain.exception.PostNotFoundException;
 import com.ject.post.domain.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,9 +22,7 @@ public class UpdatePostHandler implements CommandHandler<UpdatePostCommand, Void
     @Override
     @Transactional
     public Void handle(UpdatePostCommand command) {
-        Post post = postRepository.findById(command.postId())
-                .filter(found -> found.getStatus() != PostStatus.DELETED)
-                .orElseThrow(() -> new PostNotFoundException(command.postId()));
+        Post post = postRepository.getVisible(command.postId());
 
         CreatePostCommand.PlaceCommand place = command.place();
         post.update(

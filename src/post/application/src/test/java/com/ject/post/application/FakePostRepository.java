@@ -13,6 +13,7 @@ public class FakePostRepository implements PostRepository {
     private final Map<Long, Post> posts = new HashMap<>();
     private final Instant createdAt;
     private long sequence;
+    public int deleteCalls;
 
     public FakePostRepository(Instant createdAt) {
         this.createdAt = createdAt;
@@ -36,9 +37,16 @@ public class FakePostRepository implements PostRepository {
                 .nowExchangeEndsAt(post.getNowExchangeEndsAt())
                 .viewCount(post.getViewCount())
                 .createdAt(post.getCreatedAt() == null ? createdAt : post.getCreatedAt())
+                .deletedAt(post.getDeletedAt())
                 .build();
         posts.put(id, saved);
         return saved;
+    }
+
+    @Override
+    public void delete(Post post) {
+        deleteCalls++;
+        posts.put(post.getId(), post);
     }
 
     @Override
@@ -64,6 +72,7 @@ public class FakePostRepository implements PostRepository {
                 .nowExchangeEndsAt(post.getNowExchangeEndsAt())
                 .viewCount(post.getViewCount() + 1)
                 .createdAt(post.getCreatedAt())
+                .deletedAt(post.getDeletedAt())
                 .build());
     }
 }

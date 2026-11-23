@@ -46,9 +46,9 @@ public interface PostApi {
                                          @PathVariable("postId") Long postId,
                                          @Valid @RequestBody UpdatePostRequest request);
 
-    @Operation(summary = "PO-5 교환글 삭제", description = "교환 가능 글만 삭제합니다. FE는 PO-10으로 팝업 문구를 고른 뒤 호출합니다.")
+    @Operation(summary = "PO-5 교환글 삭제", description = "교환 가능 글만 작성자가 삭제합니다. 이미 삭제한 내 글을 다시 삭제해도 200입니다. FE는 PO-10으로 팝업 문구를 고른 뒤 호출합니다.")
     @DeleteMapping("/{postId}")
-    ApiResponse<Void> deletePost(@PathVariable("postId") Long postId);
+    ApiResponse<Void> deletePost(@LoginMember Long memberId, @PathVariable("postId") Long postId);
 
     @Operation(summary = "PO-10 연관 채팅 확인", description = "삭제 팝업 전에 이 글로 열린 방이나 이 글이 첨부된 방이 있는지 조회합니다.")
     @GetMapping("/{postId}/related-chats")
