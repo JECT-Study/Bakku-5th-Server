@@ -2,6 +2,7 @@ package com.ject.exchange.api.controller;
 
 import com.ject.common.web.auth.LoginMember;
 import com.ject.common.web.auth.LoginMemberArgumentResolver;
+import com.ject.common.web.image.ImageUrlResolver;
 import com.ject.exchange.api.exception.ExchangeExceptionHandler;
 import com.ject.exchange.application.dto.dto.AppointmentItemResult;
 import com.ject.exchange.application.dto.dto.AppointmentResult;
@@ -32,6 +33,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 class AppointmentDetailControllerTest {
 
+    private static final ImageUrlResolver IMAGE_URL_RESOLVER = new ImageUrlResolver("https://img.test");
+
     private static final String DETAIL_URL = "/api/v1/appointments/{appointmentId}";
     private static final Long EXCHANGE_ID = 1L;
     private static final Long APPOINTMENT_ID = 3L;
@@ -49,7 +52,8 @@ class AppointmentDetailControllerTest {
     private static final Instant CONFIRMED_AT = Instant.parse("2026-10-26T08:00:00Z");
     private static final String PLACE_NAME = "홍대입구역 3번 출구 앞 편의점";
     private static final String PLACE_ADDRESS = "서울 마포구 양화로 160";
-    private static final String THUMBNAIL = "https://cdn.example.com/post/501/1.jpg";
+    private static final String THUMBNAIL = "post/501/1.jpg";
+    private static final String THUMBNAIL_URL = "https://img.test/api/v1/images/post/501/1.jpg";
 
     private FakeQueryBus queryBus;
     private MockMvc mockMvc;
@@ -57,7 +61,8 @@ class AppointmentDetailControllerTest {
     @BeforeEach
     void setUp() {
         queryBus = new FakeQueryBus(new FakeExchangeRepository());
-        mockMvc = MockMvcBuilders.standaloneSetup(new AppointmentController(new FakeCommandBus(), queryBus))
+        mockMvc = MockMvcBuilders.standaloneSetup(
+                        new AppointmentController(new FakeCommandBus(), queryBus, IMAGE_URL_RESOLVER))
                 .setControllerAdvice(new ExchangeExceptionHandler())
                 .setCustomArgumentResolvers(new LoginMemberArgumentResolver())
                 .defaultResponseCharacterEncoding(StandardCharsets.UTF_8)
@@ -89,7 +94,7 @@ class AppointmentDetailControllerTest {
                 .andExpect(jsonPath("$.data.items[0].offeredItemId").value(ITEM_31))
                 .andExpect(jsonPath("$.data.items[0].type").value("POST"))
                 .andExpect(jsonPath("$.data.items[0].name").value("우사기 미니 피규어"))
-                .andExpect(jsonPath("$.data.items[0].thumbnailUrl").value(THUMBNAIL))
+                .andExpect(jsonPath("$.data.items[0].thumbnailUrl").value(THUMBNAIL_URL))
                 .andExpect(jsonPath("$.data.expiresAt").value("2026-10-27T14:00:00+09:00"))
                 .andExpect(jsonPath("$.data.myReminderOffsetMinutes").value(30))
                 .andExpect(jsonPath("$.data.otherActiveProposalsOnPost").value(false))

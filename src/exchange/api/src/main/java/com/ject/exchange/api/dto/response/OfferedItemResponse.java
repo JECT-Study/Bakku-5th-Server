@@ -1,5 +1,6 @@
 package com.ject.exchange.api.dto.response;
 
+import com.ject.common.web.image.ImageUrlResolver;
 import com.ject.exchange.api.dto.enums.ItemAvailability;
 import com.ject.exchange.application.dto.dto.OfferedItemResult;
 import com.ject.exchange.domain.domain.exchange.OfferType;
@@ -36,13 +37,13 @@ public record OfferedItemResponse(
         @Schema(description = "NEW일 때 사진 (첫 장이 대표). POST면 null")
         List<String> imageUrls
 ) {
-    public static OfferedItemResponse from(OfferedItemResult item) {
+    public static OfferedItemResponse from(OfferedItemResult item, ImageUrlResolver imageUrlResolver) {
         return new OfferedItemResponse(
                 item.id(),
                 EnumMapper.map(item.type(), OfferType.class),
                 EnumMapper.map(item.availability(), ItemAvailability.class),
                 item.editable(),
-                PostSummaryResponse.from(item.post()),
+                PostSummaryResponse.from(item.post(), imageUrlResolver),
                 item.name(),
                 item.opened(),
                 item.description(),

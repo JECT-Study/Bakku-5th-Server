@@ -28,12 +28,7 @@ public class CreateExchangeHandler implements CommandHandler<CreateExchangeComma
 
     @Transactional
     public Long handle(CreateExchangeCommand command) {
-        PostInfo post = postPort.findById(command.postId())
-                .orElseThrow(() -> new ExchangeException(ExchangeErrorCode.POST_NOT_FOUND));
-
-        if (!post.isRequestable()) {
-            throw new ExchangeException(ExchangeErrorCode.POST_NOT_REQUESTABLE);
-        }
+        PostInfo post = requestablePostOf(command.postId());
         // Todo: 중복 요청, 나간 채팅방 재요청 검증 (chat BC 채팅방 정보가 생기면)
 
         Exchange exchange =
@@ -66,6 +61,21 @@ public class CreateExchangeHandler implements CommandHandler<CreateExchangeComma
                 };
         // Todo: 채팅방 생성
         return exchangeRepository.save(exchange).getId();
+    }
+
+    /**
+     * 요청할 글. 화면이 삭제 · 예약중 · 교환 완료에 각기 다른 안내를 띄우므로 에러를 나눈다 (C-07-1 예외, spec 결정 1 · 5)
+     */
+    private PostInfo requestablePostOf(Long postId) {
+        PostInfo post = postPort.findById(postId)
+                .filter(found -> found.status() != PostInfo.Status.DELETED)
+                .orElseThrow(() -> new ExchangeException(ExchangeErrorCode.POST_NOT_FOUND));
+        switch (post.status()) {
+            case AVAILABLE -> { }
+            case RESERVED -> throw new ExchangeException(ExchangeErrorCode.POST_RESERVED_ELSEWHERE);
+            case COMPLETED, DELETED -> throw new ExchangeException(ExchangeErrorCode.POST_NOT_REQUESTABLE);
+        }
+        return post;
     }
 
     private void validAttachedPostIds(Long requesterId, List<Long> offeredPostIds) {

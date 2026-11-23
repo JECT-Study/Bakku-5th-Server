@@ -1,5 +1,6 @@
 package com.ject.exchange.api.dto.response;
 
+import com.ject.common.web.image.ImageUrlResolver;
 import com.ject.exchange.api.dto.enums.AppointmentStatus;
 import com.ject.exchange.api.dto.enums.AppointmentTimeType;
 import com.ject.exchange.api.dto.enums.ConfirmationAnswer;
@@ -69,7 +70,7 @@ public record AppointmentResponse(
     /**
      * 약속 응답. 변경 제안 · 취소 요청은 아직 없으므로 null
      */
-    public static AppointmentResponse from(AppointmentResult result) {
+    public static AppointmentResponse from(AppointmentResult result, ImageUrlResolver imageUrlResolver) {
         return new AppointmentResponse(
                 result.id(),
                 result.exchangeId(),
@@ -80,7 +81,8 @@ public record AppointmentResponse(
                 toSeoul(result.scheduledAt()),
                 new PlaceResponse(result.place().name(), result.place().address(), result.place().lat(), result.place().lng()),
                 result.items().stream()
-                        .map(item -> new AppointmentItemResponse(item.offeredItemId(), item.type(), item.name(), item.thumbnailUrl()))
+                        .map(item -> new AppointmentItemResponse(item.offeredItemId(), item.type(), item.name(),
+                                item.thumbnailKey() == null ? null : imageUrlResolver.resolve(item.thumbnailKey())))
                         .toList(),
                 toSeoul(result.expiresAt()),
                 result.myReminderOffsetMinutes(),

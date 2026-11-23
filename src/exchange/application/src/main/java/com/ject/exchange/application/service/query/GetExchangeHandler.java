@@ -7,10 +7,12 @@ import com.ject.exchange.application.dto.dto.UserInfo;
 import com.ject.exchange.application.dto.query.GetExchangeQuery;
 import com.ject.exchange.application.port.PostPort;
 import com.ject.exchange.application.port.UserPort;
+import com.ject.exchange.domain.domain.appointment.AppointmentStatus;
 import com.ject.exchange.domain.domain.exchange.Exchange;
 import com.ject.exchange.domain.domain.exchange.OfferedItem;
 import com.ject.exchange.domain.exception.ExchangeErrorCode;
 import com.ject.exchange.domain.exception.ExchangeException;
+import com.ject.exchange.domain.repository.AppointmentRepository;
 import com.ject.exchange.domain.repository.ExchangeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -27,6 +30,7 @@ import java.util.stream.Stream;
 public class GetExchangeHandler implements QueryHandler<GetExchangeQuery, ExchangeResult> {
 
     private final ExchangeRepository exchangeRepository;
+    private final AppointmentRepository appointmentRepository;
     private final PostPort postPort;
     private final UserPort userPort;
 
@@ -43,7 +47,18 @@ public class GetExchangeHandler implements QueryHandler<GetExchangeQuery, Exchan
                 .collect(Collectors.toMap(PostInfo::id, p -> p));
         Map<Long, UserInfo> users = userPort.findAllByIds(List.of(exchange.getRequestUserId(), exchange.getOwnerId())).stream()
                 .collect(Collectors.toMap(UserInfo::id, u -> u));
-        return ExchangeResult.of(exchange, posts, users);
+        return ExchangeResult.of(exchange, posts, users, reservedHerePostIdsOf(exchange));
+    }
+
+    /**
+     * 이 교환의 확정 약속이 고른 첨부 글 ID. 예약중인 첨부 글이 이 교환 때문인지 다른 교환 때문인지 가른다
+     */
+    private Set<Long> reservedHerePostIdsOf(Exchange exchange) {
+        return appointmentRepository.findAllByExchangeId(exchange.getId()).stream()
+                .filter(appointment -> appointment.getStatus() == AppointmentStatus.CONFIRMED)
+                .flatMap(appointment -> appointmentRepository.findPostIdsOf(appointment.getId()).stream())
+                .filter(postId -> !postId.equals(exchange.getPostId()))
+                .collect(Collectors.toSet());
     }
 
     private static List<Long> postIdsOf(Exchange exchange) {

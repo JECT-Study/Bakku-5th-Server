@@ -1,5 +1,6 @@
 package com.ject.exchange.api.dto.response;
 
+import com.ject.common.web.image.ImageUrlResolver;
 import com.ject.exchange.api.dto.enums.AppointmentButton;
 import com.ject.exchange.application.dto.dto.ExchangeResult;
 import com.ject.exchange.domain.domain.exchange.ExchangeStatus;
@@ -49,16 +50,16 @@ public record ExchangeResponse(
 
     private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
 
-    public static ExchangeResponse from(ExchangeResult result) {
+    public static ExchangeResponse from(ExchangeResult result, ImageUrlResolver imageUrlResolver) {
         return ExchangeResponse.builder()
                 .id(result.id())
                 .status(result.status())
-                .post(PostSummaryResponse.from(result.post()))
+                .post(PostSummaryResponse.from(result.post(), imageUrlResolver))
                 .requester(ParticipantResponse.from(result.requester()))
                 .owner(ParticipantResponse.from(result.owner()))
                 .offerType(result.offerType())
                 .offeredItems(result.offeredItems().stream()
-                        .map(OfferedItemResponse::from)
+                        .map(item -> OfferedItemResponse.from(item, imageUrlResolver))
                         .toList())
                 .chatRoomId(result.chatRoomId())
                 .appointmentButton(EnumMapper.map(result.appointmentButton(), AppointmentButton.class))

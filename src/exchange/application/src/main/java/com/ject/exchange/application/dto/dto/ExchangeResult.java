@@ -7,6 +7,7 @@ import com.ject.exchange.domain.domain.exchange.OfferType;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public record ExchangeResult(
         Long id,
@@ -21,7 +22,11 @@ public record ExchangeResult(
         Instant createdAt
 ) {
 
-    public static ExchangeResult of(Exchange exchange, Map<Long, PostInfo> posts, Map<Long, UserInfo> users) {
+    /**
+     * @param reservedHerePostIds 이 교환의 확정 약속이 고른 첨부 글 ID. 예약중이면 RESERVED_HERE로 보여 준다
+     */
+    public static ExchangeResult of(Exchange exchange, Map<Long, PostInfo> posts, Map<Long, UserInfo> users,
+                                    Set<Long> reservedHerePostIds) {
         PostInfo postInfo = posts.get(exchange.getPostId());
         PostSummary postSummary = toPostSummary(exchange.getPostId(), postInfo);
         Participant requester = toParticipant(exchange.getRequestUserId(), users.get(exchange.getRequestUserId()));
@@ -36,7 +41,9 @@ public record ExchangeResult(
                         itemPostSummary = toPostSummary(item.getSourcePostId(), itemPostInfo);
                         availability = switch (itemPostSummary.status()) {
                             case AVAILABLE -> ItemAvailability.AVAILABLE;
-                            case RESERVED -> ItemAvailability.RESERVED_ELSEWHERE; // Todo: 이 교환의 약속이면 RESERVED_HERE
+                            case RESERVED -> reservedHerePostIds.contains(item.getSourcePostId())
+                                    ? ItemAvailability.RESERVED_HERE
+                                    : ItemAvailability.RESERVED_ELSEWHERE;
                             case COMPLETED -> ItemAvailability.COMPLETED;
                             case DELETED -> ItemAvailability.DELETED;
                         };
@@ -78,9 +85,10 @@ public record ExchangeResult(
     }
 
     private static PostSummary toPostSummary(Long postId, PostInfo post) {
-        if (post == null) { // Todo: 삭제된 글 표시 정책 정해지면 반영
+        // 삭제됐거나 조회되지 않은 글은 제목 · 사진 없이 DELETED로 보여 준다 (화면은 고정 문구만 쓴다, spec 결정 2)
+        if (post == null || post.status() == PostInfo.Status.DELETED) {
             return new PostSummary(postId, null, null, PostInfo.Status.DELETED);
         }
-        return new PostSummary(post.id(), post.title(), post.thumbnailUrl(), post.status());
+        return new PostSummary(post.id(), post.title(), post.thumbnailKey(), post.status());
     }
 }

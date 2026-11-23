@@ -2,6 +2,7 @@ package com.ject.exchange.api.controller;
 
 import com.ject.common.web.auth.LoginMember;
 import com.ject.common.web.auth.LoginMemberArgumentResolver;
+import com.ject.common.web.image.ImageUrlResolver;
 import com.ject.exchange.api.exception.ExchangeExceptionHandler;
 import com.ject.exchange.application.dto.command.UpdateNewItemCommand;
 import com.ject.exchange.application.dto.query.GetExchangeQuery;
@@ -46,6 +47,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 class ExchangeControllerTest {
 
+    private static final ImageUrlResolver IMAGE_URL_RESOLVER = new ImageUrlResolver("https://img.test");
+
     private static final Instant NOW = Instant.parse("2026-11-20T05:30:00Z");
     private static final Long EXCHANGE_ID = 1L;
     private static final Long POST_ID = 10L;
@@ -70,7 +73,8 @@ class ExchangeControllerTest {
         exchangeRepository = new FakeExchangeRepository();
         commandBus = new FakeCommandBus(new UpdateNewItemHandler(exchangeRepository));
         queryBus = new FakeQueryBus(exchangeRepository);
-        mockMvc = MockMvcBuilders.standaloneSetup(new ExchangeController(commandBus, queryBus))
+        mockMvc = MockMvcBuilders.standaloneSetup(
+                        new ExchangeController(commandBus, queryBus, IMAGE_URL_RESOLVER))
                 .setControllerAdvice(new ExchangeExceptionHandler())
                 .setCustomArgumentResolvers(new LoginMemberArgumentResolver())
                 .defaultResponseCharacterEncoding(StandardCharsets.UTF_8)

@@ -2,6 +2,7 @@ package com.ject.exchange.api.controller;
 
 import com.ject.common.web.auth.LoginMember;
 import com.ject.common.web.auth.LoginMemberArgumentResolver;
+import com.ject.common.web.image.ImageUrlResolver;
 import com.ject.exchange.api.exception.ExchangeExceptionHandler;
 import com.ject.exchange.application.dto.command.RejectAppointmentCommand;
 import com.ject.exchange.application.dto.dto.AppointmentItemResult;
@@ -31,6 +32,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 class AppointmentRejectControllerTest {
 
+    private static final ImageUrlResolver IMAGE_URL_RESOLVER = new ImageUrlResolver("https://img.test");
+
     private static final String REJECT_URL = "/api/v1/appointments/{appointmentId}/reject";
     private static final Long EXCHANGE_ID = 1L;
     private static final Long APPOINTMENT_ID = 3L;
@@ -41,7 +44,8 @@ class AppointmentRejectControllerTest {
     private static final Instant SCHEDULED_AT = Instant.parse("2026-10-27T06:00:00Z");
     /** 2026-10-26 14:00 (+09:00) */
     private static final Instant CREATED_AT = Instant.parse("2026-10-26T05:00:00Z");
-    private static final String THUMBNAIL = "https://cdn.example.com/post/501/1.jpg";
+    private static final String THUMBNAIL = "post/501/1.jpg";
+    private static final String THUMBNAIL_URL = "https://img.test/api/v1/images/post/501/1.jpg";
 
     private FakeCommandBus commandBus;
     private FakeQueryBus queryBus;
@@ -53,7 +57,8 @@ class AppointmentRejectControllerTest {
         queryBus = new FakeQueryBus(new FakeExchangeRepository());
         commandBus.onRejectAppointment(command -> APPOINTMENT_ID);
         queryBus.willReturnAppointment(rejectedResult());
-        mockMvc = MockMvcBuilders.standaloneSetup(new AppointmentController(commandBus, queryBus))
+        mockMvc = MockMvcBuilders.standaloneSetup(
+                        new AppointmentController(commandBus, queryBus, IMAGE_URL_RESOLVER))
                 .setControllerAdvice(new ExchangeExceptionHandler())
                 .setCustomArgumentResolvers(new LoginMemberArgumentResolver())
                 .defaultResponseCharacterEncoding(StandardCharsets.UTF_8)
