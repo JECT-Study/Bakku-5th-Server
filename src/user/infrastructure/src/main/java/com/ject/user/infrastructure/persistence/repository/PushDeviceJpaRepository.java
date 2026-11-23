@@ -6,6 +6,9 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
+import java.util.List;
+
 public interface PushDeviceJpaRepository extends JpaRepository<PushDeviceJpaEntity, Long> {
 
     /**
@@ -38,4 +41,7 @@ public interface PushDeviceJpaRepository extends JpaRepository<PushDeviceJpaEnti
     @Modifying(flushAutomatically = true)
     @Query("DELETE FROM PushDeviceJpaEntity d WHERE d.memberId = :memberId")
     void deleteAllByMemberId(@Param("memberId") Long memberId);
+
+    @Query("SELECT d.pushToken FROM PushDeviceJpaEntity d WHERE d.memberId IN :memberIds")
+    List<String> findPushTokensByMemberIds(@Param("memberIds") Collection<Long> memberIds);
 }

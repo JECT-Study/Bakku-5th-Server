@@ -3,7 +3,9 @@ package com.ject.user.application;
 import com.ject.user.application.port.PushDeviceRepository;
 import com.ject.user.domain.domain.PushDevice;
 
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -37,6 +39,14 @@ class FakePushDeviceRepository implements PushDeviceRepository {
     @Override
     public void deleteAllByMemberId(Long memberId) {
         byDeviceId.values().removeIf(device -> device.getMemberId().equals(memberId));
+    }
+
+    @Override
+    public List<String> findPushTokensByMemberIds(Collection<Long> memberIds) {
+        return byDeviceId.values().stream()
+                .filter(device -> memberIds.contains(device.getMemberId()))
+                .map(PushDevice::getPushToken)
+                .toList();
     }
 
     Optional<PushDevice> findByDeviceId(String deviceId) {
