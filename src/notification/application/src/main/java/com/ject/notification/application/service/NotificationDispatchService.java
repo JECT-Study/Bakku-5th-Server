@@ -54,11 +54,17 @@ public class NotificationDispatchService {
             log.warn("아직 보내지 않는 알림 종류라 건너뜀. type={}", request.type());
             return;
         }
+        if (request.senderId() == null) {
+            log.warn("제목에 넣을 상대방(senderId)이 없어 건너뜀. type={}, receiverIds={}", request.type(),
+                    request.receiverIds());
+            return;
+        }
         List<Long> receiverIds = receiversOf(request);
         if (receiverIds.isEmpty()) {
             return;
         }
-        NotificationContent content = NotificationMessages.content(request.type(), senderNickname(request.senderId()),
+        NotificationContent content = NotificationMessages.content(request.type(),
+                memberNicknamePort.getNickname(request.senderId()),
                 request.params().get(NotificationMessages.PRODUCT_NAME));
         NotificationTargetType targetType = request.target() == null ? null : request.target().type();
         Long targetId = request.target() == null ? null : request.target().id();
@@ -77,17 +83,13 @@ public class NotificationDispatchService {
      */
     private List<Long> receiversOf(NotificationRequested request) {
         Long senderId = request.senderId();
-        Set<Long> blocked = senderId == null || request.type() == NotificationType.APPOINTMENT_CANCELED
+        Set<Long> blocked = request.type() == NotificationType.APPOINTMENT_CANCELED
                 ? Set.of()
                 : Set.copyOf(blockRelationPort.getBlockRelatedMemberIds(senderId));
         return request.receiverIds().stream()
                 .filter(receiverId -> !receiverId.equals(senderId) && !blocked.contains(receiverId))
                 .distinct()
                 .toList();
-    }
-
-    private String senderNickname(Long senderId) {
-        return senderId == null ? null : memberNicknamePort.getNickname(senderId);
     }
 
     /**

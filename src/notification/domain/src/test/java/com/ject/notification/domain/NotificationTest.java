@@ -38,7 +38,7 @@ class NotificationTest {
     @DisplayName("받는 사람이 없으면 만들 수 없다")
     void createWithoutReceiver() {
         // given
-        NotificationContent content = new NotificationContent("바꾸", "교환은 잘 하셨나요?");
+        NotificationContent content = new NotificationContent("하치와레러버", "교환은 잘 하셨나요?");
 
         // when · then
         assertThrows(NullPointerException.class, () -> Notification.create(null,

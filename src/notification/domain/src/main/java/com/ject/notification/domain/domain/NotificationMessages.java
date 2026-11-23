@@ -14,9 +14,6 @@ public final class NotificationMessages {
     /** 문장 뒤에 붙일 교환글 제품명의 params 키 */
     public static final String PRODUCT_NAME = "productName";
 
-    /** 보낸 회원이 없는 알림의 제목 */
-    public static final String SYSTEM_TITLE = "바꾸";
-
     private static final Map<NotificationType, String> SENTENCES = new EnumMap<>(NotificationType.class);
 
     static {
@@ -56,8 +53,9 @@ public final class NotificationMessages {
     }
 
     /**
-     * @param senderNickname 보낸 회원 닉네임, 보낸 회원이 없으면 null
-     * @param productName    교환글 제품명, 없으면 null
+     * 제목은 상대방 닉네임이다 (P-07-04).
+     *
+     * @param productName 교환글 제품명, 없으면 null
      * @throws IllegalArgumentException 문장이 정해지지 않은 종류일 때
      */
     public static NotificationContent content(NotificationType type, String senderNickname, String productName) {
@@ -65,8 +63,7 @@ public final class NotificationMessages {
         if (sentence == null) {
             throw new IllegalArgumentException("문장이 정해지지 않은 알림 종류: " + type);
         }
-        String title = senderNickname == null ? SYSTEM_TITLE : senderNickname;
         String body = productName == null || productName.isBlank() ? sentence : "[" + productName + "] " + sentence;
-        return new NotificationContent(title, body);
+        return new NotificationContent(senderNickname, body);
     }
 }

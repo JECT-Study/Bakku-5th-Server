@@ -26,14 +26,13 @@ class NotificationMessagesTest {
     }
 
     @Test
-    @DisplayName("보낸 회원이 없으면 제목은 앱 이름, 제품명이 없으면 문장만 쓴다")
-    void contentWithoutSenderAndProduct() {
+    @DisplayName("제품명이 없으면 문장만 쓴다")
+    void contentWithoutProduct() {
         // when
         NotificationContent content = NotificationMessages.content(NotificationType.EXCHANGE_CONFIRMATION,
-                null, " ");
+                "하치와레러버", " ");
 
         // then
-        assertEquals(NotificationMessages.SYSTEM_TITLE, content.title());
         assertEquals("교환은 잘 하셨나요?", content.body());
     }
 

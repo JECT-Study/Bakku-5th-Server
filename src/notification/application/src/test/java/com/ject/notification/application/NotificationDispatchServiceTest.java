@@ -88,16 +88,25 @@ class NotificationDispatchServiceTest {
     }
 
     @Test
-    @DisplayName("보낸 회원이 없으면 제목은 앱 이름이고, 여러 명이면 기기 토큰을 모아 한 번에 보낸다")
-    void systemNotification() {
+    @DisplayName("받는 사람이 여러 명이면 기기 토큰을 모아 한 번에 보낸다")
+    void multipleReceivers() {
         // when
-        dispatchService.dispatch(request(NotificationType.EXCHANGE_CONFIRMATION, List.of(101L, 303L), null));
+        dispatchService.dispatch(request(NotificationType.POST_DELETED, List.of(101L, 303L), SENDER_ID));
 
         // then
-        List<Notification> saved = notificationRepository.findAll();
-        assertEquals(2, saved.size());
-        assertEquals(NotificationMessages.SYSTEM_TITLE, saved.getFirst().getTitle());
+        assertEquals(2, notificationRepository.findAll().size());
         assertEquals(List.of("fcm-101", "fcm-303"), pushSender.sent().getFirst().pushTokens());
+    }
+
+    @Test
+    @DisplayName("제목에 넣을 상대방(senderId)이 없으면 저장도 푸시도 하지 않는다")
+    void withoutSender() {
+        // when
+        dispatchService.dispatch(request(NotificationType.EXCHANGE_CONFIRMATION, List.of(101L), null));
+
+        // then
+        assertTrue(notificationRepository.findAll().isEmpty());
+        assertTrue(pushSender.sent().isEmpty());
     }
 
     @Test
@@ -154,7 +163,7 @@ class NotificationDispatchServiceTest {
     @DisplayName("문장이 없는 종류(출시 후 알림)는 저장도 푸시도 하지 않는다")
     void unsupportedType() {
         // when
-        dispatchService.dispatch(request(NotificationType.WISHLIST_KEYWORD, List.of(101L), null));
+        dispatchService.dispatch(request(NotificationType.WISHLIST_KEYWORD, List.of(101L), SENDER_ID));
 
         // then
         assertTrue(notificationRepository.findAll().isEmpty());
