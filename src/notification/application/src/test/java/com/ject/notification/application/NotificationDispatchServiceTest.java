@@ -23,6 +23,7 @@ class NotificationDispatchServiceTest {
     private static final Long SENDER_ID = 202L;
     private static final NotificationRequested.Target CHAT_ROOM =
             new NotificationRequested.Target(NotificationTargetType.CHAT_ROOM, 5L);
+    private static final Map<Long, List<Long>> BLOCKED = Map.of(SENDER_ID, List.of(505L));
     private static final Map<Long, List<String>> TOKENS = Map.of(101L, List.of("fcm-101"), 303L, List.of("fcm-303"));
 
     private FakeNotificationRepository notificationRepository;
@@ -126,6 +127,30 @@ class NotificationDispatchServiceTest {
     }
 
     @Test
+    @DisplayName("보낸 회원과 차단 관계인 회원에게는 저장도 푸시도 하지 않는다")
+    void blockedReceiverIsExcluded() {
+        // when
+        dispatchService.dispatch(request(NotificationType.CHAT_MESSAGE, List.of(505L), SENDER_ID));
+        dispatchService.dispatch(request(NotificationType.POST_UPDATED, List.of(505L, 101L), SENDER_ID));
+
+        // then
+        List<Notification> saved = notificationRepository.findAll();
+        assertEquals(1, saved.size());
+        assertEquals(101L, saved.getFirst().getReceiverId());
+        assertEquals(1, pushSender.sent().size());
+    }
+
+    @Test
+    @DisplayName("약속 취소는 차단 관계여도 보낸다 (차단으로 확정 약속이 취소된 경우)")
+    void appointmentCanceledIgnoresBlock() {
+        // when
+        dispatchService.dispatch(request(NotificationType.APPOINTMENT_CANCELED, List.of(505L), SENDER_ID));
+
+        // then
+        assertEquals(1, notificationRepository.findAll().size());
+    }
+
+    @Test
     @DisplayName("문장이 없는 종류(출시 후 알림)는 저장도 푸시도 하지 않는다")
     void unsupportedType() {
         // when
@@ -137,8 +162,8 @@ class NotificationDispatchServiceTest {
     }
 
     private NotificationDispatchService service(PushTokenPort pushTokenPort) {
-        return new NotificationDispatchService(notificationRepository, memberId -> "하치와레러버", pushTokenPort,
-                pushSender);
+        return new NotificationDispatchService(notificationRepository, memberId -> "하치와레러버",
+                memberId -> BLOCKED.getOrDefault(memberId, List.of()), pushTokenPort, pushSender);
     }
 
     private static NotificationRequested request(NotificationType type, List<Long> receiverIds, Long senderId) {

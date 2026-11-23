@@ -2,7 +2,9 @@ package com.ject.notification.application.service;
 
 import com.ject.common.event.notification.NotificationRequested;
 import com.ject.common.event.notification.NotificationTargetType;
+import com.ject.common.event.notification.NotificationType;
 import com.ject.notification.application.dto.PushMessage;
+import com.ject.notification.application.port.BlockRelationPort;
 import com.ject.notification.application.port.MemberNicknamePort;
 import com.ject.notification.application.port.NotificationRepository;
 import com.ject.notification.application.port.PushSender;
@@ -17,6 +19,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * 다른 파트의 알림 요청을 받는 사람별 알림으로 만들어 저장하고 푸시를 보낸다. 문장 · 저장 여부는 알림 쪽이 정한다 (결정 B2).
@@ -28,14 +31,16 @@ public class NotificationDispatchService {
 
     private final NotificationRepository notificationRepository;
     private final MemberNicknamePort memberNicknamePort;
+    private final BlockRelationPort blockRelationPort;
     private final PushTokenPort pushTokenPort;
     private final PushSender pushSender;
 
     public NotificationDispatchService(NotificationRepository notificationRepository,
-                                       MemberNicknamePort memberNicknamePort, PushTokenPort pushTokenPort,
-                                       PushSender pushSender) {
+                                       MemberNicknamePort memberNicknamePort, BlockRelationPort blockRelationPort,
+                                       PushTokenPort pushTokenPort, PushSender pushSender) {
         this.notificationRepository = notificationRepository;
         this.memberNicknamePort = memberNicknamePort;
+        this.blockRelationPort = blockRelationPort;
         this.pushTokenPort = pushTokenPort;
         this.pushSender = pushSender;
     }
@@ -67,11 +72,16 @@ public class NotificationDispatchService {
     }
 
     /**
-     * 보낸 회원 자신은 받지 않는다.
+     * 보낸 회원 자신과 보낸 회원과 차단 관계인 회원은 받지 않는다.
+     * 약속 취소는 차단으로 확정 약속이 취소될 때도 보내야 해서 차단을 확인하지 않는다 (X-01-1, 결정 A13).
      */
-    private static List<Long> receiversOf(NotificationRequested request) {
+    private List<Long> receiversOf(NotificationRequested request) {
+        Long senderId = request.senderId();
+        Set<Long> blocked = senderId == null || request.type() == NotificationType.APPOINTMENT_CANCELED
+                ? Set.of()
+                : Set.copyOf(blockRelationPort.getBlockRelatedMemberIds(senderId));
         return request.receiverIds().stream()
-                .filter(receiverId -> !receiverId.equals(request.senderId()))
+                .filter(receiverId -> !receiverId.equals(senderId) && !blocked.contains(receiverId))
                 .distinct()
                 .toList();
     }

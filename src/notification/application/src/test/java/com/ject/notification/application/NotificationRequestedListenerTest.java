@@ -64,7 +64,7 @@ class NotificationRequestedListenerTest {
     private static NotificationRequestedListener listener(FakeNotificationRepository notificationRepository) {
         return new NotificationRequestedListener(
                 new NotificationDispatchService(notificationRepository, memberId -> "하치와레러버",
-                        memberIds -> List.of(), new FakePushSender()));
+                        memberId -> List.of(), memberIds -> List.of(), new FakePushSender()));
     }
 
     private static NotificationRequested request(Instant scheduledAt) {
