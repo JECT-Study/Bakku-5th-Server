@@ -143,7 +143,7 @@ class CreateExchangeHandlerLoginMemberTest {
         assertEquals(1, exchangeRepository.saveCount());
     }
 
-    // ---- AC-10 판정 순서 009 → 005 → 003 → 008 → 007 ----
+    // ---- AC-10 판정 순서 009 → 108 · 005 → 003 → 008 → 007 ----
 
     @Test
     @DisplayName("없는 글이면 차단 관계여도 POST_NOT_FOUND가 먼저다")
@@ -155,12 +155,13 @@ class CreateExchangeHandlerLoginMemberTest {
     }
 
     @Test
-    @DisplayName("글이 예약중이면 차단 관계여도 POST_NOT_REQUESTABLE이 먼저다")
-    void handle_reservedPostWithBlock_notRequestableFirst() {
+    @DisplayName("글이 예약중이면 차단 관계여도 POST_RESERVED_ELSEWHERE가 먼저다")
+    void handle_reservedPostWithBlock_reservedElsewhereFirst() {
         postPort.register(new PostInfo(POST_P, "치이카와 교환해요", null, MEMBER_B, PostInfo.Status.RESERVED));
         userPort.block(MEMBER_A, MEMBER_B);
 
-        assertRejected(ExchangeErrorCode.POST_NOT_REQUESTABLE,
+        // #107 결정 5: 예약중 글은 EXCHANGE_108
+        assertRejected(ExchangeErrorCode.POST_RESERVED_ELSEWHERE,
                 () -> handler.handle(newItemCommand(MEMBER_A, POST_P)));
     }
 

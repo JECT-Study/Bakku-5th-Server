@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * 테스트용 가짜 쿼리 버스. 교환 상세 조회는 실제 Handler가 있으면 그 Handler로, 없으면 가짜 저장소의 현재 값으로 응답한다.
@@ -55,7 +56,7 @@ class FakeQueryBus implements QueryBus {
             Map<Long, UserInfo> users = Map.of(
                     exchange.getRequestUserId(), new UserInfo(exchange.getRequestUserId(), "하치와레러버", 0),
                     exchange.getOwnerId(), new UserInfo(exchange.getOwnerId(), "쿠로미덕후", 0));
-            return (R) ExchangeResult.of(exchange, posts, users);
+            return (R) ExchangeResult.of(exchange, posts, users, Set.of());
         }
         if (query instanceof GetAppointmentQuery && appointmentFailure != null) {
             throw appointmentFailure;

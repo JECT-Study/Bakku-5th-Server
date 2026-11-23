@@ -116,10 +116,11 @@ public record AppointmentResult(
     private static AppointmentItemResult toItemResult(OfferedItem item, OfferType offerType, Map<Long, PostInfo> sourcePosts) {
         if (offerType == OfferType.POST) {
             PostInfo sourcePost = sourcePosts.get(item.getSourcePostId());
-            // Todo: 삭제된 글 표시 정책 정해지면 반영
-            return new AppointmentItemResult(item.getId(), OfferType.POST,
-                    sourcePost == null ? null : sourcePost.title(),
-                    sourcePost == null ? null : sourcePost.thumbnailUrl());
+            // 원본 글이 삭제됐거나 조회되지 않으면 제목 · 사진을 비운다 (화면은 "삭제된 제품"을 보여 준다, spec 결정 2)
+            if (sourcePost == null || sourcePost.status() == PostInfo.Status.DELETED) {
+                return new AppointmentItemResult(item.getId(), OfferType.POST, null, null);
+            }
+            return new AppointmentItemResult(item.getId(), OfferType.POST, sourcePost.title(), sourcePost.thumbnailKey());
         }
         // Todo: 이미지 모듈 전까지 새로 작성한 아이템의 대표 사진은 null
         return new AppointmentItemResult(item.getId(), OfferType.NEW,

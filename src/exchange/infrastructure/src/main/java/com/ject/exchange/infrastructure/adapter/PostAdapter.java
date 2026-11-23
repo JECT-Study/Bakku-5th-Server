@@ -2,50 +2,76 @@ package com.ject.exchange.infrastructure.adapter;
 
 import com.ject.exchange.application.dto.dto.PostInfo;
 import com.ject.exchange.application.port.PostPort;
+import com.ject.exchange.application.port.PostStatusRejectedException;
+import com.ject.post.application.contract.PostBrief;
+import com.ject.post.application.contract.PostLookup;
+import com.ject.post.application.contract.PostStatusChangeRejectedException;
+import com.ject.post.application.contract.PostStatusChanger;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 @Component
+@RequiredArgsConstructor
 public class PostAdapter implements PostPort {
 
-    // Todo: post BC 조회 API가 생기면 실제 호출로 교체
-    private final Map<Long, PostInfo> posts = Map.of(
-            1L, new PostInfo(1L, "치이카와 우사기 가챠 피규어",
-                    "https://{cdn}/post/1/1.jpg", 100L, PostInfo.Status.AVAILABLE),   // 100번 유저의 글
-            2L, new PostInfo(2L, "다이소 빨래 detergent",
-                    "https://{cdn}/post/2/1.jpg", 200L, PostInfo.Status.AVAILABLE),   // 200번 유저의 글
-            3L, new PostInfo(3L, "스마트폰 거치대",
-                    "https://{cdn}/post/3/1.jpg", 200L, PostInfo.Status.AVAILABLE),
-            4L, new PostInfo(4L, "헤드폰",
-                    "https://{cdn}/post/4/1.jpg", 200L, PostInfo.Status.RESERVED)     // 실패 케이스 확인용
-    );
+    private final PostLookup postLookup;
+    private final PostStatusChanger postStatusChanger;
 
     @Override
     public Optional<PostInfo> findById(Long postId) {
-        return Optional.ofNullable(posts.get(postId));
-    }
-
-    @Override
-    public void reserve(List<Long> postIds) {
-        // Todo: post BC 예약중 전환 계약이 생기면 실제 호출로 교체 (지금은 같은 글 중복 확정을 exchange 데이터와 글 잠금으로 막는다)
-    }
-
-    @Override
-    public void complete(List<Long> postIds) {
-        // Todo: post BC 교환 완료 전환 계약이 생기면 연결 (지금은 완료 약속에 묶인 글 판정으로 다른 방 확정을 막는다)
-    }
-
-    @Override
-    public void release(List<Long> postIds) {
-        // Todo: post BC 예약 해제 계약이 생기면 연결 (지금은 못 만남 약속이 글을 묶지 않는 것으로 다시 약속할 수 있다)
+        return findAllByIds(List.of(postId)).stream().findFirst();
     }
 
     @Override
     public List<PostInfo> findAllByIds(List<Long> postIds) {
-        return postIds.stream().map(posts::get).filter(Objects::nonNull).toList();
+        if (postIds.isEmpty()) {
+            return List.of();
+        }
+        return postLookup.findAllByIds(postIds).stream()
+                .map(PostAdapter::toPostInfo)
+                .toList();
+    }
+
+    @Override
+    public void reserve(List<Long> postIds) {
+        changeStatus(postIds, postStatusChanger::reserve);
+    }
+
+    @Override
+    public void complete(List<Long> postIds) {
+        changeStatus(postIds, postStatusChanger::complete);
+    }
+
+    @Override
+    public void release(List<Long> postIds) {
+        changeStatus(postIds, postStatusChanger::release);
+    }
+
+    private static void changeStatus(List<Long> postIds, Consumer<List<Long>> change) {
+        try {
+            change.accept(postIds);
+        } catch (PostStatusChangeRejectedException rejected) {
+            throw new PostStatusRejectedException(rejected.getPostId());
+        }
+    }
+
+    private static PostInfo toPostInfo(PostBrief brief) {
+        return new PostInfo(brief.id(), brief.title(), brief.thumbnailKey(), brief.authorId(), statusOf(brief));
+    }
+
+    /**
+     * 모르는 상태를 임의 상태로 보면 요청 · 약속 판정이 틀어지므로 실패시킨다
+     */
+    private static PostInfo.Status statusOf(PostBrief brief) {
+        return Arrays.stream(PostInfo.Status.values())
+                .filter(status -> status.name().equals(brief.status()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(
+                        "알 수 없는 글 상태입니다. postId=" + brief.id() + " status=" + brief.status()));
     }
 }

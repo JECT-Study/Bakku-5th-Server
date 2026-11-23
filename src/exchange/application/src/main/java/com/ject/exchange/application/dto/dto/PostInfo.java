@@ -3,7 +3,7 @@ package com.ject.exchange.application.dto.dto;
 public record PostInfo(
         Long id,
         String title,
-        String thumbnailUrl,
+        String thumbnailKey,
         Long ownerId,
         Status status
 ) {
@@ -13,10 +13,6 @@ public record PostInfo(
         RESERVED,
         COMPLETED,
         DELETED
-    }
-
-    public boolean isRequestable() {
-        return status == Status.AVAILABLE;
     }
 
     public boolean isAttachableBy(Long requesterId) {

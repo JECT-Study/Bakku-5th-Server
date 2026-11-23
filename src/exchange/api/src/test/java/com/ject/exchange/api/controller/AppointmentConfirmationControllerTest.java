@@ -2,6 +2,7 @@ package com.ject.exchange.api.controller;
 
 import com.ject.common.web.auth.LoginMember;
 import com.ject.common.web.auth.LoginMemberArgumentResolver;
+import com.ject.common.web.image.ImageUrlResolver;
 import com.ject.exchange.api.exception.ExchangeExceptionHandler;
 import com.ject.exchange.application.dto.command.RespondConfirmationCommand;
 import com.ject.exchange.application.dto.dto.AppointmentItemResult;
@@ -42,6 +43,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 class AppointmentConfirmationControllerTest {
 
+    private static final ImageUrlResolver IMAGE_URL_RESOLVER = new ImageUrlResolver("https://img.test");
+
     private static final String CONFIRMATION_URL = "/api/v1/appointments/{appointmentId}/confirmation";
     private static final Long EXCHANGE_ID = 1L;
     private static final Long APPOINTMENT_ID = 3L;
@@ -72,7 +75,8 @@ class AppointmentConfirmationControllerTest {
         queryBus.willReturnAppointment(result(AppointmentStatus.COMPLETED,
                 new ConfirmationSummary(OPENS_AT, AppointmentStatus.COMPLETED, false, ConfirmationAnswer.DONE,
                         RESOLVED_AT)));
-        mockMvc = MockMvcBuilders.standaloneSetup(new AppointmentController(commandBus, queryBus))
+        mockMvc = MockMvcBuilders.standaloneSetup(
+                        new AppointmentController(commandBus, queryBus, IMAGE_URL_RESOLVER))
                 .setControllerAdvice(new ExchangeExceptionHandler())
                 .setCustomArgumentResolvers(new LoginMemberArgumentResolver())
                 .defaultResponseCharacterEncoding(StandardCharsets.UTF_8)

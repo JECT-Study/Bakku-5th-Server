@@ -4,6 +4,8 @@ dependencies {
     implementation project(':common-jpa')
     // 교환 참여자 정보를 회원 요약 계약(MemberSummaryQuery)으로 조회한다. post-infrastructure와 같은 의존
     implementation project(':user-application')
+    // 글 정보 · 글 상태를 post 계약(PostLookup · PostStatusChanger)으로 조회 · 변경한다
+    implementation project(':post-application')
 
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 }

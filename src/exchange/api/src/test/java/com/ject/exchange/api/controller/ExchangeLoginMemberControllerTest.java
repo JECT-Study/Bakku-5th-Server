@@ -2,6 +2,7 @@ package com.ject.exchange.api.controller;
 
 import com.ject.common.web.auth.LoginMember;
 import com.ject.common.web.auth.LoginMemberArgumentResolver;
+import com.ject.common.web.image.ImageUrlResolver;
 import com.ject.exchange.api.exception.ExchangeExceptionHandler;
 import com.ject.exchange.application.dto.command.CreateExchangeCommand;
 import com.ject.exchange.application.dto.dto.PostInfo;
@@ -42,6 +43,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 class ExchangeLoginMemberControllerTest {
 
+    private static final ImageUrlResolver IMAGE_URL_RESOLVER = new ImageUrlResolver("https://img.test");
+
     private static final Instant NOW = Instant.parse("2026-11-21T05:00:00Z");
     private static final String CREATE_URL = "/api/v1/exchanges";
     private static final String DETAIL_URL = "/api/v1/exchanges/{exchangeId}";
@@ -72,8 +75,10 @@ class ExchangeLoginMemberControllerTest {
         userPort = new FakeUserPort();
         commandBus = new FakeCommandBus(new UpdateNewItemHandler(exchangeRepository),
                 new CreateExchangeHandler(exchangeRepository, postPort, userPort));
-        queryBus = new FakeQueryBus(new GetExchangeHandler(exchangeRepository, postPort, userPort));
-        mockMvc = MockMvcBuilders.standaloneSetup(new ExchangeController(commandBus, queryBus))
+        queryBus = new FakeQueryBus(new GetExchangeHandler(exchangeRepository,
+                new FakeAppointmentRepository(exchangeRepository, NOW), postPort, userPort));
+        mockMvc = MockMvcBuilders.standaloneSetup(
+                        new ExchangeController(commandBus, queryBus, IMAGE_URL_RESOLVER))
                 .setControllerAdvice(new ExchangeExceptionHandler())
                 .setCustomArgumentResolvers(new LoginMemberArgumentResolver())
                 .defaultResponseCharacterEncoding(StandardCharsets.UTF_8)
@@ -242,14 +247,15 @@ class ExchangeLoginMemberControllerTest {
     }
 
     @Test
-    @DisplayName("E-1 차단 관계이면서 글이 예약중이면 409 EXCHANGE_005이다")
-    void createExchange_blockedWithReservedPost_returnsExchange005() throws Exception {
+    @DisplayName("E-1 차단 관계이면서 글이 예약중이면 409 EXCHANGE_108이다")
+    void createExchange_blockedWithReservedPost_returnsExchange108() throws Exception {
         postPort.register(new PostInfo(POST_P, "치이카와 교환해요", null, MEMBER_B, PostInfo.Status.RESERVED));
         userPort.block(MEMBER_A, MEMBER_B);
 
+        // #107 결정 5: 예약중 글은 EXCHANGE_108
         mockMvc.perform(createRequest(MEMBER_A, newItemBody(POST_P)))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("EXCHANGE_005"));
+                .andExpect(jsonPath("$.code").value("EXCHANGE_108"));
     }
 
     @Test

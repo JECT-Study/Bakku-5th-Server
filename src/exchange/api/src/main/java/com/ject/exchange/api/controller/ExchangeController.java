@@ -2,6 +2,7 @@ package com.ject.exchange.api.controller;
 
 import com.ject.common.core.cqrs.command.CommandBus;
 import com.ject.common.core.cqrs.query.QueryBus;
+import com.ject.common.web.image.ImageUrlResolver;
 import com.ject.common.web.response.ApiResponse;
 import com.ject.exchange.api.controller.api.ExchangeApi;
 import com.ject.exchange.api.dto.request.CreateExchangeRequest;
@@ -19,6 +20,7 @@ public class ExchangeController implements ExchangeApi {
 
     private final CommandBus commandBus;
     private final QueryBus queryBus;
+    private final ImageUrlResolver imageUrlResolver;
 
     @Override
     public ApiResponse<ExchangeResponse> createExchange(Long memberId, CreateExchangeRequest request) {
@@ -27,7 +29,7 @@ public class ExchangeController implements ExchangeApi {
                 .exchangeId(exchangeId)
                 .viewerId(memberId)
                 .build());
-        return ApiResponse.created(ExchangeResponse.from(result));
+        return ApiResponse.created(ExchangeResponse.from(result, imageUrlResolver));
     }
 
     @Override
@@ -36,13 +38,13 @@ public class ExchangeController implements ExchangeApi {
                 .exchangeId(exchangeId)
                 .viewerId(memberId)
                 .build());
-        return ApiResponse.success(ExchangeResponse.from(result));
+        return ApiResponse.success(ExchangeResponse.from(result, imageUrlResolver));
     }
 
     @Override
     public ApiResponse<ExchangeResponse> updateNewItem(Long memberId, Long exchangeId, NewItemRequest request) {
         Long id = commandBus.send(new UpdateNewItemCommand(exchangeId, memberId, request.toNewItem()));
         ExchangeResult result = queryBus.send(GetExchangeQuery.builder().exchangeId(id).viewerId(memberId).build());
-        return ApiResponse.success(ExchangeResponse.from(result));
+        return ApiResponse.success(ExchangeResponse.from(result, imageUrlResolver));
     }
 }

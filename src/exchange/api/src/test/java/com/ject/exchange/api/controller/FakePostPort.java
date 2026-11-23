@@ -15,14 +15,17 @@ import java.util.Optional;
 class FakePostPort implements PostPort {
 
     private final Map<Long, PostInfo> posts = new HashMap<>();
+    private RuntimeException lookupFailure;
 
     @Override
     public Optional<PostInfo> findById(Long postId) {
+        throwIfLookupFails();
         return Optional.ofNullable(posts.get(postId));
     }
 
     @Override
     public List<PostInfo> findAllByIds(List<Long> postIds) {
+        throwIfLookupFails();
         return postIds.stream()
                 .map(posts::get)
                 .filter(Objects::nonNull)
@@ -40,6 +43,17 @@ class FakePostPort implements PostPort {
 
     @Override
     public void release(List<Long> postIds) {
+    }
+
+    /** post 글 상태를 알 수 없을 때 Adapter가 던지는 예외를 흉내 낸다 (#107 AC-17). */
+    void failLookupWith(RuntimeException failure) {
+        this.lookupFailure = failure;
+    }
+
+    private void throwIfLookupFails() {
+        if (lookupFailure != null) {
+            throw lookupFailure;
+        }
     }
 
     void register(PostInfo post) {

@@ -48,7 +48,8 @@ class GetExchangeHandlerParticipantTest {
         exchangeRepository = new FakeExchangeRepository();
         postPort = new FakePostPort();
         userPort = new FakeUserPort();
-        handler = new GetExchangeHandler(exchangeRepository, postPort, userPort);
+        handler = new GetExchangeHandler(exchangeRepository, new FakeAppointmentRepository(exchangeRepository, NOW),
+                postPort, userPort);
 
         postPort.register(new PostInfo(POST_ID, "치이카와 교환해요", null, MEMBER_B, PostInfo.Status.AVAILABLE));
         exchangeRepository.preload(exchangeOf(MEMBER_A, MEMBER_B));

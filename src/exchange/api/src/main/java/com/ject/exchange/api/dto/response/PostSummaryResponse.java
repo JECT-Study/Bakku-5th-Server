@@ -1,5 +1,6 @@
 package com.ject.exchange.api.dto.response;
 
+import com.ject.common.web.image.ImageUrlResolver;
 import com.ject.exchange.api.dto.enums.PostStatus;
 import com.ject.exchange.application.dto.dto.PostSummary;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -18,14 +19,14 @@ public record PostSummaryResponse(
         @Schema(description = "교환글 상태", example = "AVAILABLE")
         PostStatus status
 ) {
-    public static PostSummaryResponse from(PostSummary summary) {
+    public static PostSummaryResponse from(PostSummary summary, ImageUrlResolver imageUrlResolver) {
         if (summary == null) {
             return null;
         }
         return new PostSummaryResponse(
                 summary.id(),
                 summary.title(),
-                summary.thumbnailUrl(),
+                summary.thumbnailKey() == null ? null : imageUrlResolver.resolve(summary.thumbnailKey()),
                 EnumMapper.map(summary.status(), PostStatus.class));
     }
 }

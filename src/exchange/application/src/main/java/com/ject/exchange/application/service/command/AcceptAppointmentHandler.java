@@ -5,6 +5,7 @@ import com.ject.common.core.time.ServiceTime;
 import com.ject.exchange.application.dto.command.AcceptAppointmentCommand;
 import com.ject.exchange.application.dto.dto.PostInfo;
 import com.ject.exchange.application.port.PostPort;
+import com.ject.exchange.application.port.PostStatusRejectedException;
 import com.ject.exchange.domain.domain.appointment.Appointment;
 import com.ject.exchange.domain.domain.appointment.AppointmentStatus;
 import com.ject.exchange.domain.domain.exchange.Exchange;
@@ -63,14 +64,14 @@ public class AcceptAppointmentHandler implements CommandHandler<AcceptAppointmen
                 .map(Appointment::autoReject)
                 .toList();
         // 예약중 요청이 실패하면 확정 · 자동 거절도 남지 않아야 하므로 저장보다 먼저 요청한다 (E-04-1 "한 번에 처리")
-        postPort.reserve(reservationTargetsOf(exchange.getPostId(), sourcePostIds));
+        reserve(exchange.getPostId(), sourcePostIds);
         // Todo: 채팅방 "약속이 확정됐어요" · 다른 방 "다른 분과 약속이 먼저 확정돼서…" 카드와 알림, 약속 전 알림 · 교환 확인 예약
         autoRejected.forEach(appointmentRepository::save);
         return appointmentRepository.save(confirmed).getId();
     }
 
     /**
-     * 교환글이 수락 가능한지. 다른 약속에 묶였는지는 exchange 데이터로 먼저 본다 (post BC 상태가 stub이어도 중복 확정을 막기 위해)
+     * 교환글이 수락 가능한지. 다른 약속에 묶였는지는 exchange 데이터로 먼저 본다 (글 잠금 안에서 판정해 같은 글의 동시 확정을 막는다)
      */
     private void validatePostAvailable(Long exchangeId, Long postId) {
         List<Long> postIds = List.of(postId);
@@ -108,6 +109,20 @@ public class AcceptAppointmentHandler implements CommandHandler<AcceptAppointmen
                 .collect(Collectors.toSet());
         if (!availablePostIds.containsAll(sourcePostIds)) {
             throw new ExchangeException(ExchangeErrorCode.ITEM_NOT_AVAILABLE);
+        }
+    }
+
+    /**
+     * 교환글과 고른 첨부 글을 예약중으로 바꾼다. 판정 뒤 그사이 post에서 거부되면 거부된 글로 에러를 고른다 (spec 결정 3)
+     */
+    private void reserve(Long postId, List<Long> sourcePostIds) {
+        try {
+            postPort.reserve(reservationTargetsOf(postId, sourcePostIds));
+        } catch (PostStatusRejectedException rejected) {
+            ExchangeErrorCode errorCode = postId.equals(rejected.getPostId())
+                    ? ExchangeErrorCode.POST_NOT_REQUESTABLE
+                    : ExchangeErrorCode.ITEM_NOT_AVAILABLE;
+            throw new ExchangeException(errorCode);
         }
     }
 
