@@ -2,6 +2,7 @@ package com.ject.post.domain.domain;
 
 import com.ject.post.domain.exception.NotPostAuthorException;
 import com.ject.post.domain.exception.PostCompletedException;
+import com.ject.post.domain.exception.PostNotFoundException;
 import com.ject.post.domain.exception.PostReservedException;
 import lombok.Builder;
 import lombok.Getter;
@@ -29,11 +30,12 @@ public class Post {
     private Instant nowExchangeEndsAt;
     private int viewCount;
     private final Instant createdAt;
+    private Instant deletedAt;
 
     @Builder
     private Post(Long id, Long authorId, PostStatus status, List<String> imageKeys, List<String> tags, String title,
                  PostCategory category, boolean opened, String description, String wantedItem, Place place,
-                 Instant nowExchangeEndsAt, int viewCount, Instant createdAt) {
+                 Instant nowExchangeEndsAt, int viewCount, Instant createdAt, Instant deletedAt) {
         this.id = id;
         this.authorId = authorId;
         this.status = status;
@@ -48,6 +50,7 @@ public class Post {
         this.nowExchangeEndsAt = nowExchangeEndsAt;
         this.viewCount = viewCount;
         this.createdAt = createdAt;
+        this.deletedAt = deletedAt;
     }
 
     public static Post create(Long authorId, List<String> imageKeys, String title, PostCategory category,
@@ -76,13 +79,13 @@ public class Post {
     public void update(Long editorId, List<String> imageKeys, String title, PostCategory category, boolean opened,
                        List<String> tags, String description, String wantedItem, Place place) {
         if (!isWrittenBy(editorId)) {
-            throw new NotPostAuthorException(id);
+            throw NotPostAuthorException.onUpdate(id);
         }
         if (status == PostStatus.RESERVED) {
-            throw new PostReservedException(id);
+            throw PostReservedException.onUpdate(id);
         }
         if (status == PostStatus.COMPLETED) {
-            throw new PostCompletedException(id);
+            throw PostCompletedException.onUpdate(id);
         }
         this.imageKeys = List.copyOf(imageKeys);
         this.title = title;
@@ -92,6 +95,27 @@ public class Post {
         this.description = description;
         this.wantedItem = wantedItem;
         this.place = place;
+    }
+
+    public boolean delete(Long requesterId, Instant now) {
+        if (status == PostStatus.DELETED) {
+            if (!isWrittenBy(requesterId)) {
+                throw new PostNotFoundException(id);
+            }
+            return false;
+        }
+        if (!isWrittenBy(requesterId)) {
+            throw NotPostAuthorException.onDelete(id);
+        }
+        if (status == PostStatus.RESERVED) {
+            throw PostReservedException.onDelete(id);
+        }
+        if (status == PostStatus.COMPLETED) {
+            throw PostCompletedException.onDelete(id);
+        }
+        this.status = PostStatus.DELETED;
+        this.deletedAt = now;
+        return true;
     }
 
     public void attachImages(List<String> finalKeys) {
