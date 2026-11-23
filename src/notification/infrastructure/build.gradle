@@ -5,4 +5,7 @@ dependencies {
     // 저장 (JPA · 공통 엔티티)
     implementation project(':common-jpa')
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    // 보낸 회원 닉네임 조회 (user 도메인 조회 계약)
+    implementation project(':user-application')
 }
