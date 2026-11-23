@@ -1,4 +1,4 @@
-package com.ject.post.application.service.query;
+package com.ject.post.application.service.contract;
 
 import com.ject.post.application.FakePostSummaryReader;
 import com.ject.post.application.contract.PostBrief;
