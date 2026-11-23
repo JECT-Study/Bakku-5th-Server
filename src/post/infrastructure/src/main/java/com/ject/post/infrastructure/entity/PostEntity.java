@@ -71,6 +71,9 @@ public class PostEntity extends BaseEntity {
     @Column(name = "version", nullable = false)
     private Long version;
 
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
     public static PostEntity from(Post post) {
         PostEntity entity = new PostEntity();
         entity.authorId = post.getAuthorId();
@@ -95,5 +98,11 @@ public class PostEntity extends BaseEntity {
         this.hub = post.getPlace().hub();
         this.nowExchangeEndsAt = post.getNowExchangeEndsAt();
         this.viewCount = post.getViewCount();
+        this.deletedAt = post.getDeletedAt();
+    }
+
+    public void markDeleted(Instant deletedAt) {
+        this.status = PostStatus.DELETED;
+        this.deletedAt = deletedAt;
     }
 }

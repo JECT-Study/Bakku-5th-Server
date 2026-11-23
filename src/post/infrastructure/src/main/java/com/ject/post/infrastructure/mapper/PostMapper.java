@@ -30,6 +30,7 @@ public final class PostMapper {
                 .nowExchangeEndsAt(entity.getNowExchangeEndsAt())
                 .viewCount(entity.getViewCount())
                 .createdAt(entity.getCreatedAt())
+                .deletedAt(entity.getDeletedAt())
                 .build();
     }
 }
