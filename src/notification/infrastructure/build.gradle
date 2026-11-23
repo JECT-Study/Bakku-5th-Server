@@ -1,4 +1,8 @@
 dependencies {
     implementation project(':notification-domain')
     implementation project(':notification-application')
+
+    // 저장 (JPA · 공통 엔티티)
+    implementation project(':common-jpa')
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 }

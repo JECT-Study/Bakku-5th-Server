@@ -1,4 +1,7 @@
 dependencies {
     // 공통 예외 (DomainException · ErrorCode). domain을 쓰는 쪽에도 보이도록 api로 노출
     api project(':common-core')
+
+    // 알림 종류 · 이동 대상 (다른 파트와 같이 쓰는 값)
+    api project(':common-event')
 }
