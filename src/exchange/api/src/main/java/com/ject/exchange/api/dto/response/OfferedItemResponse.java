@@ -47,6 +47,15 @@ public record OfferedItemResponse(
                 item.name(),
                 item.opened(),
                 item.description(),
-                item.imageUrls());
+                imageUrlsOf(item, imageUrlResolver));
+    }
+
+    private static List<String> imageUrlsOf(OfferedItemResult item, ImageUrlResolver imageUrlResolver) {
+        if (item.imageKeys() == null) {
+            return null;
+        }
+        return item.imageKeys().stream()
+                .map(imageUrlResolver::resolve)
+                .toList();
     }
 }

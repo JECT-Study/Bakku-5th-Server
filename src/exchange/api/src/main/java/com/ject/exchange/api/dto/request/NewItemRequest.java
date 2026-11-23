@@ -5,13 +5,14 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import org.hibernate.validator.constraints.UniqueElements;
 
 import java.util.List;
 
 @Schema(description = "새로 작성한 아이템 (E-1의 newItem, E-3 요청 본문)")
 public record NewItemRequest(
-        @Schema(description = "업로드한 이미지 key 1~5장, 첫 장이 대표", example = "[\"exchange/tmp/a.jpg\", \"exchange/tmp/b.jpg\"]")
-        @NotNull @Size(min = 1, max = 5)
+        @Schema(description = "업로드한 이미지 key 1~5장 (중복 불가), 첫 장이 대표. E-3은 이 교환의 정식 key와 섞을 수 있다", example = "[\"exchange/tmp/1/0b1c2d3e-4f50-6172-8394-a5b6c7d8e9f0.jpg\"]")
+        @NotNull @Size(min = 1, max = 5) @UniqueElements
         List<@NotBlank String> imageKeys,
 
         @Schema(description = "제품명 (2~40자)", example = "치이카와 아크릴 스탠드")
@@ -26,8 +27,7 @@ public record NewItemRequest(
         @Size(max = 1000)
         String description
 ) {
-        // Todo: 이미지 모듈 업로드 후 수정
         public NewItem toNewItem() {
-                return new NewItem(name, opened, description);
+                return new NewItem(name, opened, description, imageKeys);
         }
 }

@@ -162,13 +162,13 @@ class AcceptAppointmentPostConnectTest {
     void createAfterAccept_byOtherMember_throwsPostReservedElsewhere() {
         // given
         handler.handle(accept(APPOINTMENT_ID));
-        CreateExchangeHandler createHandler = new CreateExchangeHandler(exchangeRepository, postPort, userPort);
+        CreateExchangeHandler createHandler = new CreateExchangeHandler(exchangeRepository, postPort, userPort, new FakeImagePort());
         int savesBefore = exchangeRepository.saveCount();
 
         // when
         ExchangeException exception = assertThrows(ExchangeException.class,
                 () -> createHandler.handle(new CreateExchangeCommand(MEMBER_C, POST_P, OfferType.NEW, null,
-                        new NewItem("치이카와 아크릴 스탠드", false, "가챠에서 두 개 나와서 하나 교환해요"))));
+                        new NewItem("치이카와 아크릴 스탠드", false, "가챠에서 두 개 나와서 하나 교환해요", List.of("exchange/tmp/100/item-1.jpg")))));
 
         // then
         assertEquals(ExchangeErrorCode.POST_RESERVED_ELSEWHERE, exception.getErrorCode());

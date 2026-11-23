@@ -16,6 +16,7 @@ public enum ExchangeErrorCode implements ErrorCode {
     NOT_REQUESTER("EXCHANGE_012", 403, "요청자가 아닙니다."),
     NOT_NEW_ITEM_OFFER("EXCHANGE_013", 409, "새로 작성 방식의 요청이 아닙니다."),
     NEW_ITEM_LOCKED("EXCHANGE_014", 409, "확정된 약속이 있어 아이템을 수정할 수 없습니다."),
+    INVALID_IMAGE_KEY("EXCHANGE_015", 400, "사용할 수 없는 이미지입니다."),
 
     APPOINTMENT_NOT_FOUND("EXCHANGE_101", 404, "약속을 찾을 수 없습니다."),
     INVALID_SCHEDULED_AT("EXCHANGE_102", 400, "약속 시각이 올바르지 않습니다."),

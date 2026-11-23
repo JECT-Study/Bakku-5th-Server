@@ -73,8 +73,8 @@ class ExchangeLoginMemberControllerTest {
         exchangeRepository = new FakeExchangeRepository();
         postPort = new FakePostPort();
         userPort = new FakeUserPort();
-        commandBus = new FakeCommandBus(new UpdateNewItemHandler(exchangeRepository),
-                new CreateExchangeHandler(exchangeRepository, postPort, userPort));
+        commandBus = new FakeCommandBus(new UpdateNewItemHandler(exchangeRepository, new FakeImagePort()),
+                new CreateExchangeHandler(exchangeRepository, postPort, userPort, new FakeImagePort()));
         queryBus = new FakeQueryBus(new GetExchangeHandler(exchangeRepository,
                 new FakeAppointmentRepository(exchangeRepository, NOW), postPort, userPort));
         mockMvc = MockMvcBuilders.standaloneSetup(

@@ -71,7 +71,7 @@ class ExchangeControllerTest {
     @BeforeEach
     void setUp() {
         exchangeRepository = new FakeExchangeRepository();
-        commandBus = new FakeCommandBus(new UpdateNewItemHandler(exchangeRepository));
+        commandBus = new FakeCommandBus(new UpdateNewItemHandler(exchangeRepository, new FakeImagePort()));
         queryBus = new FakeQueryBus(exchangeRepository);
         mockMvc = MockMvcBuilders.standaloneSetup(
                         new ExchangeController(commandBus, queryBus, IMAGE_URL_RESOLVER))

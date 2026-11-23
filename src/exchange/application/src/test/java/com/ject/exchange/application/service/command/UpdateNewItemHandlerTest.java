@@ -42,7 +42,7 @@ class UpdateNewItemHandlerTest {
     @BeforeEach
     void setUp() {
         exchangeRepository = new FakeExchangeRepository();
-        handler = new UpdateNewItemHandler(exchangeRepository);
+        handler = new UpdateNewItemHandler(exchangeRepository, new FakeImagePort());
     }
 
     @Test
@@ -52,7 +52,7 @@ class UpdateNewItemHandlerTest {
         exchangeRepository.preload(newItemExchange(ExchangeStatus.ACTIVE));
 
         // when
-        Long result = handler.handle(command(REQUESTER_ID, new NewItem("새 이름", true, "새 설명")));
+        Long result = handler.handle(command(REQUESTER_ID, new NewItem("새 이름", true, "새 설명", List.of("exchange/tmp/100/item-1.jpg"))));
 
         // then
         assertEquals(EXCHANGE_ID, result);
@@ -72,7 +72,7 @@ class UpdateNewItemHandlerTest {
     void handle_withoutDescription_savesNullDescription() {
         exchangeRepository.preload(newItemExchange(ExchangeStatus.ACTIVE));
 
-        handler.handle(command(REQUESTER_ID, new NewItem("새 이름", true, null)));
+        handler.handle(command(REQUESTER_ID, new NewItem("새 이름", true, null, List.of("exchange/tmp/100/item-1.jpg"))));
 
         OfferedItem item = savedItem();
         assertEquals("새 이름", item.getName().value());
@@ -84,7 +84,7 @@ class UpdateNewItemHandlerTest {
     void handle_thousandCharacterDescription_saves() {
         exchangeRepository.preload(newItemExchange(ExchangeStatus.ACTIVE));
 
-        handler.handle(command(REQUESTER_ID, new NewItem("새 이름", false, "가".repeat(1000))));
+        handler.handle(command(REQUESTER_ID, new NewItem("새 이름", false, "가".repeat(1000), List.of("exchange/tmp/100/item-1.jpg"))));
 
         assertEquals(1000, savedItem().getDescription().value().length());
     }
@@ -96,7 +96,7 @@ class UpdateNewItemHandlerTest {
         exchangeRepository.preload(newItemExchange(ExchangeStatus.ACTIVE));
         String name = "가".repeat(length);
 
-        handler.handle(command(REQUESTER_ID, new NewItem(name, false, null)));
+        handler.handle(command(REQUESTER_ID, new NewItem(name, false, null, List.of("exchange/tmp/100/item-1.jpg"))));
 
         assertEquals(name, savedItem().getName().value());
     }
@@ -107,7 +107,7 @@ class UpdateNewItemHandlerTest {
         exchangeRepository.preload(newItemExchange(ExchangeStatus.ACTIVE));
 
         ExchangeException exception = assertThrows(ExchangeException.class, () -> handler.handle(
-                new UpdateNewItemCommand(MISSING_EXCHANGE_ID, REQUESTER_ID, new NewItem("새 이름", true, "새 설명"))));
+                new UpdateNewItemCommand(MISSING_EXCHANGE_ID, REQUESTER_ID, new NewItem("새 이름", true, "새 설명", List.of("exchange/tmp/100/item-1.jpg")))));
 
         assertEquals(ExchangeErrorCode.EXCHANGE_NOT_FOUND, exception.getErrorCode());
         assertEquals(0, exchangeRepository.saveCount());
@@ -120,7 +120,7 @@ class UpdateNewItemHandlerTest {
         exchangeRepository.preload(newItemExchange(ExchangeStatus.ACTIVE));
 
         ExchangeException exception = assertThrows(ExchangeException.class,
-                () -> handler.handle(command(OWNER_ID, new NewItem("새 이름", true, "새 설명"))));
+                () -> handler.handle(command(OWNER_ID, new NewItem("새 이름", true, "새 설명", List.of("exchange/tmp/100/item-1.jpg")))));
 
         assertEquals(ExchangeErrorCode.NOT_REQUESTER, exception.getErrorCode());
         assertEquals(0, exchangeRepository.saveCount());
@@ -133,7 +133,7 @@ class UpdateNewItemHandlerTest {
         exchangeRepository.preload(newItemExchange(ExchangeStatus.ACTIVE));
 
         ExchangeException exception = assertThrows(ExchangeException.class,
-                () -> handler.handle(command(OTHER_MEMBER_ID, new NewItem("새 이름", true, "새 설명"))));
+                () -> handler.handle(command(OTHER_MEMBER_ID, new NewItem("새 이름", true, "새 설명", List.of("exchange/tmp/100/item-1.jpg")))));
 
         assertEquals(ExchangeErrorCode.NOT_REQUESTER, exception.getErrorCode());
         assertEquals(0, exchangeRepository.saveCount());
@@ -148,7 +148,7 @@ class UpdateNewItemHandlerTest {
                 ExchangeStatus.ACTIVE, null, NOW, NOW));
 
         ExchangeException exception = assertThrows(ExchangeException.class,
-                () -> handler.handle(command(REQUESTER_ID, new NewItem("새 이름", true, "새 설명"))));
+                () -> handler.handle(command(REQUESTER_ID, new NewItem("새 이름", true, "새 설명", List.of("exchange/tmp/100/item-1.jpg")))));
 
         assertEquals(ExchangeErrorCode.NOT_NEW_ITEM_OFFER, exception.getErrorCode());
         assertEquals(0, exchangeRepository.saveCount());
@@ -164,7 +164,7 @@ class UpdateNewItemHandlerTest {
         exchangeRepository.preload(newItemExchange(status));
 
         ExchangeException exception = assertThrows(ExchangeException.class,
-                () -> handler.handle(command(REQUESTER_ID, new NewItem("새 이름", true, "새 설명"))));
+                () -> handler.handle(command(REQUESTER_ID, new NewItem("새 이름", true, "새 설명", List.of("exchange/tmp/100/item-1.jpg")))));
 
         assertEquals(ExchangeErrorCode.EXCHANGE_CLOSED, exception.getErrorCode());
         assertEquals(0, exchangeRepository.saveCount());
@@ -178,7 +178,7 @@ class UpdateNewItemHandlerTest {
         exchangeRepository.preload(newItemExchange(ExchangeStatus.ACTIVE));
 
         ExchangeException exception = assertThrows(ExchangeException.class,
-                () -> handler.handle(command(REQUESTER_ID, new NewItem("가".repeat(41), true, "새 설명"))));
+                () -> handler.handle(command(REQUESTER_ID, new NewItem("가".repeat(41), true, "새 설명", List.of("exchange/tmp/100/item-1.jpg")))));
 
         assertEquals(ExchangeErrorCode.INVALID_OFFERED_ITEMS, exception.getErrorCode());
         assertEquals(0, exchangeRepository.saveCount());
@@ -191,7 +191,7 @@ class UpdateNewItemHandlerTest {
         exchangeRepository.preload(newItemExchange(ExchangeStatus.ACTIVE));
 
         ExchangeException exception = assertThrows(ExchangeException.class,
-                () -> handler.handle(command(REQUESTER_ID, new NewItem("새 이름", true, "가".repeat(1001)))));
+                () -> handler.handle(command(REQUESTER_ID, new NewItem("새 이름", true, "가".repeat(1001), List.of("exchange/tmp/100/item-1.jpg")))));
 
         assertEquals(ExchangeErrorCode.INVALID_OFFERED_ITEMS, exception.getErrorCode());
         assertEquals(0, exchangeRepository.saveCount());

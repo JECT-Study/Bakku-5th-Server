@@ -49,7 +49,7 @@ class CreateExchangePostConnectTest {
         exchangeRepository = new FakeExchangeRepository();
         postPort = new FakePostPort();
         userPort = new FakeUserPort();
-        handler = new CreateExchangeHandler(exchangeRepository, postPort, userPort);
+        handler = new CreateExchangeHandler(exchangeRepository, postPort, userPort, new FakeImagePort());
 
         postPort.register(post(POST_P, "P", "post/10/1.jpg", MEMBER_B, PostInfo.Status.AVAILABLE));
         postPort.register(post(POST_Q1, "Q1", "post/20/1.jpg", MEMBER_A, PostInfo.Status.AVAILABLE));
@@ -224,7 +224,7 @@ class CreateExchangePostConnectTest {
 
     private static CreateExchangeCommand newItemCommand(Long requesterId, Long postId) {
         return new CreateExchangeCommand(requesterId, postId, OfferType.NEW, null,
-                new NewItem("치이카와 아크릴 스탠드", false, "가챠에서 두 개 나와서 하나 교환해요"));
+                new NewItem("치이카와 아크릴 스탠드", false, "가챠에서 두 개 나와서 하나 교환해요", List.of("exchange/tmp/100/item-1.jpg")));
     }
 
     private static CreateExchangeCommand postCommand(Long requesterId, Long postId, List<Long> offeredPostIds) {

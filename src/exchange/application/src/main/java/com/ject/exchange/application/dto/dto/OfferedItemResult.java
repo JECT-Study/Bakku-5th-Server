@@ -13,5 +13,5 @@ public record OfferedItemResult(
         String name,
         Boolean opened,
         String description,
-        List<String> imageUrls     // Todo: 이미지 모듈 전까지 빈 리스트
+        List<String> imageKeys     // NEW면 정식 사진 key(순서대로), POST면 null
 ) {}

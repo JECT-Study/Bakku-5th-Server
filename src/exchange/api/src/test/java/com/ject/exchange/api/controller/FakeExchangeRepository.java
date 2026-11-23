@@ -57,7 +57,7 @@ class FakeExchangeRepository implements ExchangeRepository {
                 .mapToObj(index -> {
                     OfferedItem item = items.get(index);
                     return OfferedItem.of(nextItemId++, item.getSourcePostId(), item.getName(), item.getOpened(),
-                            item.getDescription(), item.getSortOrder());
+                            item.getDescription(), item.getSortOrder(), item.getImageKeys());
                 })
                 .toList();
         return Exchange.of(nextExchangeId++, exchange.getPostId(), exchange.getRequestUserId(),

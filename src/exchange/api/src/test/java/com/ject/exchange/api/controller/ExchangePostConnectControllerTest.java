@@ -88,8 +88,8 @@ class ExchangePostConnectControllerTest {
         appointmentRepository = new FakeAppointmentRepository(exchangeRepository, NOW);
         postPort = new FakePostPort();
         FakeUserPort userPort = new FakeUserPort();
-        FakeCommandBus commandBus = new FakeCommandBus(new UpdateNewItemHandler(exchangeRepository),
-                new CreateExchangeHandler(exchangeRepository, postPort, userPort));
+        FakeCommandBus commandBus = new FakeCommandBus(new UpdateNewItemHandler(exchangeRepository, new FakeImagePort()),
+                new CreateExchangeHandler(exchangeRepository, postPort, userPort, new FakeImagePort()));
         FakeQueryBus queryBus = new FakeQueryBus(
                 new GetExchangeHandler(exchangeRepository, appointmentRepository, postPort, userPort));
         mockMvc = MockMvcBuilders.standaloneSetup(new ExchangeController(commandBus, queryBus, IMAGE_URL_RESOLVER))
