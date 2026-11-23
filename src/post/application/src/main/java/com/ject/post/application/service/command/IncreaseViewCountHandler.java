@@ -5,8 +5,6 @@ import com.ject.common.core.time.ServiceTime;
 import com.ject.post.application.dto.command.IncreaseViewCountCommand;
 import com.ject.post.application.port.PostViewLog;
 import com.ject.post.domain.domain.Post;
-import com.ject.post.domain.domain.PostStatus;
-import com.ject.post.domain.exception.PostNotFoundException;
 import com.ject.post.domain.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,9 +21,7 @@ public class IncreaseViewCountHandler implements CommandHandler<IncreaseViewCoun
     @Override
     @Transactional
     public Void handle(IncreaseViewCountCommand command) {
-        Post post = postRepository.findById(command.postId())
-                .filter(found -> found.getStatus() != PostStatus.DELETED)
-                .orElseThrow(() -> new PostNotFoundException(command.postId()));
+        Post post = postRepository.getVisible(command.postId());
         if (!post.isWrittenBy(command.viewerId())
                 && postViewLog.markViewed(command.postId(), command.viewerId(), serviceTime.today())) {
             postRepository.increaseViewCount(command.postId());

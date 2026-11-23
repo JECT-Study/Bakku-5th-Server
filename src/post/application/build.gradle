@@ -1,5 +1,6 @@
 dependencies {
     implementation project(':post-domain')
+    implementation project(':common-event')
 
     // 빈 등록 · 트랜잭션
     implementation 'org.springframework:spring-context'
