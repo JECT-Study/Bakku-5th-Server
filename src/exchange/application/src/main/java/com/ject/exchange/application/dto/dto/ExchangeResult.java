@@ -70,10 +70,11 @@ public record ExchangeResult(
     }
 
     private static Participant toParticipant(Long userId, UserInfo user) {
-        if (user == null) { // Todo: 탈퇴 회원 표시 정책 정해지면 반영
+        if (user == null) { // 회원 정보를 찾지 못하면 ID만 두고 닉네임 · 완료 횟수는 비운다
             return new Participant(userId, null, 0);
         }
-        return new Participant(user.id(), user.nickname(), 0); // Todo: reputation BC 연동 전까지 completedCount 0
+        // 탈퇴 회원도 userId는 유지한다 (참여자 판별용). 닉네임은 user BC가 "탈퇴한 사용자"로 준다
+        return new Participant(user.id(), user.nickname(), user.completedCount());
     }
 
     private static PostSummary toPostSummary(Long postId, PostInfo post) {

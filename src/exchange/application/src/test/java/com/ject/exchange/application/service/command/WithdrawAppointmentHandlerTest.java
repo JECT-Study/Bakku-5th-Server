@@ -604,7 +604,8 @@ class WithdrawAppointmentHandlerTest {
     }
 
     private ProposeAppointmentHandler proposeHandler() {
-        return new ProposeAppointmentHandler(exchangeRepository, appointmentRepository, postPort, serviceTime);
+        return new ProposeAppointmentHandler(exchangeRepository, appointmentRepository, postPort,
+                new FakeUserPort(), serviceTime);
     }
 
     private void givenDefaultExchangeAndProposal() {

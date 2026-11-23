@@ -25,11 +25,13 @@ public interface ExchangeApi {
     @Operation(summary = "E-1 교환 요청", description = "교환 요청 저장과 채팅방 생성을 한 번에 처리합니다. 응답의 chatRoomId로 바로 채팅방에 들어갑니다.")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    ApiResponse<ExchangeResponse> createExchange(@Valid @RequestBody CreateExchangeRequest request);
+    ApiResponse<ExchangeResponse> createExchange(@Parameter(hidden = true) @LoginMember Long memberId,
+                                                 @Valid @RequestBody CreateExchangeRequest request);
 
     @Operation(summary = "E-2 교환 상세", description = "채팅방 상단 고정 카드, 첫 메시지 아이템 카드, 아이템 상세, 입력창 위 버튼 상태에 사용합니다.")
     @GetMapping("/{exchangeId}")
-    ApiResponse<ExchangeResponse> getExchange(@PathVariable("exchangeId") Long exchangeId);
+    ApiResponse<ExchangeResponse> getExchange(@Parameter(hidden = true) @LoginMember Long memberId,
+                                              @PathVariable("exchangeId") Long exchangeId);
 
     @Operation(summary = "E-3 새로 작성한 아이템 수정", description = "요청자가 새로 작성한 아이템을 수정합니다. 확정 약속이 있으면 수정할 수 없습니다.")
     @PutMapping("/{exchangeId}/new-item")

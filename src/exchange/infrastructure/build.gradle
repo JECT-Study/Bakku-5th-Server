@@ -2,6 +2,8 @@ dependencies {
     implementation project(':exchange-domain')
     implementation project(':exchange-application')
     implementation project(':common-jpa')
+    // 교환 참여자 정보를 회원 요약 계약(MemberSummaryQuery)으로 조회한다. post-infrastructure와 같은 의존
+    implementation project(':user-application')
 
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 }

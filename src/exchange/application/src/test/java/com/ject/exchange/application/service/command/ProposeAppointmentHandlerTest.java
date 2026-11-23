@@ -65,6 +65,7 @@ class ProposeAppointmentHandlerTest {
     private FakeExchangeRepository exchangeRepository;
     private FakeAppointmentRepository appointmentRepository;
     private FakePostPort postPort;
+    private FakeUserPort userPort;
     private ServiceTime serviceTime;
     private ProposeAppointmentHandler handler;
 
@@ -73,8 +74,10 @@ class ProposeAppointmentHandlerTest {
         exchangeRepository = new FakeExchangeRepository();
         appointmentRepository = new FakeAppointmentRepository(exchangeRepository, NOW);
         postPort = new FakePostPort();
+        userPort = new FakeUserPort();
         serviceTime = new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul")));
-        handler = new ProposeAppointmentHandler(exchangeRepository, appointmentRepository, postPort, serviceTime);
+        handler = new ProposeAppointmentHandler(exchangeRepository, appointmentRepository, postPort, userPort,
+                serviceTime);
 
         postPort.register(post(POST_ID, "치이카와 교환해요", OWNER_ID, PostInfo.Status.AVAILABLE));
         postPort.register(post(SOURCE_POST_31, "우사기 미니 피규어", REQUESTER_ID, PostInfo.Status.AVAILABLE));
@@ -618,6 +621,149 @@ class ProposeAppointmentHandlerTest {
 
         assertRejected(ExchangeErrorCode.INVALID_OFFERED_ITEMS,
                 () -> handler.handle(scheduledCommand(REQUESTER_ID, List.of(ITEM_31, FOREIGN_ITEM), 30)));
+    }
+
+    // ---- exchange-user-connect AC-11 차단 관계 ----
+
+    @Test
+    @DisplayName("요청자가 게시자를 차단했으면 요청자의 제안은 BLOCKED_USER이고 저장하지 않는다")
+    void handle_requesterBlockedOwner_byRequester_throwsBlockedUser() {
+        exchangeRepository.preload(twoPostItemExchange(ExchangeStatus.ACTIVE));
+        userPort.block(REQUESTER_ID, OWNER_ID);
+
+        assertRejected(ExchangeErrorCode.BLOCKED_USER,
+                () -> handler.handle(scheduledCommand(REQUESTER_ID, List.of(ITEM_31), 30)));
+    }
+
+    @Test
+    @DisplayName("게시자가 요청자를 차단했으면 요청자의 제안은 BLOCKED_USER이고 저장하지 않는다")
+    void handle_ownerBlockedRequester_byRequester_throwsBlockedUser() {
+        exchangeRepository.preload(twoPostItemExchange(ExchangeStatus.ACTIVE));
+        userPort.block(OWNER_ID, REQUESTER_ID);
+
+        assertRejected(ExchangeErrorCode.BLOCKED_USER,
+                () -> handler.handle(scheduledCommand(REQUESTER_ID, List.of(ITEM_31), 30)));
+    }
+
+    @Test
+    @DisplayName("요청자가 게시자를 차단했으면 게시자의 제안도 BLOCKED_USER이고 저장하지 않는다")
+    void handle_requesterBlockedOwner_byOwner_throwsBlockedUser() {
+        exchangeRepository.preload(twoPostItemExchange(ExchangeStatus.ACTIVE));
+        userPort.block(REQUESTER_ID, OWNER_ID);
+
+        assertRejected(ExchangeErrorCode.BLOCKED_USER,
+                () -> handler.handle(scheduledCommand(OWNER_ID, List.of(ITEM_31), 30)));
+    }
+
+    @Test
+    @DisplayName("게시자가 요청자를 차단했으면 게시자의 지금 바로 제안도 BLOCKED_USER이고 저장하지 않는다")
+    void handle_ownerBlockedRequester_byOwnerNow_throwsBlockedUser() {
+        exchangeRepository.preload(twoPostItemExchange(ExchangeStatus.ACTIVE));
+        userPort.block(OWNER_ID, REQUESTER_ID);
+
+        assertRejected(ExchangeErrorCode.BLOCKED_USER, () -> handler.handle(command(OWNER_ID,
+                AppointmentTimeType.NOW, null, List.of(ITEM_31), null)));
+    }
+
+    @Test
+    @DisplayName("차단 판정은 제안자와 받는 사람으로 묻고 차단이 없으면 저장된다")
+    void handle_noBlock_checksProposerAndReceiverThenSaves() {
+        exchangeRepository.preload(twoPostItemExchange(ExchangeStatus.ACTIVE));
+        userPort.block(REQUESTER_ID, OTHER_MEMBER_ID);
+
+        Long appointmentId = handler.handle(scheduledCommand(OWNER_ID, List.of(ITEM_31), 30));
+
+        assertNotNull(appointmentId);
+        assertEquals(1, appointmentRepository.saveCount());
+        assertEquals(List.of(List.of(OWNER_ID, REQUESTER_ID)), userPort.blockChecks());
+    }
+
+    // ---- exchange-user-connect AC-12 판정 순서 002 · 010 → 008 → 나머지 ----
+
+    @Test
+    @DisplayName("참여자가 아니면 차단 관계여도 NOT_EXCHANGE_PARTICIPANT가 먼저다")
+    void handle_thirdPartyWithBlock_participantFirst() {
+        exchangeRepository.preload(twoPostItemExchange(ExchangeStatus.ACTIVE));
+        userPort.block(OTHER_MEMBER_ID, OWNER_ID);
+        userPort.block(OTHER_MEMBER_ID, REQUESTER_ID);
+
+        assertRejected(ExchangeErrorCode.NOT_EXCHANGE_PARTICIPANT,
+                () -> handler.handle(scheduledCommand(OTHER_MEMBER_ID, List.of(ITEM_31), 30)));
+    }
+
+    @Test
+    @DisplayName("종료된 교환이면 차단 관계여도 EXCHANGE_CLOSED가 먼저다")
+    void handle_closedExchangeWithBlock_closedFirst() {
+        exchangeRepository.preload(twoPostItemExchange(ExchangeStatus.CLOSED));
+        userPort.block(REQUESTER_ID, OWNER_ID);
+
+        assertRejected(ExchangeErrorCode.EXCHANGE_CLOSED,
+                () -> handler.handle(scheduledCommand(REQUESTER_ID, List.of(ITEM_31), 30)));
+    }
+
+    @Test
+    @DisplayName("차단 관계와 지난 약속 시각이 겹치면 BLOCKED_USER가 먼저다")
+    void handle_blockWithPastTime_blockedFirst() {
+        exchangeRepository.preload(twoPostItemExchange(ExchangeStatus.ACTIVE));
+        userPort.block(OWNER_ID, REQUESTER_ID);
+
+        assertRejected(ExchangeErrorCode.BLOCKED_USER, () -> handler.handle(command(REQUESTER_ID,
+                AppointmentTimeType.SCHEDULED, NOW.minus(Duration.ofHours(1)), List.of(ITEM_31), 30)));
+    }
+
+    @Test
+    @DisplayName("차단 관계와 진행 중 제안이 겹치면 BLOCKED_USER가 먼저다")
+    void handle_blockWithPendingProposal_blockedFirst() {
+        exchangeRepository.preload(twoPostItemExchange(ExchangeStatus.ACTIVE));
+        appointmentRepository.preload(existing(EXCHANGE_ID, OWNER_ID, REQUESTER_ID, AppointmentStatus.PROPOSED,
+                NOW.plus(Duration.ofHours(1))));
+        userPort.block(REQUESTER_ID, OWNER_ID);
+
+        assertRejected(ExchangeErrorCode.BLOCKED_USER,
+                () -> handler.handle(scheduledCommand(REQUESTER_ID, List.of(ITEM_31), 30)));
+    }
+
+    @Test
+    @DisplayName("차단 관계와 글 예약중이 겹치면 BLOCKED_USER가 먼저다")
+    void handle_blockWithReservedPost_blockedFirst() {
+        exchangeRepository.preload(twoPostItemExchange(ExchangeStatus.ACTIVE));
+        postPort.register(post(POST_ID, "치이카와 교환해요", OWNER_ID, PostInfo.Status.RESERVED));
+        userPort.block(REQUESTER_ID, OWNER_ID);
+
+        assertRejected(ExchangeErrorCode.BLOCKED_USER,
+                () -> handler.handle(scheduledCommand(REQUESTER_ID, List.of(ITEM_31), 30)));
+    }
+
+    @Test
+    @DisplayName("차단 관계와 글 교환 완료가 겹치면 BLOCKED_USER가 먼저다")
+    void handle_blockWithCompletedPost_blockedFirst() {
+        exchangeRepository.preload(twoPostItemExchange(ExchangeStatus.ACTIVE));
+        postPort.register(post(POST_ID, "치이카와 교환해요", OWNER_ID, PostInfo.Status.COMPLETED));
+        userPort.block(REQUESTER_ID, OWNER_ID);
+
+        assertRejected(ExchangeErrorCode.BLOCKED_USER,
+                () -> handler.handle(scheduledCommand(REQUESTER_ID, List.of(ITEM_31), 30)));
+    }
+
+    @Test
+    @DisplayName("차단 관계와 첨부가 아닌 아이템이 겹치면 BLOCKED_USER가 먼저다")
+    void handle_blockWithForeignItem_blockedFirst() {
+        exchangeRepository.preload(twoPostItemExchange(ExchangeStatus.ACTIVE));
+        userPort.block(REQUESTER_ID, OWNER_ID);
+
+        assertRejected(ExchangeErrorCode.BLOCKED_USER,
+                () -> handler.handle(scheduledCommand(REQUESTER_ID, List.of(FOREIGN_ITEM), 30)));
+    }
+
+    @Test
+    @DisplayName("차단 관계와 교환 불가 아이템이 겹치면 BLOCKED_USER가 먼저다")
+    void handle_blockWithUnavailableItem_blockedFirst() {
+        exchangeRepository.preload(twoPostItemExchange(ExchangeStatus.ACTIVE));
+        postPort.register(post(SOURCE_POST_31, "우사기 미니 피규어", REQUESTER_ID, PostInfo.Status.RESERVED));
+        userPort.block(REQUESTER_ID, OWNER_ID);
+
+        assertRejected(ExchangeErrorCode.BLOCKED_USER,
+                () -> handler.handle(scheduledCommand(REQUESTER_ID, List.of(ITEM_31), 30)));
     }
 
     // ---- helpers ----

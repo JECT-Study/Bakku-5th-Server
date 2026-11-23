@@ -5,6 +5,7 @@ import com.ject.common.core.time.ServiceTime;
 import com.ject.exchange.application.dto.command.ProposeAppointmentCommand;
 import com.ject.exchange.application.dto.dto.PostInfo;
 import com.ject.exchange.application.port.PostPort;
+import com.ject.exchange.application.port.UserPort;
 import com.ject.exchange.domain.domain.appointment.Appointment;
 import com.ject.exchange.domain.domain.appointment.vo.AppointmentItemIds;
 import com.ject.exchange.domain.domain.appointment.vo.AppointmentTime;
@@ -34,6 +35,7 @@ public class ProposeAppointmentHandler implements CommandHandler<ProposeAppointm
     private final ExchangeRepository exchangeRepository;
     private final AppointmentRepository appointmentRepository;
     private final PostPort postPort;
+    private final UserPort userPort;
     private final ServiceTime serviceTime;
 
     @Override
@@ -43,6 +45,10 @@ public class ProposeAppointmentHandler implements CommandHandler<ProposeAppointm
         Exchange exchange = exchangeRepository.findByIdForUpdate(command.exchangeId())
                 .orElseThrow(() -> new ExchangeException(ExchangeErrorCode.EXCHANGE_NOT_FOUND));
         Long receiverId = exchange.appointmentReceiverFor(command.proposerId());
+        // 차단되면 서로 대화할 수 없으므로 약속도 제안할 수 없다 (C-09-2). 참여자 · 교환 상태 다음에 본다 (spec 결정 4)
+        if (userPort.isBlocked(command.proposerId(), receiverId)) {
+            throw new ExchangeException(ExchangeErrorCode.BLOCKED_USER);
+        }
         Instant now = serviceTime.now();
         AppointmentTime time = AppointmentTime.of(
                 command.timeType(), serviceTime.toOffset(command.scheduledAt()), serviceTime.toOffset(now));
@@ -50,7 +56,7 @@ public class ProposeAppointmentHandler implements CommandHandler<ProposeAppointm
         validatePostOpenForAppointment(exchange.getPostId());
         AppointmentItemIds itemIds = selectItems(exchange, command.offeredItemIds());
 
-        // Todo: 차단 관계 확인 (BLOCKED_USER), 채팅방 "교환을 제안해요" 카드 · 상대 알림
+        // Todo: 채팅방 "교환을 제안해요" 카드 · 상대 알림
         Appointment appointment = Appointment.propose(exchange.getId(), command.proposerId(), receiverId,
                 time, command.place(), itemIds, command.reminderOffsetMinutes(), now);
         return appointmentRepository.save(appointment).getId();
