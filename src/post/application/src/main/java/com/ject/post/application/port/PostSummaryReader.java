@@ -10,6 +10,11 @@ public interface PostSummaryReader {
 
     List<Row> findHomePage(Condition condition, Long cursorId, int limit);
 
+    List<Brief> findBriefs(List<Long> ids);
+
+    record Brief(Long id, Long authorId, PostStatus status, String title, String thumbnailKey) {
+    }
+
     record Condition(Boolean nowExchange, PostCategory category, Instant now) {
     }
 
