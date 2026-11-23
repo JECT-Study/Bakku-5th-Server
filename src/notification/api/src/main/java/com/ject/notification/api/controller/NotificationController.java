@@ -50,8 +50,8 @@ public class NotificationController implements NotificationApi {
     }
 
     @Override
-    public ApiResponse<ReadAllResponse> readAll() {
-        return ApiResponse.success(new ReadAllResponse(3));
+    public ApiResponse<ReadAllResponse> readAll(Long memberId) {
+        return ApiResponse.success(new ReadAllResponse(notificationReadService.readAll(memberId)));
     }
 
     private NotificationResponse toResponse(NotificationItem item) {

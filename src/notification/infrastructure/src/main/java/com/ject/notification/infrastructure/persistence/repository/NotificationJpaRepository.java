@@ -44,4 +44,12 @@ public interface NotificationJpaRepository extends JpaRepository<NotificationJpa
                  @Param("createdFrom") Instant createdFrom);
 
     boolean existsByIdAndReceiverIdAndCreatedAtGreaterThanEqual(Long id, Long receiverId, Instant createdFrom);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("""
+            UPDATE NotificationJpaEntity n SET n.readAt = :readAt, n.updatedAt = :readAt
+            WHERE n.receiverId = :receiverId AND n.readAt IS NULL AND n.createdAt >= :createdFrom
+            """)
+    int markAllRead(@Param("receiverId") Long receiverId, @Param("readAt") Instant readAt,
+                    @Param("createdFrom") Instant createdFrom);
 }

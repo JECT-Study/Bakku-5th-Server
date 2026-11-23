@@ -47,7 +47,8 @@ public interface NotificationApi {
             @LoginMember Long memberId,
             @Parameter(description = "알림 ID") @PathVariable("notificationId") Long notificationId);
 
-    @Operation(summary = "NT-4 모두 읽음", description = "안 읽은 알림을 전부 읽음 처리합니다.")
+    @Operation(summary = "NT-4 모두 읽음",
+            description = "30일 안에 받은 안 읽은 알림을 전부 읽음 처리하고, 이번에 읽음 처리한 수를 돌려줍니다.")
     @PostMapping("/read-all")
-    ApiResponse<ReadAllResponse> readAll();
+    ApiResponse<ReadAllResponse> readAll(@LoginMember Long memberId);
 }

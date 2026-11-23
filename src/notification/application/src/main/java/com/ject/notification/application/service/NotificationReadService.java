@@ -39,4 +39,14 @@ public class NotificationReadService {
             throw new NotificationNotFoundException(notificationId);
         }
     }
+
+    /**
+     * NT-4 안 읽은 알림(30일 안)을 모두 읽음으로 바꾼다.
+     *
+     * @return 이번에 읽음으로 바꾼 수
+     */
+    public long readAll(Long memberId) {
+        Instant now = serviceTime.now();
+        return notificationRepository.markAllRead(memberId, now, Notification.visibleFrom(now));
+    }
 }

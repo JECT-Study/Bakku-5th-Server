@@ -51,6 +51,11 @@ class FakeNotificationRepository implements NotificationRepository {
                 && !notification.getCreatedAt().isBefore(createdFrom));
     }
 
+    @Override
+    public long markAllRead(Long receiverId, Instant readAt, Instant createdFrom) {
+        return markReadWhere(notification -> notification.getReceiverId().equals(receiverId), readAt, createdFrom);
+    }
+
     private int markReadWhere(Predicate<Notification> condition, Instant readAt, Instant createdFrom) {
         int updated = 0;
         for (int i = 0; i < store.size(); i++) {

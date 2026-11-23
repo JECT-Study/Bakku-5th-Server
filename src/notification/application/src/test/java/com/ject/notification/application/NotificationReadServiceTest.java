@@ -19,6 +19,7 @@ import java.time.ZoneId;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class NotificationReadServiceTest {
@@ -75,7 +76,7 @@ class NotificationReadServiceTest {
 
         // when & then
         assertNotFound(1L);
-        assertEquals(null, find(1L).getReadAt());
+        assertNull(find(1L).getReadAt());
     }
 
     @Test
@@ -86,6 +87,35 @@ class NotificationReadServiceTest {
 
         // when & then
         assertNotFound(1L);
+    }
+
+    @Test
+    @DisplayName("NT-4 30일 안에 받은 내 안 읽은 알림만 읽음 처리하고 그 수를 준다")
+    void readAll() {
+        // given
+        Instant firstReadAt = NOW.minusSeconds(50);
+        add(1L, MEMBER_ID, NOW.minusSeconds(300), null);
+        add(2L, MEMBER_ID, NOW.minusSeconds(200), firstReadAt);
+        add(3L, MEMBER_ID, NOW.minusSeconds(100), null);
+        add(4L, MEMBER_ID, NOW.minus(Duration.ofDays(30)).minusSeconds(1), null);
+        add(5L, 202L, NOW.minusSeconds(100), null);
+
+        // when
+        long readCount = readService.readAll(MEMBER_ID);
+
+        // then
+        assertEquals(2, readCount);
+        assertEquals(NOW, find(1L).getReadAt());
+        assertEquals(firstReadAt, find(2L).getReadAt());
+        assertEquals(NOW, find(3L).getReadAt());
+        assertNull(find(4L).getReadAt());
+        assertNull(find(5L).getReadAt());
+    }
+
+    @Test
+    @DisplayName("NT-4 안 읽은 알림이 없으면 0")
+    void readAllNothing() {
+        assertEquals(0, readService.readAll(MEMBER_ID));
     }
 
     private void assertNotFound(Long notificationId) {

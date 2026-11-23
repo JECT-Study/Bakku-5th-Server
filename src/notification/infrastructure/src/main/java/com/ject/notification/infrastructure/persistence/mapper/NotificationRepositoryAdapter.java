@@ -50,6 +50,11 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
                 receiverId, createdFrom);
     }
 
+    @Override
+    public long markAllRead(Long receiverId, Instant readAt, Instant createdFrom) {
+        return notificationJpaRepository.markAllRead(receiverId, readAt, createdFrom);
+    }
+
     private static NotificationJpaEntity toEntity(Notification notification) {
         return new NotificationJpaEntity(notification.getReceiverId(), notification.getType(),
                 notification.getTitle(), notification.getBody(), notification.getTargetType(),

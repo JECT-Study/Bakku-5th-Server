@@ -129,11 +129,12 @@ class NotificationControllerTest {
     }
 
     @Test
-    @DisplayName("NT-4 모두 읽음은 읽음 처리한 수를 반환한다")
+    @DisplayName("NT-4 모두 읽음은 로그인한 회원 기준으로 읽음 처리한 수를 반환한다")
     void readAll() throws Exception {
-        mockMvc.perform(post("/api/v1/notifications/read-all"))
+        mockMvc.perform(post("/api/v1/notifications/read-all").requestAttr(LoginMember.ATTRIBUTE, MEMBER_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.readCount").value(3));
+        assertEquals(List.of(MEMBER_ID), readService.read);
     }
 
     /**
@@ -153,6 +154,12 @@ class NotificationControllerTest {
                 throw new NotificationNotFoundException(notificationId);
             }
             read = List.of(memberId, notificationId);
+        }
+
+        @Override
+        public long readAll(Long memberId) {
+            read = List.of(memberId);
+            return 3;
         }
     }
 

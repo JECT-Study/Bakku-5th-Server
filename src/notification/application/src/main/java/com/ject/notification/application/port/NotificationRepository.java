@@ -30,4 +30,9 @@ public interface NotificationRepository {
     boolean markRead(Long notificationId, Long receiverId, Instant readAt, Instant createdFrom);
 
     boolean exists(Long notificationId, Long receiverId, Instant createdFrom);
+
+    /**
+     * @return 이번에 읽음으로 바꾼 수
+     */
+    long markAllRead(Long receiverId, Instant readAt, Instant createdFrom);
 }
