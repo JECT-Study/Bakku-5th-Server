@@ -28,6 +28,15 @@ class FakeNotificationRepository implements NotificationRepository {
                 .toList();
     }
 
+    @Override
+    public long countUnread(Long receiverId, Instant createdFrom) {
+        return store.stream()
+                .filter(notification -> notification.getReceiverId().equals(receiverId))
+                .filter(notification -> !notification.getCreatedAt().isBefore(createdFrom))
+                .filter(notification -> !notification.isRead())
+                .count();
+    }
+
     /** id · 받은 시각이 정해진 저장된 알림을 넣는다 */
     void add(Notification notification) {
         store.add(notification);

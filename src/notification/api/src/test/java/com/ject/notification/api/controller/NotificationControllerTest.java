@@ -98,10 +98,12 @@ class NotificationControllerTest {
     }
 
     @Test
-    @DisplayName("NT-2 안 읽은 알림 수를 반환한다")
+    @DisplayName("NT-2 로그인한 회원의 안 읽은 알림 수를 반환한다")
     void getUnreadCount() throws Exception {
-        mockMvc.perform(get("/api/v1/notifications/unread-count"))
+        mockMvc.perform(get("/api/v1/notifications/unread-count").requestAttr(LoginMember.ATTRIBUTE, MEMBER_ID))
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.count").value(3));
+        assertEquals(MEMBER_ID, queryService.requestedMemberId);
     }
 
     @Test
@@ -142,6 +144,12 @@ class NotificationControllerTest {
                     new NotificationItem(9000L, NotificationType.AUTO_COMPLETE_SOON, "치이카와",
                             "내일 교환이 자동으로 완료돼요", null, null, true, CREATED_AT)),
                     9000L, true);
+        }
+
+        @Override
+        public long getUnreadCount(Long memberId) {
+            requestedMemberId = memberId;
+            return 3;
         }
     }
 }

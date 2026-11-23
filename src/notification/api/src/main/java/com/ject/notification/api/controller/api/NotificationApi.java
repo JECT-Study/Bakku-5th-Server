@@ -37,7 +37,7 @@ public interface NotificationApi {
     @Operation(summary = "NT-2 안 읽은 알림 수",
             description = "상단 알림 아이콘 배지에 씁니다. 앱 실행 · 앱이 앞으로 돌아올 때 · 푸시를 받았을 때 FE가 다시 부릅니다.")
     @GetMapping("/unread-count")
-    ApiResponse<UnreadCountResponse> getUnreadCount();
+    ApiResponse<UnreadCountResponse> getUnreadCount(@LoginMember Long memberId);
 
     @Operation(summary = "NT-3 알림 읽음",
             description = "알림을 누르면 읽음 처리한 뒤 해당 화면으로 갑니다. 이미 읽은 알림이어도 성공으로 처리합니다. "

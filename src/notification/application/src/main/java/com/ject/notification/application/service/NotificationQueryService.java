@@ -40,6 +40,13 @@ public class NotificationQueryService {
                 hasNext);
     }
 
+    /**
+     * NT-2 안 읽은 알림 수 (30일 안).
+     */
+    public long getUnreadCount(Long memberId) {
+        return notificationRepository.countUnread(memberId, Notification.visibleFrom(serviceTime.now()));
+    }
+
     private static NotificationItem toItem(Notification notification) {
         return new NotificationItem(notification.getId(), notification.getType(), notification.getTitle(),
                 notification.getBody(), notification.getTargetType(), notification.getTargetId(),

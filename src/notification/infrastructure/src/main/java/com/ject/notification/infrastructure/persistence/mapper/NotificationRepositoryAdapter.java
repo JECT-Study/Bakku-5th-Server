@@ -34,6 +34,11 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
                 .toList();
     }
 
+    @Override
+    public long countUnread(Long receiverId, Instant createdFrom) {
+        return notificationJpaRepository.countUnread(receiverId, createdFrom);
+    }
+
     private static NotificationJpaEntity toEntity(Notification notification) {
         return new NotificationJpaEntity(notification.getReceiverId(), notification.getType(),
                 notification.getTitle(), notification.getBody(), notification.getTargetType(),

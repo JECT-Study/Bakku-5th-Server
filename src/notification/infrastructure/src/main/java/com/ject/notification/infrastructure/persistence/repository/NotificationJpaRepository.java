@@ -21,4 +21,13 @@ public interface NotificationJpaRepository extends JpaRepository<NotificationJpa
             """)
     List<NotificationJpaEntity> findPage(@Param("receiverId") Long receiverId, @Param("cursorId") Long cursorId,
                                          @Param("createdFrom") Instant createdFrom, Limit limit);
+
+    /**
+     * 안 읽은 알림 부분 인덱스(read_at IS NULL)로 센다 (결정 C6).
+     */
+    @Query("""
+            SELECT COUNT(n) FROM NotificationJpaEntity n
+            WHERE n.receiverId = :receiverId AND n.readAt IS NULL AND n.createdAt >= :createdFrom
+            """)
+    long countUnread(@Param("receiverId") Long receiverId, @Param("createdFrom") Instant createdFrom);
 }

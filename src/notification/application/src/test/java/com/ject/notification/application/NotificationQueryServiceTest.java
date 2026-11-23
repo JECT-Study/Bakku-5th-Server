@@ -93,6 +93,23 @@ class NotificationQueryServiceTest {
         assertEquals(List.of(2L), page.content().stream().map(NotificationItem::notificationId).toList());
     }
 
+    @Test
+    @DisplayName("NT-2 30일 안에 받은 내 알림 중 안 읽은 것만 센다")
+    void unreadCount() {
+        // given
+        add(1L, MEMBER_ID, NOW.minus(Duration.ofDays(30)).minusSeconds(1), null);
+        add(2L, MEMBER_ID, NOW.minusSeconds(200), NOW);
+        add(3L, MEMBER_ID, NOW.minusSeconds(100), null);
+        add(4L, MEMBER_ID, NOW.minus(Duration.ofDays(30)), null);
+        add(5L, 202L, NOW.minusSeconds(50), null);
+
+        // when
+        long count = queryService.getUnreadCount(MEMBER_ID);
+
+        // then
+        assertEquals(2, count);
+    }
+
     private void add(Long id, Long receiverId, Instant createdAt, Instant readAt) {
         notificationRepository.add(Notification.restore(id, receiverId, NotificationType.EXCHANGE_REQUESTED,
                 "하치와레러버", "[포켓몬 카드] 교환 요청이 왔어요", NotificationTargetType.CHAT_ROOM, 5L, readAt,

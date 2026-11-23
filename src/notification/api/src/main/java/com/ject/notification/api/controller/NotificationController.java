@@ -35,8 +35,8 @@ public class NotificationController implements NotificationApi {
     }
 
     @Override
-    public ApiResponse<UnreadCountResponse> getUnreadCount() {
-        return ApiResponse.success(new UnreadCountResponse(3));
+    public ApiResponse<UnreadCountResponse> getUnreadCount(Long memberId) {
+        return ApiResponse.success(new UnreadCountResponse(notificationQueryService.getUnreadCount(memberId)));
     }
 
     @Override

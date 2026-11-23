@@ -16,4 +16,9 @@ public interface NotificationRepository {
      * @param cursorId    이 id보다 작은 알림만, 첫 페이지면 null
      */
     List<Notification> findPage(Long receiverId, Instant createdFrom, Long cursorId, int limit);
+
+    /**
+     * @param createdFrom 이 시각 이후에 받은 알림만
+     */
+    long countUnread(Long receiverId, Instant createdFrom);
 }
