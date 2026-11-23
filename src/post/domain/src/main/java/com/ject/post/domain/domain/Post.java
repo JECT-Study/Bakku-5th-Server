@@ -4,6 +4,7 @@ import com.ject.post.domain.exception.NotPostAuthorException;
 import com.ject.post.domain.exception.PostCompletedException;
 import com.ject.post.domain.exception.PostNotFoundException;
 import com.ject.post.domain.exception.PostReservedException;
+import com.ject.post.domain.exception.PostStatusTransitionException;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -116,6 +117,28 @@ public class Post {
         this.status = PostStatus.DELETED;
         this.deletedAt = now;
         return true;
+    }
+
+    public void reserve() {
+        changeStatus(PostStatus.AVAILABLE, PostStatus.RESERVED);
+    }
+
+    public void release() {
+        changeStatus(PostStatus.RESERVED, PostStatus.AVAILABLE);
+    }
+
+    public void complete() {
+        changeStatus(PostStatus.RESERVED, PostStatus.COMPLETED);
+    }
+
+    private void changeStatus(PostStatus from, PostStatus to) {
+        if (status == PostStatus.DELETED) {
+            throw new PostNotFoundException(id);
+        }
+        if (status != from) {
+            throw new PostStatusTransitionException(id);
+        }
+        this.status = to;
     }
 
     public void attachImages(List<String> finalKeys) {
