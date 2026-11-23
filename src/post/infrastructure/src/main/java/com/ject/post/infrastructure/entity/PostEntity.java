@@ -101,6 +101,10 @@ public class PostEntity extends BaseEntity {
         this.deletedAt = post.getDeletedAt();
     }
 
+    public void changeStatus(PostStatus status) {
+        this.status = status;
+    }
+
     public void markDeleted(Instant deletedAt) {
         this.status = PostStatus.DELETED;
         this.deletedAt = deletedAt;

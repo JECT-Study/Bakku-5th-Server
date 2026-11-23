@@ -74,6 +74,21 @@ public class JpaPostRepository implements PostRepository {
         }
     }
 
+    @Override
+    @Transactional
+    public void updateStatuses(List<Post> posts) {
+        for (Post post : posts) {
+            PostEntity entity = postEntityRepository.findById(post.getId())
+                    .orElseThrow(() -> new PostNotFoundException(post.getId()));
+            entity.changeStatus(post.getStatus());
+            try {
+                postEntityRepository.flush();
+            } catch (ObjectOptimisticLockingFailureException e) {
+                throw PostConflictException.onStatusChange(post.getId());
+            }
+        }
+    }
+
     private PostEntity update(Post post) {
         PostEntity entity = postEntityRepository.findById(post.getId())
                 .orElseThrow(() -> new PostNotFoundException(post.getId()));
