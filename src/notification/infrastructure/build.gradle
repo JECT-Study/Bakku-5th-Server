@@ -8,4 +8,7 @@ dependencies {
 
     // 보낸 회원 닉네임 · 기기 토큰 조회 (user 도메인 조회 계약)
     implementation project(':user-application')
+
+    // 예약 알림 문구용 값 저장 (JSON)
+    implementation 'tools.jackson.core:jackson-databind'
 }
