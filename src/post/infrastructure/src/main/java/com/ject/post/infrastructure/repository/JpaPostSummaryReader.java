@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static com.ject.post.infrastructure.entity.QPostEntity.postEntity;
+import static com.ject.post.infrastructure.entity.QPostImageEntity.postImageEntity;
 
 @Repository
 @RequiredArgsConstructor
@@ -44,6 +45,28 @@ public class JpaPostSummaryReader implements PostSummaryReader {
         Map<Long, String> thumbnails = findThumbnails(posts);
         return posts.stream()
                 .map(post -> toRow(post, thumbnails.get(post.getId())))
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Brief> findBriefs(List<Long> ids) {
+        return queryFactory
+                .select(postEntity.id, postEntity.authorId, postEntity.status, postEntity.title,
+                        postImageEntity.imageKey)
+                .from(postEntity)
+                .leftJoin(postImageEntity).on(
+                        postImageEntity.postId.eq(postEntity.id),
+                        postImageEntity.sortOrder.eq(THUMBNAIL_SORT_ORDER))
+                .where(postEntity.id.in(ids))
+                .fetch()
+                .stream()
+                .map(tuple -> new Brief(
+                        tuple.get(postEntity.id),
+                        tuple.get(postEntity.authorId),
+                        tuple.get(postEntity.status),
+                        tuple.get(postEntity.title),
+                        tuple.get(postImageEntity.imageKey)))
                 .toList();
     }
 
