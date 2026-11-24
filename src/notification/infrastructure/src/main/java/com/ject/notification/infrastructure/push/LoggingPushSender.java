@@ -16,8 +16,9 @@ public class LoggingPushSender implements PushSender {
     private static final Logger log = LoggerFactory.getLogger(LoggingPushSender.class);
 
     @Override
-    public void send(List<String> pushTokens, PushMessage message) {
+    public List<String> send(List<String> pushTokens, PushMessage message) {
         log.info("푸시 (전송 안 함). type={}, tokens={}, title={}, body={}, target={}:{}", message.type(),
                 pushTokens.size(), message.title(), message.body(), message.targetType(), message.targetId());
+        return List.of();
     }
 }

@@ -8,6 +8,7 @@ import com.ject.notification.application.port.BlockRelationPort;
 import com.ject.notification.application.port.MemberNicknamePort;
 import com.ject.notification.application.port.NotificationRepository;
 import com.ject.notification.application.port.PushSender;
+import com.ject.notification.application.port.PushTokenCleanupPort;
 import com.ject.notification.application.port.PushTokenPort;
 import com.ject.notification.domain.domain.Notification;
 import com.ject.notification.domain.domain.NotificationContent;
@@ -33,15 +34,18 @@ public class NotificationDispatchService {
     private final MemberNicknamePort memberNicknamePort;
     private final BlockRelationPort blockRelationPort;
     private final PushTokenPort pushTokenPort;
+    private final PushTokenCleanupPort pushTokenCleanupPort;
     private final PushSender pushSender;
 
     public NotificationDispatchService(NotificationRepository notificationRepository,
                                        MemberNicknamePort memberNicknamePort, BlockRelationPort blockRelationPort,
-                                       PushTokenPort pushTokenPort, PushSender pushSender) {
+                                       PushTokenPort pushTokenPort, PushTokenCleanupPort pushTokenCleanupPort,
+                                       PushSender pushSender) {
         this.notificationRepository = notificationRepository;
         this.memberNicknamePort = memberNicknamePort;
         this.blockRelationPort = blockRelationPort;
         this.pushTokenPort = pushTokenPort;
+        this.pushTokenCleanupPort = pushTokenCleanupPort;
         this.pushSender = pushSender;
     }
 
@@ -94,12 +98,18 @@ public class NotificationDispatchService {
 
     /**
      * 푸시가 실패해도 알림 목록 저장은 남긴다.
+     * 더 쓸 수 없는 토큰(앱 삭제 등)은 기기 행을 지워 다음부터 보내지 않는다.
      */
     private void push(List<Long> receiverIds, PushMessage message) {
         try {
             List<String> pushTokens = pushTokenPort.getPushTokens(receiverIds);
-            if (!pushTokens.isEmpty()) {
-                pushSender.send(pushTokens, message);
+            if (pushTokens.isEmpty()) {
+                return;
+            }
+            List<String> unusable = pushSender.send(pushTokens, message);
+            if (!unusable.isEmpty()) {
+                pushTokenCleanupPort.deletePushTokens(unusable);
+                log.info("더 쓸 수 없는 기기 토큰 정리. count={}", unusable.size());
             }
         } catch (RuntimeException e) {
             log.warn("푸시 발송 실패. type={}, receiverIds={}", message.type(), receiverIds, e);

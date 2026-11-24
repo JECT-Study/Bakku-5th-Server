@@ -64,6 +64,26 @@ class FcmPushSenderTest {
     }
 
     @Test
+    @DisplayName("나눠 보낸 요청들에서 더 쓸 수 없다고(UNREGISTERED) 답한 토큰만 모아 돌려준다")
+    void collectUnregistered() {
+        // given
+        FcmPushSender sender = new FcmPushSender((pushTokens, message) -> pushTokens.stream()
+                .map(token -> token.equals("fcm-3") || token.equals("fcm-600")
+                        ? new FcmResult(token, FcmResult.Status.UNREGISTERED, "UNREGISTERED", "not found")
+                        : token.equals("fcm-4")
+                        ? new FcmResult(token, FcmResult.Status.FAILED, "INTERNAL", "Internal error")
+                        : new FcmResult(token, FcmResult.Status.SENT, null, null))
+                .toList());
+        List<String> tokens = IntStream.range(0, 700).mapToObj(i -> "fcm-" + i).toList();
+
+        // when
+        List<String> unregistered = sender.send(tokens, MESSAGE);
+
+        // then
+        assertEquals(List.of("fcm-3", "fcm-600"), unregistered);
+    }
+
+    @Test
     @DisplayName("FCM 요청 자체가 실패하면 예외를 넘긴다 (알림 저장은 발송하는 쪽에서 남김)")
     void requestFailure() {
         // given

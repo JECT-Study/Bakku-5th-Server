@@ -126,7 +126,7 @@ class NotificationRequestedListenerTest {
     private NotificationRequestedListener listener(FakeNotificationRepository notificationRepository) {
         return new NotificationRequestedListener(
                 new NotificationDispatchService(notificationRepository, memberId -> "하치와레러버",
-                        memberId -> List.of(), memberIds -> List.of(), new FakePushSender()),
+                        memberId -> List.of(), memberIds -> List.of(), pushTokens -> { }, new FakePushSender()),
                 new NotificationScheduleService(scheduledNotificationRepository));
     }
 

@@ -54,6 +54,21 @@ class PushTokenServiceTest {
         assertTrue(tokens.isEmpty());
     }
 
+    @Test
+    @DisplayName("더 쓸 수 없는 토큰의 기기 행만 지운다")
+    void deletePushTokens() {
+        // given
+        register(101L, "device-1", "fcm-1");
+        register(101L, "device-2", "fcm-2");
+        register(202L, "device-3", "fcm-3");
+
+        // when
+        pushTokenService.deletePushTokens(List.of("fcm-2", "fcm-3", "fcm-unknown"));
+
+        // then
+        assertEquals(List.of("fcm-1"), pushTokenService.getPushTokens(List.of(101L, 202L)));
+    }
+
     private void register(Long memberId, String deviceId, String pushToken) {
         pushDeviceRepository.save(PushDevice.register(memberId, deviceId, pushToken, DevicePlatform.IOS, null));
     }

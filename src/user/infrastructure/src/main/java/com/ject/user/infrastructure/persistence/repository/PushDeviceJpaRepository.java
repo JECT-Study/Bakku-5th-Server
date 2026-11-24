@@ -44,4 +44,8 @@ public interface PushDeviceJpaRepository extends JpaRepository<PushDeviceJpaEnti
 
     @Query("SELECT d.pushToken FROM PushDeviceJpaEntity d WHERE d.memberId IN :memberIds")
     List<String> findPushTokensByMemberIds(@Param("memberIds") Collection<Long> memberIds);
+
+    @Modifying(flushAutomatically = true)
+    @Query("DELETE FROM PushDeviceJpaEntity d WHERE d.pushToken IN :pushTokens")
+    void deleteByPushTokens(@Param("pushTokens") Collection<String> pushTokens);
 }

@@ -6,6 +6,7 @@ import com.ject.notification.infrastructure.push.FcmClient.FcmResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -26,12 +27,19 @@ public class FcmPushSender implements PushSender {
     }
 
     @Override
-    public void send(List<String> pushTokens, PushMessage message) {
+    public List<String> send(List<String> pushTokens, PushMessage message) {
+        List<String> unregistered = new ArrayList<>();
         for (int from = 0; from < pushTokens.size(); from += FcmClient.MAX_TOKENS_PER_REQUEST) {
             List<String> chunk = pushTokens.subList(from,
                     Math.min(from + FcmClient.MAX_TOKENS_PER_REQUEST, pushTokens.size()));
-            logFailures(message, fcmClient.send(chunk, message));
+            List<FcmResult> results = fcmClient.send(chunk, message);
+            logFailures(message, results);
+            results.stream()
+                    .filter(result -> result.status() == FcmResult.Status.UNREGISTERED)
+                    .map(FcmResult::pushToken)
+                    .forEach(unregistered::add);
         }
+        return unregistered;
     }
 
     /**
