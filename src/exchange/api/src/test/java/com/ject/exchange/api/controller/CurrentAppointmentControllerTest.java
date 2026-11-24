@@ -29,6 +29,8 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.hasKey;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -50,7 +52,6 @@ class CurrentAppointmentControllerTest {
     /** 2026-10-27 15:00 (+09:00) */
     private static final Instant SCHEDULED_AT = Instant.parse("2026-10-27T06:00:00Z");
     /** 2026-10-27 14:00 (+09:00) */
-    private static final Instant EXPIRES_AT = Instant.parse("2026-10-27T05:00:00Z");
     /** 2026-10-26 14:00 (+09:00) */
     private static final Instant CREATED_AT = Instant.parse("2026-10-26T05:00:00Z");
     /** 2026-10-26 17:00 (+09:00) */
@@ -80,7 +81,7 @@ class CurrentAppointmentControllerTest {
     @DisplayName("A-3 진행 중 제안이 있으면 200과 약속 전체 필드를 반환한다")
     void getCurrentAppointment_pendingProposal_returns200WithAllFields() throws Exception {
         queryBus.willReturnCurrentAppointment(Optional.of(
-                result(AppointmentStatus.PROPOSED, EXPIRES_AT, 30, true, null)));
+                result(AppointmentStatus.PROPOSED, null, 30, true, null)));
 
         mockMvc.perform(currentRequest(EXCHANGE_ID, REQUESTER_ID))
                 .andExpect(status().isOk())
@@ -99,10 +100,10 @@ class CurrentAppointmentControllerTest {
                 .andExpect(jsonPath("$.data.items[0].type").value("POST"))
                 .andExpect(jsonPath("$.data.items[0].name").value("우사기 미니 피규어"))
                 .andExpect(jsonPath("$.data.items[0].thumbnailUrl").value(THUMBNAIL_URL))
-                .andExpect(jsonPath("$.data.expiresAt").value("2026-10-27T14:00:00+09:00"))
+                .andExpect(jsonPath("$.data.expiresAt").doesNotExist())
                 .andExpect(jsonPath("$.data.myReminderOffsetMinutes").value(30))
                 .andExpect(jsonPath("$.data.otherActiveProposalsOnPost").value(true))
-                .andExpect(jsonPath("$.data.pendingChange").doesNotExist())
+                .andExpect(jsonPath("$.data", not(hasKey("pendingChange"))))
                 .andExpect(jsonPath("$.data.canceledByUserId").doesNotExist())
                 .andExpect(jsonPath("$.data.confirmation").doesNotExist())
                 .andExpect(jsonPath("$.data.confirmedAt").doesNotExist())
@@ -113,7 +114,7 @@ class CurrentAppointmentControllerTest {
     @DisplayName("A-3 경로의 교환 id와 로그인 회원이 현재 약속 쿼리로 전달된다")
     void getCurrentAppointment_sendsQueryWithViewer() throws Exception {
         queryBus.willReturnCurrentAppointment(Optional.of(
-                result(AppointmentStatus.PROPOSED, EXPIRES_AT, 30, false, null)));
+                result(AppointmentStatus.PROPOSED, null, 30, false, null)));
 
         mockMvc.perform(currentRequest(EXCHANGE_ID, REQUESTER_ID))
                 .andExpect(status().isOk());
@@ -129,7 +130,7 @@ class CurrentAppointmentControllerTest {
     @DisplayName("A-3 받는 사람이 조회하면 조회자가 받는 사람으로 전달되고 내 알림은 null이다")
     void getCurrentAppointment_byReceiver_sendsReceiverAndReturnsNullReminder() throws Exception {
         queryBus.willReturnCurrentAppointment(Optional.of(
-                result(AppointmentStatus.PROPOSED, EXPIRES_AT, null, false, null)));
+                result(AppointmentStatus.PROPOSED, null, null, false, null)));
 
         mockMvc.perform(currentRequest(EXCHANGE_ID, OWNER_ID))
                 .andExpect(status().isOk())

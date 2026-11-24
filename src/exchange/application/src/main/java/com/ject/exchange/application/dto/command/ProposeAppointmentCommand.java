@@ -36,11 +36,9 @@ public record ProposeAppointmentCommand(
         /**
          * 교환할 물건 (이 교환의 첨부 아이템 ID). null이면 고를 수 있는 아이템이 1개일 때 자동 선택
          */
-        List<Long> offeredItemIds,
+        List<Long> offeredItemIds
 
-        /**
-         * 제안자의 약속 전 알림(분). null이면 끔. NOW면 무시
-         */
-        Integer reminderOffsetMinutes
+        // 출시 후 검토 (E-06-1, #117): 제안자의 약속 전 알림(분). 이번 출시는 30분 고정
+        // Integer reminderOffsetMinutes
 ) implements Command<Long> {
 }

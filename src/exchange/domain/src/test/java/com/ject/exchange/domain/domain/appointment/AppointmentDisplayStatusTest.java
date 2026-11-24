@@ -30,29 +30,38 @@ class AppointmentDisplayStatusTest {
     }
 
     @Test
-    @DisplayName("PROPOSED이고 만료 시각이 지금과 같으면 보여 줄 상태는 EXPIRED다")
-    void displayStatusAt_proposedAtExpiry_returnsExpired() {
+    @DisplayName("PROPOSED이고 옛 만료 시각이 지금과 같아도 보여 줄 상태는 PROPOSED다")
+    void displayStatusAt_proposedAtOldExpiry_returnsProposed() {
         Appointment appointment = appointment(AppointmentStatus.PROPOSED, NOW);
 
-        assertEquals(AppointmentStatus.EXPIRED, appointment.displayStatusAt(NOW));
+        assertEquals(AppointmentStatus.PROPOSED, appointment.displayStatusAt(NOW));
     }
 
     @Test
-    @DisplayName("PROPOSED이고 만료 시각이 지났으면 보여 줄 상태는 EXPIRED다")
-    void displayStatusAt_proposedAfterExpiry_returnsExpired() {
+    @DisplayName("PROPOSED이고 제안 후 25시간이 지나 옛 만료 시각이 지났어도 보여 줄 상태는 PROPOSED다")
+    void displayStatusAt_proposedAfterOldExpiry_returnsProposed() {
         Appointment appointment = appointment(AppointmentStatus.PROPOSED, NOW.minus(Duration.ofHours(1)));
 
-        assertEquals(AppointmentStatus.EXPIRED, appointment.displayStatusAt(NOW));
-    }
-
-    @Test
-    @DisplayName("만료 시각이 지나 EXPIRED로 보여도 저장 상태는 PROPOSED 그대로다")
-    void displayStatusAt_expired_keepsStoredStatus() {
-        Appointment appointment = appointment(AppointmentStatus.PROPOSED, NOW.minus(Duration.ofHours(1)));
-
-        appointment.displayStatusAt(NOW);
-
+        assertEquals(AppointmentStatus.PROPOSED, appointment.displayStatusAt(NOW));
         assertEquals(AppointmentStatus.PROPOSED, appointment.getStatus());
+    }
+
+    @Test
+    @DisplayName("PROPOSED이고 약속 시각이 지났어도 보여 줄 상태는 PROPOSED다")
+    void displayStatusAt_proposedPastSchedule_returnsProposed() {
+        Appointment appointment = Appointment.of(3L, 1L, 100L, 200L, AppointmentStatus.PROPOSED,
+                new AppointmentTime(AppointmentTimeType.SCHEDULED, NOW.minus(Duration.ofHours(1))), PLACE,
+                new AppointmentItemIds(List.of(31L)), null, 30, null, null, CREATED_AT, CREATED_AT);
+
+        assertEquals(AppointmentStatus.PROPOSED, appointment.displayStatusAt(NOW));
+    }
+
+    @Test
+    @DisplayName("PROPOSED이고 만료 시각이 null이면 보여 줄 상태는 PROPOSED다")
+    void displayStatusAt_proposedWithoutExpiry_returnsProposed() {
+        Appointment appointment = appointment(AppointmentStatus.PROPOSED, null);
+
+        assertEquals(AppointmentStatus.PROPOSED, appointment.displayStatusAt(NOW));
     }
 
     @ParameterizedTest

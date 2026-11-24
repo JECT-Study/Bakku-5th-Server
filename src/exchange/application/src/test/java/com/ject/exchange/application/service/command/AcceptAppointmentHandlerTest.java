@@ -26,7 +26,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -93,13 +92,13 @@ class AcceptAppointmentHandlerTest {
     // ---- 정상 흐름 ----
 
     @Test
-    @DisplayName("받는 사람이 수락하면 CONFIRMED · 확정 시각이 저장되고 시간 · 장소 · 아이템 · 제안자 알림은 그대로다")
+    @DisplayName("받는 사람이 수락하면 CONFIRMED · 확정 시각 · 받는 사람 알림 30이 저장되고 시간 · 장소 · 아이템 · 제안자 알림은 그대로다")
     void handle_byReceiver_confirmsAppointment() {
         // given
         givenDefaultExchangeAndProposal();
 
         // when
-        Long acceptedId = handler.handle(command(APPOINTMENT_ID, OWNER_ID, 60));
+        Long acceptedId = handler.handle(command(APPOINTMENT_ID, OWNER_ID));
 
         // then
         assertEquals(APPOINTMENT_ID, acceptedId);
@@ -114,10 +113,11 @@ class AcceptAppointmentHandlerTest {
         assertEquals(PLACE, saved.getPlace());
         assertEquals(List.of(ITEM_31), saved.getItemIds().values());
         assertEquals(30, saved.getProposerReminderOffsetMinutes());
+        assertEquals(30, saved.getReceiverReminderOffsetMinutes());
     }
 
     @Test
-    @DisplayName("수락 후 받는 사람이 조회하면 CONFIRMED · 확정 시각 · 만료 null · 내 알림 60이다")
+    @DisplayName("수락 후 받는 사람이 조회하면 CONFIRMED · 확정 시각 · 만료 null · 내 알림 30이다")
     void handle_thenGetAppointment_returnsConfirmedForAccepter() {
         // given
         givenDefaultExchangeAndProposal();
@@ -125,7 +125,7 @@ class AcceptAppointmentHandlerTest {
                 postPort, serviceTime);
 
         // when
-        Long acceptedId = handler.handle(command(APPOINTMENT_ID, OWNER_ID, 60));
+        Long acceptedId = handler.handle(command(APPOINTMENT_ID, OWNER_ID));
         AppointmentResult result = getHandler.handle(new GetAppointmentQuery(acceptedId, OWNER_ID));
 
         // then
@@ -133,60 +133,41 @@ class AcceptAppointmentHandlerTest {
         assertEquals(AppointmentStatus.CONFIRMED, result.status());
         assertEquals(NOW, result.confirmedAt());
         assertNull(result.expiresAt());
-        assertEquals(60, result.myReminderOffsetMinutes());
+        assertEquals(30, result.myReminderOffsetMinutes());
     }
 
     @Test
-    @DisplayName("받는 사람 알림 60으로 수락하면 받는 사람 알림 60 · 제안자 알림 30이 저장된다")
-    void handle_withReminder_savesReceiverReminderOnly() {
-        givenDefaultExchangeAndProposal();
+    @DisplayName("약속 시각이 20분 뒤라 알림 시각이 이미 지났어도 받는 사람 알림 30이 저장된다")
+    void handle_reminderAlreadyPassed_savesThirty() {
+        exchangeRepository.preload(defaultExchange(ExchangeStatus.ACTIVE));
+        appointmentRepository.preload(scheduledProposal(null, NOW.plus(Duration.ofMinutes(20))));
 
-        handler.handle(command(APPOINTMENT_ID, OWNER_ID, 60));
+        handler.handle(command(APPOINTMENT_ID, OWNER_ID));
 
-        Appointment saved = stored(APPOINTMENT_ID);
-        assertEquals(60, saved.getReceiverReminderOffsetMinutes());
-        assertEquals(30, saved.getProposerReminderOffsetMinutes());
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = {10, 1440})
-    @DisplayName("받는 사람 알림 경계값 10 · 1440도 저장된다")
-    void handle_boundaryReminder_saves(int reminder) {
-        givenDefaultExchangeAndProposal();
-
-        handler.handle(command(APPOINTMENT_ID, OWNER_ID, reminder));
-
-        assertEquals(reminder, stored(APPOINTMENT_ID).getReceiverReminderOffsetMinutes());
+        assertEquals(30, stored(APPOINTMENT_ID).getReceiverReminderOffsetMinutes());
     }
 
     @Test
-    @DisplayName("알림 null로 수락하면 CONFIRMED이고 받는 사람 알림은 null이다")
-    void handle_nullReminder_confirmsWithoutReminder() {
-        givenDefaultExchangeAndProposal();
-
-        handler.handle(command(APPOINTMENT_ID, OWNER_ID, null));
-
-        Appointment saved = stored(APPOINTMENT_ID);
-        assertEquals(AppointmentStatus.CONFIRMED, saved.getStatus());
-        assertNull(saved.getReceiverReminderOffsetMinutes());
-    }
-
-    @Test
-    @DisplayName("지금 바로 약속을 알림 30으로 수락하면 CONFIRMED이고 받는 사람 알림은 null이다")
-    void handle_nowAppointment_ignoresReminder() {
+    @DisplayName("지금 바로 약속을 수락하면 CONFIRMED이고 두 사람 알림 null이며 조회 응답 내 알림도 null이다")
+    void handle_nowAppointment_noReminder() {
         // given
         exchangeRepository.preload(defaultExchange(ExchangeStatus.ACTIVE));
-        appointmentRepository.preload(appointment(APPOINTMENT_ID, EXCHANGE_ID, REQUESTER_ID, OWNER_ID,
-                AppointmentStatus.PROPOSED, new AppointmentTime(AppointmentTimeType.NOW, null),
-                NOW.plus(Duration.ofHours(23)), List.of(ITEM_31)));
+        appointmentRepository.preload(Appointment.of(APPOINTMENT_ID, EXCHANGE_ID, REQUESTER_ID, OWNER_ID,
+                AppointmentStatus.PROPOSED, new AppointmentTime(AppointmentTimeType.NOW, null), PLACE,
+                new AppointmentItemIds(List.of(ITEM_31)), null, null, null, null, CREATED_AT, CREATED_AT));
+        GetAppointmentHandler getHandler = new GetAppointmentHandler(appointmentRepository, exchangeRepository,
+                postPort, serviceTime);
 
         // when
-        handler.handle(command(APPOINTMENT_ID, OWNER_ID, 30));
+        handler.handle(command(APPOINTMENT_ID, OWNER_ID));
 
         // then
         Appointment saved = stored(APPOINTMENT_ID);
         assertEquals(AppointmentStatus.CONFIRMED, saved.getStatus());
         assertNull(saved.getReceiverReminderOffsetMinutes());
+        assertNull(saved.getProposerReminderOffsetMinutes());
+        assertNull(getHandler.handle(new GetAppointmentQuery(APPOINTMENT_ID, OWNER_ID)).myReminderOffsetMinutes());
+        assertNull(getHandler.handle(new GetAppointmentQuery(APPOINTMENT_ID, REQUESTER_ID)).myReminderOffsetMinutes());
     }
 
     @Test
@@ -195,7 +176,7 @@ class AcceptAppointmentHandlerTest {
         exchangeRepository.preload(defaultExchange(ExchangeStatus.ACTIVE));
         appointmentRepository.preload(scheduledProposal(NOW.plusSeconds(1), NOW.plusSeconds(1)));
 
-        handler.handle(command(APPOINTMENT_ID, OWNER_ID, null));
+        handler.handle(command(APPOINTMENT_ID, OWNER_ID));
 
         assertEquals(AppointmentStatus.CONFIRMED, stored(APPOINTMENT_ID).getStatus());
     }
@@ -203,8 +184,8 @@ class AcceptAppointmentHandlerTest {
     // ---- 자동 거절 (AC-6) ----
 
     @Test
-    @DisplayName("같은 글의 다른 교환의 만료 전 제안은 AUTO_REJECTED · 만료된 제안과 다른 글 제안은 그대로다")
-    void handle_otherProposalsOnSamePost_autoRejectsPendingOnly() {
+    @DisplayName("같은 글의 다른 교환의 PROPOSED 제안은 옛 만료 시각과 상관없이 AUTO_REJECTED · 다른 글 제안은 그대로다")
+    void handle_otherProposalsOnSamePost_autoRejectsAllPending() {
         // given
         givenDefaultExchangeAndProposal();
         preloadOtherExchange(2L, POST_ID, ExchangeStatus.ACTIVE, List.of(postItem(41L, 601L, 0)));
@@ -213,22 +194,42 @@ class AcceptAppointmentHandlerTest {
         preloadOtherExchange(5L, OTHER_POST_ID, ExchangeStatus.ACTIVE, List.of(postItem(44L, 604L, 0)));
         preloadOtherExchange(8L, POST_ID, ExchangeStatus.ACTIVE, List.of(postItem(48L, 608L, 0)));
         appointmentRepository.preload(otherProposal(12L, 2L, EXPIRES_AT, List.of(41L)));
-        appointmentRepository.preload(otherProposal(13L, 3L, EXPIRES_AT, List.of(42L)));
+        appointmentRepository.preload(otherProposal(13L, 3L, null, List.of(42L)));
         appointmentRepository.preload(otherProposal(14L, 4L, NOW.minus(Duration.ofMinutes(1)), List.of(43L)));
         appointmentRepository.preload(otherProposal(15L, 5L, EXPIRES_AT, List.of(44L)));
         appointmentRepository.preload(otherProposal(18L, 8L, NOW, List.of(48L)));
 
         // when
-        handler.handle(command(APPOINTMENT_ID, OWNER_ID, null));
+        handler.handle(command(APPOINTMENT_ID, OWNER_ID));
 
         // then
         assertEquals(AppointmentStatus.AUTO_REJECTED, stored(12L).getStatus());
         assertEquals(AppointmentStatus.AUTO_REJECTED, stored(13L).getStatus());
-        assertEquals(AppointmentStatus.PROPOSED, stored(14L).getStatus());
+        assertEquals(AppointmentStatus.AUTO_REJECTED, stored(14L).getStatus());
         assertEquals(AppointmentStatus.PROPOSED, stored(15L).getStatus());
-        assertEquals(AppointmentStatus.PROPOSED, stored(18L).getStatus());
+        assertEquals(AppointmentStatus.AUTO_REJECTED, stored(18L).getStatus());
         assertEquals(ExchangeStatus.ACTIVE, exchangeRepository.findById(2L).orElseThrow().getStatus());
         assertEquals(ExchangeStatus.ACTIVE, exchangeRepository.findById(3L).orElseThrow().getStatus());
+    }
+
+    @Test
+    @DisplayName("교환 X 제안을 수락하면 같은 글 교환 Y의 제안 후 25시간 지난 PROPOSED 제안이 AUTO_REJECTED다")
+    void handle_staleProposalInOtherRoom_autoRejected() {
+        // given
+        givenDefaultExchangeAndProposal();
+        preloadOtherExchange(2L, POST_ID, ExchangeStatus.ACTIVE, List.of(postItem(41L, 601L, 0)));
+        Instant proposedAt = NOW.minus(Duration.ofHours(25));
+        appointmentRepository.preload(Appointment.of(12L, 2L, OTHER_MEMBER_ID + 2L, OWNER_ID + 2L,
+                AppointmentStatus.PROPOSED, scheduledTime(SCHEDULED_AT), PLACE, new AppointmentItemIds(List.of(41L)),
+                proposedAt.plus(Duration.ofHours(24)), 30, null, null, proposedAt, proposedAt));
+
+        // when
+        Long acceptedId = handler.handle(command(APPOINTMENT_ID, OWNER_ID));
+
+        // then
+        assertEquals(APPOINTMENT_ID, acceptedId);
+        assertEquals(AppointmentStatus.CONFIRMED, stored(APPOINTMENT_ID).getStatus());
+        assertEquals(AppointmentStatus.AUTO_REJECTED, stored(12L).getStatus());
     }
 
     @Test
@@ -239,7 +240,7 @@ class AcceptAppointmentHandlerTest {
         Appointment q2 = otherProposal(12L, 2L, EXPIRES_AT, List.of(41L));
         appointmentRepository.preload(q2);
 
-        handler.handle(command(APPOINTMENT_ID, OWNER_ID, null));
+        handler.handle(command(APPOINTMENT_ID, OWNER_ID));
 
         Appointment rejected = stored(12L);
         assertEquals(AppointmentStatus.AUTO_REJECTED, rejected.getStatus());
@@ -259,7 +260,7 @@ class AcceptAppointmentHandlerTest {
         preloadOtherExchange(2L, POST_ID, otherStatus, List.of(postItem(41L, 601L, 0)));
         appointmentRepository.preload(otherProposal(12L, 2L, EXPIRES_AT, List.of(41L)));
 
-        handler.handle(command(APPOINTMENT_ID, OWNER_ID, null));
+        handler.handle(command(APPOINTMENT_ID, OWNER_ID));
 
         assertEquals(AppointmentStatus.AUTO_REJECTED, stored(12L).getStatus());
         assertEquals(otherStatus, exchangeRepository.findById(2L).orElseThrow().getStatus());
@@ -285,7 +286,7 @@ class AcceptAppointmentHandlerTest {
         appointmentRepository.preload(otherProposal(20L, 10L, EXPIRES_AT, List.of(102L)));
 
         // when
-        handler.handle(command(APPOINTMENT_ID, OWNER_ID, null));
+        handler.handle(command(APPOINTMENT_ID, OWNER_ID));
 
         // then
         assertEquals(AppointmentStatus.AUTO_REJECTED, stored(16L).getStatus());
@@ -301,7 +302,7 @@ class AcceptAppointmentHandlerTest {
     void handle_reservesPostAndChosenAttachedPost() {
         givenDefaultExchangeAndProposal();
 
-        handler.handle(command(APPOINTMENT_ID, OWNER_ID, null));
+        handler.handle(command(APPOINTMENT_ID, OWNER_ID));
 
         assertEquals(List.of(List.of(POST_ID, SOURCE_POST_31)), postPort.reserveRequests());
     }
@@ -317,7 +318,7 @@ class AcceptAppointmentHandlerTest {
         appointmentRepository.preload(scheduledProposal(EXPIRES_AT, SCHEDULED_AT));
 
         // when
-        handler.handle(command(APPOINTMENT_ID, OWNER_ID, null));
+        handler.handle(command(APPOINTMENT_ID, OWNER_ID));
 
         // then
         assertEquals(AppointmentStatus.CONFIRMED, stored(APPOINTMENT_ID).getStatus());
@@ -331,7 +332,7 @@ class AcceptAppointmentHandlerTest {
     void handle_locksInvolvedPostsBeforeLockedLookup() {
         givenDefaultExchangeAndProposal();
 
-        handler.handle(command(APPOINTMENT_ID, OWNER_ID, null));
+        handler.handle(command(APPOINTMENT_ID, OWNER_ID));
 
         assertEquals(1, postLockRepository.lockedPostIds().size());
         assertEquals(Set.of(POST_ID, SOURCE_POST_31), Set.copyOf(postLockRepository.lockedPostIds().get(0)));
@@ -350,9 +351,9 @@ class AcceptAppointmentHandlerTest {
                 scheduledTime(SCHEDULED_AT), EXPIRES_AT, List.of(41L)));
 
         // when
-        handler.handle(command(APPOINTMENT_ID, OWNER_ID, null));
+        handler.handle(command(APPOINTMENT_ID, OWNER_ID));
         ExchangeException late = assertThrows(ExchangeException.class,
-                () -> handler.handle(command(12L, OWNER_ID, null)));
+                () -> handler.handle(command(12L, OWNER_ID)));
 
         // then
         assertEquals(ExchangeErrorCode.POST_RESERVED_ELSEWHERE, late.getErrorCode());
@@ -373,7 +374,7 @@ class AcceptAppointmentHandlerTest {
         givenDefaultExchangeAndProposal();
 
         assertRejected(ExchangeErrorCode.APPOINTMENT_NOT_FOUND,
-                () -> handler.handle(command(MISSING_APPOINTMENT_ID, OWNER_ID, null)));
+                () -> handler.handle(command(MISSING_APPOINTMENT_ID, OWNER_ID)));
     }
 
     @Test
@@ -382,7 +383,7 @@ class AcceptAppointmentHandlerTest {
         givenDefaultExchangeAndProposal();
 
         assertRejected(ExchangeErrorCode.NOT_EXCHANGE_PARTICIPANT,
-                () -> handler.handle(command(APPOINTMENT_ID, OTHER_MEMBER_ID, null)));
+                () -> handler.handle(command(APPOINTMENT_ID, OTHER_MEMBER_ID)));
     }
 
     @Test
@@ -392,7 +393,7 @@ class AcceptAppointmentHandlerTest {
         appointmentRepository.preload(scheduledProposal(EXPIRES_AT, SCHEDULED_AT));
 
         assertRejected(ExchangeErrorCode.NOT_EXCHANGE_PARTICIPANT,
-                () -> handler.handle(command(APPOINTMENT_ID, OTHER_MEMBER_ID, null)));
+                () -> handler.handle(command(APPOINTMENT_ID, OTHER_MEMBER_ID)));
     }
 
     @Test
@@ -401,7 +402,7 @@ class AcceptAppointmentHandlerTest {
         givenDefaultExchangeAndProposal();
 
         assertRejected(ExchangeErrorCode.NOT_APPOINTMENT_RECEIVER,
-                () -> handler.handle(command(APPOINTMENT_ID, REQUESTER_ID, null)));
+                () -> handler.handle(command(APPOINTMENT_ID, REQUESTER_ID)));
     }
 
     @Test
@@ -411,7 +412,7 @@ class AcceptAppointmentHandlerTest {
         appointmentRepository.preload(scheduledProposal(EXPIRES_AT, SCHEDULED_AT));
 
         assertRejected(ExchangeErrorCode.NOT_APPOINTMENT_RECEIVER,
-                () -> handler.handle(command(APPOINTMENT_ID, REQUESTER_ID, null)));
+                () -> handler.handle(command(APPOINTMENT_ID, REQUESTER_ID)));
     }
 
     // ---- 실패: 교환 · 제안 상태 ----
@@ -424,7 +425,7 @@ class AcceptAppointmentHandlerTest {
         appointmentRepository.preload(scheduledProposal(EXPIRES_AT, SCHEDULED_AT));
 
         assertRejected(ExchangeErrorCode.EXCHANGE_CLOSED,
-                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID, null)));
+                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID)));
     }
 
     @Test
@@ -435,12 +436,12 @@ class AcceptAppointmentHandlerTest {
                 AppointmentStatus.REJECTED, scheduledTime(SCHEDULED_AT), EXPIRES_AT, List.of(ITEM_31)));
 
         assertRejected(ExchangeErrorCode.EXCHANGE_CLOSED,
-                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID, null)));
+                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID)));
     }
 
     @ParameterizedTest
     @EnumSource(value = AppointmentStatus.class,
-            names = {"REJECTED", "WITHDRAWN", "EXPIRED", "CONFIRMED", "CANCELED", "COMPLETED", "NOT_MET"})
+            names = {"REJECTED", "WITHDRAWN", "CONFIRMED", "CANCELED", "COMPLETED", "NOT_MET"})
     @DisplayName("진행 중이 아닌 제안을 수락하면 EXCHANGE_106이고 상태는 그대로다")
     void handle_proposalNotActive_throwsProposalNotActive(AppointmentStatus status) {
         exchangeRepository.preload(defaultExchange(ExchangeStatus.ACTIVE));
@@ -448,7 +449,7 @@ class AcceptAppointmentHandlerTest {
                 scheduledTime(SCHEDULED_AT), EXPIRES_AT, List.of(ITEM_31)));
 
         assertRejected(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE,
-                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID, null)));
+                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID)));
     }
 
     @Test
@@ -459,52 +460,76 @@ class AcceptAppointmentHandlerTest {
                 AppointmentStatus.AUTO_REJECTED, scheduledTime(SCHEDULED_AT), EXPIRES_AT, List.of(ITEM_31)));
 
         assertRejected(ExchangeErrorCode.POST_RESERVED_ELSEWHERE,
-                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID, null)));
+                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID)));
     }
 
-    // ---- 실패: 시각 (AC-13) ----
+    // ---- 시각 ----
 
     @Test
-    @DisplayName("만료 시각과 약속 시각이 모두 지금이면 EXCHANGE_107")
-    void handle_expiredAndScheduledAtNow_throwsScheduledAtPassed() {
+    @DisplayName("약속 시각이 지금이면 EXCHANGE_107이고 PROPOSED 그대로다")
+    void handle_scheduledAtNow_throwsScheduledAtPassed() {
         exchangeRepository.preload(defaultExchange(ExchangeStatus.ACTIVE));
         appointmentRepository.preload(scheduledProposal(NOW, NOW));
 
         assertRejected(ExchangeErrorCode.SCHEDULED_AT_PASSED,
-                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID, null)));
+                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID)));
+        assertEquals(AppointmentStatus.PROPOSED, stored(APPOINTMENT_ID).getStatus());
     }
 
     @Test
-    @DisplayName("만료 시각과 약속 시각이 1시간 지났으면 EXCHANGE_107")
-    void handle_expiredAndScheduledAtPassed_throwsScheduledAtPassed() {
+    @DisplayName("약속 시각이 1시간 지났으면 EXCHANGE_107이고 PROPOSED 그대로다")
+    void handle_scheduledAtPassed_throwsScheduledAtPassed() {
         exchangeRepository.preload(defaultExchange(ExchangeStatus.ACTIVE));
         Instant oneHourAgo = NOW.minus(Duration.ofHours(1));
-        appointmentRepository.preload(scheduledProposal(oneHourAgo, oneHourAgo));
+        appointmentRepository.preload(scheduledProposal(null, oneHourAgo));
 
         assertRejected(ExchangeErrorCode.SCHEDULED_AT_PASSED,
-                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID, null)));
+                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID)));
+        assertEquals(AppointmentStatus.PROPOSED, stored(APPOINTMENT_ID).getStatus());
     }
 
     @Test
-    @DisplayName("만료 시각이 지금이고 약속 시각은 1시간 뒤면 EXCHANGE_106")
-    void handle_expiredAtNowBeforeScheduledAt_throwsProposalNotActive() {
+    @DisplayName("옛 만료 시각이 지금이고 약속 시각은 1시간 뒤면 수락된다")
+    void handle_oldExpiryNowBeforeScheduledAt_confirms() {
         exchangeRepository.preload(defaultExchange(ExchangeStatus.ACTIVE));
         appointmentRepository.preload(scheduledProposal(NOW, NOW.plus(Duration.ofHours(1))));
 
-        assertRejected(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE,
-                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID, null)));
+        handler.handle(command(APPOINTMENT_ID, OWNER_ID));
+
+        assertEquals(AppointmentStatus.CONFIRMED, stored(APPOINTMENT_ID).getStatus());
     }
 
     @Test
-    @DisplayName("지금 바로 약속의 만료 시각이 지났으면 EXCHANGE_106")
-    void handle_expiredNowAppointment_throwsProposalNotActive() {
+    @DisplayName("약속 시각이 3일 뒤인 제안을 제안 후 25시간에 수락하면 CONFIRMED다")
+    void handle_proposal25HoursOld_confirms() {
+        // given
+        exchangeRepository.preload(defaultExchange(ExchangeStatus.ACTIVE));
+        Instant proposedAt = NOW.minus(Duration.ofHours(25));
+        appointmentRepository.preload(Appointment.of(APPOINTMENT_ID, EXCHANGE_ID, REQUESTER_ID, OWNER_ID,
+                AppointmentStatus.PROPOSED, scheduledTime(NOW.plus(Duration.ofDays(3))), PLACE,
+                new AppointmentItemIds(List.of(ITEM_31)), proposedAt.plus(Duration.ofHours(24)), 30, null, null,
+                proposedAt, proposedAt));
+
+        // when
+        Long acceptedId = handler.handle(command(APPOINTMENT_ID, OWNER_ID));
+
+        // then
+        assertEquals(APPOINTMENT_ID, acceptedId);
+        assertEquals(AppointmentStatus.CONFIRMED, stored(APPOINTMENT_ID).getStatus());
+        assertEquals(List.of(List.of(POST_ID, SOURCE_POST_31)), postPort.reserveRequests());
+    }
+
+    @Test
+    @DisplayName("지금 바로 제안을 제안 후 25시간에 수락하면 CONFIRMED다")
+    void handle_nowProposal25HoursOld_confirms() {
         exchangeRepository.preload(defaultExchange(ExchangeStatus.ACTIVE));
         appointmentRepository.preload(appointment(APPOINTMENT_ID, EXCHANGE_ID, REQUESTER_ID, OWNER_ID,
                 AppointmentStatus.PROPOSED, new AppointmentTime(AppointmentTimeType.NOW, null),
-                NOW.minus(Duration.ofMinutes(1)), List.of(ITEM_31)));
+                NOW.minus(Duration.ofHours(1)), List.of(ITEM_31)));
 
-        assertRejected(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE,
-                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID, null)));
+        handler.handle(command(APPOINTMENT_ID, OWNER_ID));
+
+        assertEquals(AppointmentStatus.CONFIRMED, stored(APPOINTMENT_ID).getStatus());
     }
 
     // ---- 실패: 다른 약속 · 글 상태 ----
@@ -517,7 +542,7 @@ class AcceptAppointmentHandlerTest {
         appointmentRepository.preload(otherAppointment(12L, 2L, AppointmentStatus.CONFIRMED, List.of(41L)));
 
         assertRejected(ExchangeErrorCode.POST_RESERVED_ELSEWHERE,
-                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID, null)));
+                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID)));
     }
 
     @Test
@@ -527,7 +552,7 @@ class AcceptAppointmentHandlerTest {
         postPort.register(post(POST_ID, OWNER_ID, PostInfo.Status.RESERVED));
 
         assertRejected(ExchangeErrorCode.POST_RESERVED_ELSEWHERE,
-                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID, null)));
+                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID)));
     }
 
     @ParameterizedTest
@@ -538,7 +563,7 @@ class AcceptAppointmentHandlerTest {
         postPort.register(post(POST_ID, OWNER_ID, status));
 
         assertRejected(ExchangeErrorCode.POST_NOT_REQUESTABLE,
-                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID, null)));
+                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID)));
     }
 
     @Test
@@ -550,7 +575,7 @@ class AcceptAppointmentHandlerTest {
         appointmentRepository.preload(scheduledProposal(EXPIRES_AT, SCHEDULED_AT));
 
         assertRejected(ExchangeErrorCode.POST_NOT_REQUESTABLE,
-                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID, null)));
+                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID)));
     }
 
     @ParameterizedTest
@@ -561,7 +586,7 @@ class AcceptAppointmentHandlerTest {
         postPort.register(post(SOURCE_POST_31, REQUESTER_ID, status));
 
         assertRejected(ExchangeErrorCode.ITEM_NOT_AVAILABLE,
-                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID, null)));
+                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID)));
     }
 
     @Test
@@ -574,7 +599,7 @@ class AcceptAppointmentHandlerTest {
         appointmentRepository.preload(scheduledProposal(EXPIRES_AT, SCHEDULED_AT));
 
         assertRejected(ExchangeErrorCode.ITEM_NOT_AVAILABLE,
-                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID, null)));
+                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID)));
     }
 
     @Test
@@ -583,7 +608,7 @@ class AcceptAppointmentHandlerTest {
         givenDefaultExchangeAndProposal();
         postPort.register(post(SOURCE_POST_32, REQUESTER_ID, PostInfo.Status.RESERVED));
 
-        handler.handle(command(APPOINTMENT_ID, OWNER_ID, null));
+        handler.handle(command(APPOINTMENT_ID, OWNER_ID));
 
         assertEquals(AppointmentStatus.CONFIRMED, stored(APPOINTMENT_ID).getStatus());
     }
@@ -598,7 +623,7 @@ class AcceptAppointmentHandlerTest {
         appointmentRepository.preload(otherAppointment(12L, 2L, AppointmentStatus.CONFIRMED, List.of(41L)));
 
         assertRejected(ExchangeErrorCode.POST_RESERVED_ELSEWHERE,
-                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID, null)));
+                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID)));
     }
 
     @Test
@@ -609,7 +634,7 @@ class AcceptAppointmentHandlerTest {
         appointmentRepository.preload(otherAppointment(12L, 2L, AppointmentStatus.COMPLETED, List.of(41L)));
 
         assertRejected(ExchangeErrorCode.POST_NOT_REQUESTABLE,
-                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID, null)));
+                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID)));
     }
 
     @Test
@@ -620,7 +645,7 @@ class AcceptAppointmentHandlerTest {
         appointmentRepository.preload(otherAppointment(12L, 2L, AppointmentStatus.COMPLETED, List.of(41L)));
 
         assertRejected(ExchangeErrorCode.POST_NOT_REQUESTABLE,
-                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID, null)));
+                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID)));
     }
 
     @ParameterizedTest
@@ -632,7 +657,7 @@ class AcceptAppointmentHandlerTest {
         appointmentRepository.preload(otherAppointment(13L, 3L, status, List.of(41L)));
 
         assertRejected(ExchangeErrorCode.ITEM_NOT_AVAILABLE,
-                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID, null)));
+                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID)));
     }
 
     @ParameterizedTest
@@ -644,7 +669,7 @@ class AcceptAppointmentHandlerTest {
         appointmentRepository.preload(otherAppointment(13L, 3L, status, List.of(41L)));
 
         assertRejected(ExchangeErrorCode.ITEM_NOT_AVAILABLE,
-                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID, null)));
+                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID)));
     }
 
     @Test
@@ -659,7 +684,7 @@ class AcceptAppointmentHandlerTest {
         appointmentRepository.preload(otherAppointment(14L, 4L, AppointmentStatus.CONFIRMED, List.of(43L)));
 
         // when
-        handler.handle(command(APPOINTMENT_ID, OWNER_ID, null));
+        handler.handle(command(APPOINTMENT_ID, OWNER_ID));
 
         // then
         assertEquals(AppointmentStatus.CONFIRMED, stored(APPOINTMENT_ID).getStatus());
@@ -681,7 +706,7 @@ class AcceptAppointmentHandlerTest {
 
         // when
         RuntimeException thrown = assertThrows(RuntimeException.class,
-                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID, null)));
+                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID)));
 
         // then
         assertSame(reserveFailure, thrown);
@@ -721,8 +746,8 @@ class AcceptAppointmentHandlerTest {
                 OfferType.POST, items, status, completedAt, CREATED_AT, CREATED_AT));
     }
 
-    private static AcceptAppointmentCommand command(Long appointmentId, Long accepterId, Integer reminder) {
-        return new AcceptAppointmentCommand(appointmentId, accepterId, reminder);
+    private static AcceptAppointmentCommand command(Long appointmentId, Long accepterId) {
+        return new AcceptAppointmentCommand(appointmentId, accepterId);
     }
 
     /** 교환 E: 글 G · 첨부 글 S1(ITEM_31) · S2(ITEM_32) */

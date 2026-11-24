@@ -126,7 +126,7 @@ class AppointmentWithdrawTest {
     // ---- 진행 중이 아닌 제안 (AC-8) ----
 
     @ParameterizedTest
-    @EnumSource(value = AppointmentStatus.class, names = {"REJECTED", "WITHDRAWN", "EXPIRED", "AUTO_REJECTED",
+    @EnumSource(value = AppointmentStatus.class, names = {"REJECTED", "WITHDRAWN", "AUTO_REJECTED",
             "CONFIRMED", "CANCELED", "COMPLETED", "NOT_MET"})
     @DisplayName("저장 상태가 PROPOSED가 아니면 EXCHANGE_106이고 상태는 그대로다")
     void withdraw_notProposed_throwsProposalNotActive(AppointmentStatus status) {
@@ -136,33 +136,45 @@ class AppointmentWithdrawTest {
         assertEquals(status, appointment.getStatus());
     }
 
-    // ---- 만료된 제안 (AC-9) ----
+    // ---- 자동 만료 없음 (#117) ----
 
     @Test
-    @DisplayName("만료 시각이 지금과 같으면 EXCHANGE_106이고 PROPOSED 그대로다")
-    void withdraw_expiresAtNow_throwsProposalNotActive() {
-        Appointment proposal = proposal(AppointmentStatus.PROPOSED, scheduled(SCHEDULED_AT), NOW);
+    @DisplayName("제안 후 25시간이 지나 옛 만료 시각이 지났어도 WITHDRAWN다")
+    void withdraw_pastOldExpiry_withdraws() {
+        Appointment proposal = proposal(AppointmentStatus.PROPOSED, scheduled(SCHEDULED_AT), NOW.minus(Duration.ofHours(1)));
 
-        assertError(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE, () -> proposal.withdraw(REQUESTER_ID, NOW));
-        assertEquals(AppointmentStatus.PROPOSED, proposal.getStatus());
+        Appointment result = proposal.withdraw(REQUESTER_ID, NOW);
+
+        assertEquals(AppointmentStatus.WITHDRAWN, result.getStatus());
     }
 
     @Test
-    @DisplayName("만료 시각과 약속 시각이 지났으면 EXCHANGE_106")
-    void withdraw_expiredAndScheduledAtPassed_throwsProposalNotActive() {
-        Instant oneHourAgo = NOW.minus(Duration.ofHours(1));
-        Appointment proposal = proposal(AppointmentStatus.PROPOSED, scheduled(oneHourAgo), oneHourAgo);
-
-        assertError(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE, () -> proposal.withdraw(REQUESTER_ID, NOW));
-    }
-
-    @Test
-    @DisplayName("지금 바로 약속의 만료 시각이 지났으면 EXCHANGE_106")
-    void withdraw_expiredNowAppointment_throwsProposalNotActive() {
+    @DisplayName("지금 바로 약속이 제안 후 25시간 지났어도 WITHDRAWN다")
+    void withdraw_nowAppointmentPastOldExpiry_withdraws() {
         Appointment proposal = proposal(AppointmentStatus.PROPOSED, new AppointmentTime(AppointmentTimeType.NOW, null),
                 NOW.minus(Duration.ofMinutes(1)));
 
-        assertError(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE, () -> proposal.withdraw(REQUESTER_ID, NOW));
+        assertEquals(AppointmentStatus.WITHDRAWN, proposal.withdraw(REQUESTER_ID, NOW).getStatus());
+    }
+
+    @Test
+    @DisplayName("약속 시각이 이미 지난 제안이어도 WITHDRAWN다")
+    void withdraw_scheduledAtPassed_withdraws() {
+        Instant oneHourAgo = NOW.minus(Duration.ofHours(1));
+        Appointment proposal = proposal(AppointmentStatus.PROPOSED, scheduled(oneHourAgo), null);
+
+        assertEquals(AppointmentStatus.WITHDRAWN, proposal.withdraw(REQUESTER_ID, NOW).getStatus());
+    }
+
+    @Test
+    @DisplayName("만료 시각이 null인 제안도 WITHDRAWN이고 만료 시각은 null 그대로다")
+    void withdraw_nullExpiresAt_withdraws() {
+        Appointment proposal = proposal(AppointmentStatus.PROPOSED, scheduled(SCHEDULED_AT), null);
+
+        Appointment result = proposal.withdraw(REQUESTER_ID, NOW);
+
+        assertEquals(AppointmentStatus.WITHDRAWN, result.getStatus());
+        assertNull(result.getExpiresAt());
     }
 
     // ---- helpers ----

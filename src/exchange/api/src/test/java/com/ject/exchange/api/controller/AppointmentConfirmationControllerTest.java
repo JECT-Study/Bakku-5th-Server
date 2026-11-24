@@ -406,6 +406,62 @@ class AppointmentConfirmationControllerTest {
                 .andExpect(jsonPath("$.data.confirmation").doesNotExist());
     }
 
+    // ---- 답이 엇갈릴 때 (#117) ----
+
+    @Test
+    @DisplayName("F-1 완료된 약속에 B가 NOT_MET · NO_SHOW로 답하면 200 · status COMPLETED · B의 myAnswer NOT_MET이다")
+    void respondConfirmation_notMetAfterCompleted_returns200Completed() throws Exception {
+        queryBus.willReturnAppointment(result(AppointmentStatus.COMPLETED,
+                new ConfirmationSummary(OPENS_AT, AppointmentStatus.COMPLETED, false, ConfirmationAnswer.NOT_MET,
+                        RESOLVED_AT)));
+
+        mockMvc.perform(confirmationRequest(OWNER_ID, "{\"answer\": \"NOT_MET\", \"notMetReason\": \"NO_SHOW\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.confirmation.result").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.confirmation.myAnswer").value("NOT_MET"));
+
+        assertEquals(List.of(new RespondConfirmationCommand(APPOINTMENT_ID, OWNER_ID, ConfirmationAnswer.NOT_MET,
+                NotMetReason.NO_SHOW, null)), commandBus.sentCommands());
+        GetAppointmentQuery query = assertInstanceOf(GetAppointmentQuery.class, queryBus.sentQueries().get(0));
+        assertEquals(OWNER_ID, query.viewerId());
+    }
+
+    @Test
+    @DisplayName("A-2 엇갈린 응답을 남긴 B가 보면 status COMPLETED · 결과 COMPLETED · myAnswer NOT_MET이다")
+    void getAppointment_disputedReply_showsCompletedWithNotMetAnswer() throws Exception {
+        queryBus.willReturnAppointment(result(AppointmentStatus.COMPLETED,
+                new ConfirmationSummary(OPENS_AT, AppointmentStatus.COMPLETED, false, ConfirmationAnswer.NOT_MET,
+                        RESOLVED_AT)));
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .get("/api/v1/appointments/{appointmentId}", APPOINTMENT_ID)
+                        .requestAttr(LoginMember.ATTRIBUTE, OWNER_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.confirmation.result").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.confirmation.myAnswer").value("NOT_MET"))
+                .andExpect(jsonPath("$.data.confirmation.resolvedAt").value("2026-11-23T15:40:00+09:00"));
+
+        GetAppointmentQuery query = assertInstanceOf(GetAppointmentQuery.class, queryBus.sentQueries().get(0));
+        assertEquals(OWNER_ID, query.viewerId());
+    }
+
+    @Test
+    @DisplayName("F-1 완료 뒤 상대 기한이 지나 NOT_MET을 보내면 409 EXCHANGE_303이고 조회하지 않는다")
+    void respondConfirmation_notMetAfterDeadline_returnsExchange303() throws Exception {
+        commandBus.onRespondConfirmation(command -> {
+            throw new ExchangeException(ExchangeErrorCode.CONFIRMATION_ALREADY_DECIDED);
+        });
+
+        mockMvc.perform(confirmationRequest(OWNER_ID, "{\"answer\": \"NOT_MET\", \"notMetReason\": \"NO_SHOW\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("EXCHANGE_303"));
+
+        assertTrue(queryBus.sentQueries().isEmpty());
+    }
+
     // ---- helpers ----
 
     private void assertValidationFailure(String body, String field) throws Exception {

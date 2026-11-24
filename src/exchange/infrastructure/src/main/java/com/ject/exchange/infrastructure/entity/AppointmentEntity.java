@@ -57,7 +57,8 @@ public class AppointmentEntity extends BaseEntity {
     @Column(name = "place_lng", nullable = false)
     private Double placeLng;
 
-    @Column(name = "expires_at", nullable = false)
+    // 자동 만료가 출시 후로 밀려 새 제안은 비워 둔다 (E-10-1, #117)
+    @Column(name = "expires_at")
     private Instant expiresAt;
 
     @Column(name = "proposer_reminder_offset_minutes")

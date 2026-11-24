@@ -43,17 +43,14 @@ public record AppointmentResponse(
         @Schema(description = "교환할 물건 (첨부 아이템 중 고른 것)")
         List<AppointmentItemResponse> items,
 
-        @Schema(description = "제안 만료 시각. PROPOSED가 아니면 null", example = "2026-10-27T15:00:00+09:00")
+        @Schema(description = "제안 만료 시각. 자동 만료가 출시 후 기능이라 지금은 항상 null")
         OffsetDateTime expiresAt,
 
-        @Schema(description = "내 약속 전 알림(분). null이면 끔. 지금 바로 약속은 항상 null", example = "30")
+        @Schema(description = "내 약속 전 알림(분). 시간을 정한 약속은 30 고정, 지금 바로 약속은 null", example = "30")
         Integer myReminderOffsetMinutes,
 
         @Schema(description = "같은 글의 다른 채팅방에 진행 중인 제안이 있는지. true면 수락 전 확인 창", example = "true")
         boolean otherActiveProposalsOnPost,
-
-        @Schema(description = "대기 중인 변경 제안. 없으면 null")
-        AppointmentChangeResponse pendingChange,
 
         @Schema(description = "약속을 취소한 사람. 취소된 약속(CANCELED)이 아니면 null", example = "101")
         Long canceledByUserId,
@@ -68,7 +65,7 @@ public record AppointmentResponse(
         OffsetDateTime createdAt
 ) {
     /**
-     * 약속 응답. 변경 제안은 아직 없으므로 null
+     * 약속 응답 (조회자 기준)
      */
     public static AppointmentResponse from(AppointmentResult result, ImageUrlResolver imageUrlResolver) {
         return new AppointmentResponse(
@@ -87,7 +84,6 @@ public record AppointmentResponse(
                 toSeoul(result.expiresAt()),
                 result.myReminderOffsetMinutes(),
                 result.otherActiveProposalsOnPost(),
-                null,   // Todo: 약속 변경 제안 구현 후 반영
                 result.canceledByUserId(),
                 confirmationOf(result.confirmation()),
                 toSeoul(result.confirmedAt()),

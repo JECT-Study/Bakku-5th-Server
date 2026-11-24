@@ -346,7 +346,7 @@ class WithdrawAppointmentHandlerTest {
     // ---- 진행 중이 아닌 제안 (AC-8) ----
 
     @ParameterizedTest
-    @EnumSource(value = AppointmentStatus.class, names = {"REJECTED", "WITHDRAWN", "EXPIRED", "AUTO_REJECTED",
+    @EnumSource(value = AppointmentStatus.class, names = {"REJECTED", "WITHDRAWN", "AUTO_REJECTED",
             "CONFIRMED", "CANCELED", "COMPLETED", "NOT_MET"})
     @DisplayName("진행 중이 아닌 제안을 철회하면 EXCHANGE_106이고 상태는 그대로다")
     void handle_proposalNotActive_throwsProposalNotActive(AppointmentStatus status) {
@@ -359,62 +359,79 @@ class WithdrawAppointmentHandlerTest {
         assertEquals(status, stored(APPOINTMENT_ID).getStatus());
     }
 
-    // ---- 만료된 제안 (AC-9) ----
+    // ---- 자동 만료 없음 (#117) ----
 
     @Test
-    @DisplayName("만료 시각이 지금이면 EXCHANGE_106이고 저장 상태는 PROPOSED 그대로다")
-    void handle_expiresAtNow_throwsProposalNotActive() {
+    @DisplayName("약속 시각이 3일 뒤인 제안을 제안 후 25시간에 withdraw하면 WITHDRAWN다")
+    void handle_proposal25HoursOld_withdraws() {
         exchangeRepository.preload(defaultExchange(ExchangeStatus.ACTIVE));
-        appointmentRepository.preload(scheduledProposal(NOW, NOW.plus(Duration.ofHours(1))));
+        appointmentRepository.preload(scheduledProposal(NOW.minus(Duration.ofHours(1)), NOW.plus(Duration.ofDays(3))));
 
-        assertWithdrawFails(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE,
-                () -> handler.handle(command(APPOINTMENT_ID, REQUESTER_ID)));
-        assertEquals(AppointmentStatus.PROPOSED, stored(APPOINTMENT_ID).getStatus());
+        Long id = handler.handle(command(APPOINTMENT_ID, REQUESTER_ID));
+
+        assertEquals(APPOINTMENT_ID, id);
+        assertEquals(AppointmentStatus.WITHDRAWN, stored(APPOINTMENT_ID).getStatus());
     }
 
     @Test
-    @DisplayName("만료 시각과 약속 시각이 지났으면 EXCHANGE_106")
-    void handle_expiredAndScheduledAtPassed_throwsProposalNotActive() {
+    @DisplayName("옛 만료 시각이 지금인 제안도 WITHDRAWN다")
+    void handle_oldExpiryNow_withdraws() {
+        exchangeRepository.preload(defaultExchange(ExchangeStatus.ACTIVE));
+        appointmentRepository.preload(scheduledProposal(NOW, NOW.plus(Duration.ofHours(1))));
+
+        handler.handle(command(APPOINTMENT_ID, REQUESTER_ID));
+
+        assertEquals(AppointmentStatus.WITHDRAWN, stored(APPOINTMENT_ID).getStatus());
+    }
+
+    @Test
+    @DisplayName("약속 시각이 1시간 지난 제안도 WITHDRAWN다")
+    void handle_scheduledAtPassed_withdraws() {
         exchangeRepository.preload(defaultExchange(ExchangeStatus.ACTIVE));
         Instant oneHourAgo = NOW.minus(Duration.ofHours(1));
         appointmentRepository.preload(scheduledProposal(oneHourAgo, oneHourAgo));
 
-        assertWithdrawFails(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE,
-                () -> handler.handle(command(APPOINTMENT_ID, REQUESTER_ID)));
+        handler.handle(command(APPOINTMENT_ID, REQUESTER_ID));
+
+        assertEquals(AppointmentStatus.WITHDRAWN, stored(APPOINTMENT_ID).getStatus());
     }
 
     @Test
-    @DisplayName("만료 시각과 약속 시각이 모두 지금이면 EXCHANGE_106")
-    void handle_expiredAndScheduledAtNow_throwsProposalNotActive() {
+    @DisplayName("약속 시각이 지금인 제안도 WITHDRAWN다")
+    void handle_scheduledAtNow_withdraws() {
         exchangeRepository.preload(defaultExchange(ExchangeStatus.ACTIVE));
         appointmentRepository.preload(scheduledProposal(NOW, NOW));
 
-        assertWithdrawFails(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE,
-                () -> handler.handle(command(APPOINTMENT_ID, REQUESTER_ID)));
+        handler.handle(command(APPOINTMENT_ID, REQUESTER_ID));
+
+        assertEquals(AppointmentStatus.WITHDRAWN, stored(APPOINTMENT_ID).getStatus());
     }
 
     @Test
-    @DisplayName("지금 바로 약속의 만료 시각이 지났으면 EXCHANGE_106")
-    void handle_expiredNowAppointment_throwsProposalNotActive() {
+    @DisplayName("지금 바로 제안을 제안 후 25시간에 withdraw해도 WITHDRAWN다")
+    void handle_nowProposal25HoursOld_withdraws() {
         exchangeRepository.preload(defaultExchange(ExchangeStatus.ACTIVE));
         appointmentRepository.preload(appointment(APPOINTMENT_ID, EXCHANGE_ID, REQUESTER_ID, OWNER_ID,
                 AppointmentStatus.PROPOSED, new AppointmentTime(AppointmentTimeType.NOW, null),
-                NOW.minus(Duration.ofMinutes(1)), List.of(ITEM_31)));
+                NOW.minus(Duration.ofHours(1)), List.of(ITEM_31)));
 
-        assertWithdrawFails(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE,
-                () -> handler.handle(command(APPOINTMENT_ID, REQUESTER_ID)));
+        handler.handle(command(APPOINTMENT_ID, REQUESTER_ID));
+
+        assertEquals(AppointmentStatus.WITHDRAWN, stored(APPOINTMENT_ID).getStatus());
     }
 
     @Test
-    @DisplayName("만료된 제안이 있으면 철회 없이도 새로 제안할 수 있다")
-    void propose_afterExpiredProposal_createsNewProposal() {
+    @DisplayName("제안 후 25시간 지난 제안이 철회되지 않았으면 새로 제안할 수 없다 (EXCHANGE_103)")
+    void propose_whilePastOldExpiryProposalPending_throwsAlreadyExists() {
         exchangeRepository.preload(defaultExchange(ExchangeStatus.ACTIVE));
-        appointmentRepository.preload(scheduledProposal(NOW, NOW.plus(Duration.ofHours(1))));
+        appointmentRepository.preload(scheduledProposal(NOW.minus(Duration.ofHours(1)), NOW.plus(Duration.ofHours(1))));
 
-        Long newId = proposeHandler().handle(proposeCommand(REQUESTER_ID));
+        ExchangeException exception = assertThrows(ExchangeException.class,
+                () -> proposeHandler().handle(proposeCommand(REQUESTER_ID)));
 
-        assertNotEquals(APPOINTMENT_ID, newId);
-        assertEquals(AppointmentStatus.PROPOSED, stored(newId).getStatus());
+        assertEquals(ExchangeErrorCode.APPOINTMENT_ALREADY_EXISTS, exception.getErrorCode());
+        assertEquals(AppointmentStatus.PROPOSED, stored(APPOINTMENT_ID).getStatus());
+        assertEquals(1, appointmentRepository.all().size());
     }
 
     // ---- 종료된 교환 (AC-10) ----
@@ -460,7 +477,7 @@ class WithdrawAppointmentHandlerTest {
     @DisplayName("같은 제안을 수락한 뒤 철회하면 EXCHANGE_106이고 CONFIRMED 그대로다")
     void handle_withdrawAfterAcceptOnSameProposal_throwsProposalNotActive() {
         givenDefaultExchangeAndProposal();
-        acceptHandler().handle(new AcceptAppointmentCommand(APPOINTMENT_ID, OWNER_ID, null));
+        acceptHandler().handle(new AcceptAppointmentCommand(APPOINTMENT_ID, OWNER_ID));
 
         ExchangeException late = assertThrows(ExchangeException.class,
                 () -> handler.handle(command(APPOINTMENT_ID, REQUESTER_ID)));
@@ -476,7 +493,7 @@ class WithdrawAppointmentHandlerTest {
         handler.handle(command(APPOINTMENT_ID, REQUESTER_ID));
 
         ExchangeException late = assertThrows(ExchangeException.class,
-                () -> acceptHandler().handle(new AcceptAppointmentCommand(APPOINTMENT_ID, OWNER_ID, null)));
+                () -> acceptHandler().handle(new AcceptAppointmentCommand(APPOINTMENT_ID, OWNER_ID)));
 
         assertEquals(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE, late.getErrorCode());
         assertEquals(AppointmentStatus.WITHDRAWN, stored(APPOINTMENT_ID).getStatus());
@@ -493,7 +510,7 @@ class WithdrawAppointmentHandlerTest {
 
         // when
         handler.handle(command(APPOINTMENT_ID, REQUESTER_ID));
-        acceptHandler().handle(new AcceptAppointmentCommand(OTHER_APPOINTMENT_ID, OWNER_ID, null));
+        acceptHandler().handle(new AcceptAppointmentCommand(OTHER_APPOINTMENT_ID, OWNER_ID));
 
         // then
         assertEquals(AppointmentStatus.WITHDRAWN, stored(APPOINTMENT_ID).getStatus());
@@ -507,7 +524,7 @@ class WithdrawAppointmentHandlerTest {
         givenDefaultExchangeAndProposal();
         exchangeRepository.preload(otherExchangeOnSamePost());
         appointmentRepository.preload(otherProposalOnSamePost());
-        acceptHandler().handle(new AcceptAppointmentCommand(OTHER_APPOINTMENT_ID, OWNER_ID, null));
+        acceptHandler().handle(new AcceptAppointmentCommand(OTHER_APPOINTMENT_ID, OWNER_ID));
 
         // when
         ExchangeException late = assertThrows(ExchangeException.class,
@@ -552,7 +569,7 @@ class WithdrawAppointmentHandlerTest {
         givenDefaultExchangeAndProposal();
         exchangeRepository.preload(sourcePostExchange());
         appointmentRepository.preload(sourcePostProposal());
-        acceptHandler().handle(new AcceptAppointmentCommand(SOURCE_POST_APPOINTMENT_ID, REQUESTER_ID, null));
+        acceptHandler().handle(new AcceptAppointmentCommand(SOURCE_POST_APPOINTMENT_ID, REQUESTER_ID));
 
         // when
         ExchangeException late = assertThrows(ExchangeException.class,
@@ -572,7 +589,7 @@ class WithdrawAppointmentHandlerTest {
         appointmentRepository.preload(sourcePostProposal());
 
         handler.handle(command(APPOINTMENT_ID, REQUESTER_ID));
-        acceptHandler().handle(new AcceptAppointmentCommand(SOURCE_POST_APPOINTMENT_ID, REQUESTER_ID, null));
+        acceptHandler().handle(new AcceptAppointmentCommand(SOURCE_POST_APPOINTMENT_ID, REQUESTER_ID));
 
         assertEquals(AppointmentStatus.WITHDRAWN, stored(APPOINTMENT_ID).getStatus());
         assertEquals(AppointmentStatus.CONFIRMED, stored(SOURCE_POST_APPOINTMENT_ID).getStatus());
@@ -623,7 +640,7 @@ class WithdrawAppointmentHandlerTest {
 
     private static ProposeAppointmentCommand proposeCommand(Long proposerId) {
         return new ProposeAppointmentCommand(EXCHANGE_ID, proposerId, AppointmentTimeType.SCHEDULED, SCHEDULED_AT,
-                PLACE, List.of(ITEM_32), 30);
+                PLACE, List.of(ITEM_32));
     }
 
     /** 교환 E: 글 G · 첨부 글 S1(ITEM_31) · S2(ITEM_32) */

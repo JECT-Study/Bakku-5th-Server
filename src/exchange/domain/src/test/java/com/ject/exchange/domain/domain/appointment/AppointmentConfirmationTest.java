@@ -225,17 +225,97 @@ class AppointmentConfirmationTest {
                 ConfirmationAnswer.NOT_MET, NotMetReason.SELF_ABSENT, null, REASON_DEADLINE));
     }
 
-    // ---- AC-5 · AC-6 결과가 정해진 뒤 ----
+    // ---- 결과가 정해진 뒤 (#117 답이 엇갈릴 때) ----
+
+    @Test
+    @DisplayName("COMPLETED 뒤 상대가 열림 1일 뒤 NOT_MET · NO_SHOW로 답하면 COMPLETED · 결과 시각 그대로이고 상대 응답이 추가된다")
+    void answerConfirmation_notMetAfterCompleted_appendsReplyOnly() {
+        // given
+        Appointment completed = completedByRequester();
+        Instant oneDayLater = OPENS_AT.plus(Duration.ofDays(1));
+
+        // when
+        Appointment answered = completed.answerConfirmation(OWNER_ID, ConfirmationAnswer.NOT_MET,
+                NotMetReason.NO_SHOW, null, oneDayLater);
+
+        // then
+        assertEquals(AppointmentStatus.COMPLETED, answered.getStatus());
+        assertEquals(OPENS_AT, answered.getResolvedAt());
+        assertEquals(Optional.of(new ConfirmationReply(OWNER_ID, ConfirmationAnswer.NOT_MET, NotMetReason.NO_SHOW,
+                null, oneDayLater)), answered.replyOf(OWNER_ID));
+        assertEquals(completed.replyOf(REQUESTER_ID), answered.replyOf(REQUESTER_ID));
+    }
+
+    @Test
+    @DisplayName("COMPLETED 뒤 상대가 OTHER와 직접 입력으로 답하면 입력 그대로 저장되고 COMPLETED 그대로다")
+    void answerConfirmation_otherAfterCompleted_savesDetail() {
+        Appointment answered = completedByRequester().answerConfirmation(OWNER_ID, ConfirmationAnswer.NOT_MET,
+                NotMetReason.OTHER, "약속 장소에 아무도 없었어요", OPENS_AT.plus(Duration.ofHours(1)));
+
+        assertEquals(AppointmentStatus.COMPLETED, answered.getStatus());
+        assertEquals(NotMetReason.OTHER, answered.replyOf(OWNER_ID).orElseThrow().notMetReason());
+        assertEquals("약속 장소에 아무도 없었어요", answered.replyOf(OWNER_ID).orElseThrow().notMetDetail());
+    }
+
+    @Test
+    @DisplayName("COMPLETED 뒤 상대 응답은 새 객체를 반환하고 원래 약속에는 상대 응답이 없다")
+    void answerConfirmation_notMetAfterCompleted_keepsOriginal() {
+        Appointment completed = completedByRequester();
+
+        completed.answerConfirmation(OWNER_ID, ConfirmationAnswer.NOT_MET, NotMetReason.NO_SHOW, null,
+                OPENS_AT.plus(Duration.ofHours(1)));
+
+        assertTrue(completed.replyOf(OWNER_ID).isEmpty());
+        assertEquals(AppointmentStatus.COMPLETED, completed.getStatus());
+    }
+
+    @Test
+    @DisplayName("COMPLETED 뒤 상대가 열림 시각 + 3일 1초 전에 NOT_MET으로 답하면 저장된다")
+    void answerConfirmation_notMetAfterCompletedJustBeforeDeadline_appends() {
+        Appointment answered = completedByRequester().answerConfirmation(OWNER_ID, ConfirmationAnswer.NOT_MET,
+                NotMetReason.NO_SHOW, null, REASON_DEADLINE.minusSeconds(1));
+
+        assertEquals(AppointmentStatus.COMPLETED, answered.getStatus());
+        assertTrue(answered.replyOf(OWNER_ID).isPresent());
+    }
 
     @ParameterizedTest
-    @EnumSource(ConfirmationAnswer.class)
-    @DisplayName("COMPLETED 뒤 상대가 어떤 답을 보내도 EXCHANGE_303")
-    void answerConfirmation_afterCompleted_throwsAlreadyDecided(ConfirmationAnswer answer) {
+    @ValueSource(longs = {0, 1, 86_400})
+    @DisplayName("COMPLETED 뒤 상대가 열림 시각 + 3일 정각 이후에 NOT_MET으로 답하면 EXCHANGE_303")
+    void answerConfirmation_notMetAfterCompletedAtOrAfterDeadline_throwsAlreadyDecided(long secondsAfterDeadline) {
         Appointment completed = completedByRequester();
-        NotMetReason reason = answer == ConfirmationAnswer.NOT_MET ? NotMetReason.NO_SHOW : null;
 
         assertRejected(ExchangeErrorCode.CONFIRMATION_ALREADY_DECIDED, () -> completed.answerConfirmation(OWNER_ID,
-                answer, reason, null, OPENS_AT.plusSeconds(10)));
+                ConfirmationAnswer.NOT_MET, NotMetReason.NO_SHOW, null,
+                REASON_DEADLINE.plusSeconds(secondsAfterDeadline)));
+    }
+
+    @Test
+    @DisplayName("COMPLETED 뒤 상대 기한은 결과 시각이 아니라 열림 시각 기준이다")
+    void answerConfirmation_notMetAfterCompleted_deadlineFromOpensAt() {
+        // 열림 1일 뒤에 완료돼도 기한은 열림 + 3일
+        Appointment completed = completedByRequesterAt(OPENS_AT.plus(Duration.ofDays(1)));
+
+        assertRejected(ExchangeErrorCode.CONFIRMATION_ALREADY_DECIDED, () -> completed.answerConfirmation(OWNER_ID,
+                ConfirmationAnswer.NOT_MET, NotMetReason.NO_SHOW, null, REASON_DEADLINE));
+    }
+
+    @Test
+    @DisplayName("COMPLETED 뒤 상대가 기한 안에 DONE으로 답하면 EXCHANGE_303")
+    void answerConfirmation_doneAfterCompleted_throwsAlreadyDecided() {
+        Appointment completed = completedByRequester();
+
+        assertRejected(ExchangeErrorCode.CONFIRMATION_ALREADY_DECIDED, () -> completed.answerConfirmation(OWNER_ID,
+                ConfirmationAnswer.DONE, null, null, OPENS_AT.plusSeconds(10)));
+    }
+
+    @Test
+    @DisplayName("COMPLETED 뒤 상대가 기한 지나 DONE으로 답해도 EXCHANGE_303")
+    void answerConfirmation_doneAfterCompletedPastDeadline_throwsAlreadyDecided() {
+        Appointment completed = completedByRequester();
+
+        assertRejected(ExchangeErrorCode.CONFIRMATION_ALREADY_DECIDED, () -> completed.answerConfirmation(OWNER_ID,
+                ConfirmationAnswer.DONE, null, null, REASON_DEADLINE));
     }
 
     @Test
@@ -245,6 +325,42 @@ class AppointmentConfirmationTest {
 
         assertRejected(ExchangeErrorCode.CONFIRMATION_ALREADY_DECIDED, () -> notMet.answerConfirmation(OWNER_ID,
                 ConfirmationAnswer.DONE, null, null, OPENS_AT.plus(Duration.ofHours(1))));
+    }
+
+    // ---- 엇갈린 뒤 다시 답함 ----
+
+    @ParameterizedTest
+    @EnumSource(ConfirmationAnswer.class)
+    @DisplayName("COMPLETED 뒤 NOT_MET으로 답한 상대가 다시 답하면 EXCHANGE_302")
+    void answerConfirmation_againAfterDisputedReply_throwsAlreadyAnswered(ConfirmationAnswer answer) {
+        Appointment disputed = completedByRequester().answerConfirmation(OWNER_ID, ConfirmationAnswer.NOT_MET,
+                NotMetReason.NO_SHOW, null, OPENS_AT.plus(Duration.ofDays(1)));
+        NotMetReason reason = answer == ConfirmationAnswer.NOT_MET ? NotMetReason.OTHER : null;
+
+        assertRejected(ExchangeErrorCode.CONFIRMATION_ALREADY_ANSWERED, () -> disputed.answerConfirmation(OWNER_ID,
+                answer, reason, "다시", OPENS_AT.plus(Duration.ofDays(1)).plusSeconds(10)));
+        assertEquals(NotMetReason.NO_SHOW, disputed.replyOf(OWNER_ID).orElseThrow().notMetReason());
+    }
+
+    @Test
+    @DisplayName("엇갈린 응답을 남긴 상대는 기한이 지나 다시 답해도 EXCHANGE_302가 먼저다")
+    void answerConfirmation_againAfterDisputedReplyPastDeadline_throwsAlreadyAnsweredFirst() {
+        Appointment disputed = completedByRequester().answerConfirmation(OWNER_ID, ConfirmationAnswer.NOT_MET,
+                NotMetReason.NO_SHOW, null, OPENS_AT.plus(Duration.ofDays(1)));
+
+        assertRejected(ExchangeErrorCode.CONFIRMATION_ALREADY_ANSWERED, () -> disputed.answerConfirmation(OWNER_ID,
+                ConfirmationAnswer.NOT_MET, NotMetReason.OTHER, null, REASON_DEADLINE.plusSeconds(1)));
+    }
+
+    @Test
+    @DisplayName("엇갈린 뒤 처음 DONE으로 답한 사람이 다시 답해도 EXCHANGE_302")
+    void answerConfirmation_firstResponderAgainAfterDispute_throwsAlreadyAnswered() {
+        Appointment disputed = completedByRequester().answerConfirmation(OWNER_ID, ConfirmationAnswer.NOT_MET,
+                NotMetReason.NO_SHOW, null, OPENS_AT.plus(Duration.ofDays(1)));
+
+        assertRejected(ExchangeErrorCode.CONFIRMATION_ALREADY_ANSWERED, () -> disputed.answerConfirmation(
+                REQUESTER_ID, ConfirmationAnswer.NOT_MET, NotMetReason.NO_SHOW, null,
+                OPENS_AT.plus(Duration.ofDays(1)).plusSeconds(10)));
     }
 
     // ---- AC-7 같은 사람이 다시 답함 ----
@@ -365,7 +481,7 @@ class AppointmentConfirmationTest {
 
     @ParameterizedTest
     @EnumSource(value = AppointmentStatus.class,
-            names = {"PROPOSED", "REJECTED", "WITHDRAWN", "EXPIRED", "AUTO_REJECTED", "CANCELED"})
+            names = {"PROPOSED", "REJECTED", "WITHDRAWN", "AUTO_REJECTED", "CANCELED"})
     @DisplayName("확정 · 완료 · 못 만남이 아닌 약속에 답하면 EXCHANGE_109")
     void answerConfirmation_notConfirmedStatus_throwsInvalidStatus(AppointmentStatus status) {
         Instant confirmedAt = status == AppointmentStatus.CANCELED ? CONFIRMED_AT : null;
@@ -387,16 +503,20 @@ class AppointmentConfirmationTest {
                 OWNER_ID, ConfirmationAnswer.NOT_MET, NotMetReason.NO_SHOW, null, OPENS_AT));
     }
 
-    // ---- AC-16 동시(순차) 응답 ----
+    // ---- 동시(순차) 응답 ----
 
     @Test
-    @DisplayName("DONE 다음 NOT_MET이 오면 COMPLETED로 정해지고 나중 응답은 EXCHANGE_303이다")
-    void answerConfirmation_doneThenNotMet_keepsCompleted() {
+    @DisplayName("DONE 다음 NOT_MET이 오면 COMPLETED 그대로이고 나중 응답은 저장된다")
+    void answerConfirmation_doneThenNotMet_keepsCompletedAndAppends() {
         Appointment first = confirmed().answerConfirmation(OWNER_ID, ConfirmationAnswer.DONE, null, null, OPENS_AT);
 
-        assertRejected(ExchangeErrorCode.CONFIRMATION_ALREADY_DECIDED, () -> first.answerConfirmation(REQUESTER_ID,
-                ConfirmationAnswer.NOT_MET, NotMetReason.NO_SHOW, null, OPENS_AT));
-        assertEquals(AppointmentStatus.COMPLETED, first.getStatus());
+        Appointment second = first.answerConfirmation(REQUESTER_ID, ConfirmationAnswer.NOT_MET, NotMetReason.NO_SHOW,
+                null, OPENS_AT);
+
+        assertEquals(AppointmentStatus.COMPLETED, second.getStatus());
+        assertEquals(OPENS_AT, second.getResolvedAt());
+        assertEquals(ConfirmationAnswer.DONE, second.replyOf(OWNER_ID).orElseThrow().answer());
+        assertEquals(ConfirmationAnswer.NOT_MET, second.replyOf(REQUESTER_ID).orElseThrow().answer());
     }
 
     // ---- 복원 팩토리 ----
@@ -434,10 +554,15 @@ class AppointmentConfirmationTest {
                 CONFIRMED_AT, null, null, List.of());
     }
 
-    /** A가 DONE으로 답해 COMPLETED된 약속 (복원) */
+    /** A가 열림 시각에 DONE으로 답해 COMPLETED된 약속 (복원) */
     private static Appointment completedByRequester() {
-        return appointment(AppointmentStatus.COMPLETED, scheduled(), CONFIRMED_AT, 30, OPENS_AT,
-                List.of(new ConfirmationReply(REQUESTER_ID, ConfirmationAnswer.DONE, null, null, OPENS_AT)));
+        return completedByRequesterAt(OPENS_AT);
+    }
+
+    /** A가 DONE으로 답해 COMPLETED된 약속 (복원) */
+    private static Appointment completedByRequesterAt(Instant resolvedAt) {
+        return appointment(AppointmentStatus.COMPLETED, scheduled(), CONFIRMED_AT, 30, resolvedAt,
+                List.of(new ConfirmationReply(REQUESTER_ID, ConfirmationAnswer.DONE, null, null, resolvedAt)));
     }
 
     /** A가 NO_SHOW로 답해 NOT_MET된 약속 (복원) */

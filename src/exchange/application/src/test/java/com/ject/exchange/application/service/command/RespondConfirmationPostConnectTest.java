@@ -123,17 +123,15 @@ class RespondConfirmationPostConnectTest {
     // ---- AC-15 ----
 
     @Test
-    @DisplayName("DONE 뒤 B가 NOT_MET으로 답하면 EXCHANGE_303이고 해제 요청 없이 P · Q1은 교환 완료 그대로다")
+    @DisplayName("DONE 뒤 B가 NOT_MET으로 답해도 해제 요청 없이 P · Q1은 교환 완료 그대로다")
     void handle_notMetAfterDone_keepsCompleted() {
         // given
         handlerAt(NOW).handle(done(MEMBER_A));
 
         // when
-        ExchangeException exception = assertThrows(ExchangeException.class,
-                () -> handlerAt(NOW.plusSeconds(60)).handle(notMet(MEMBER_B)));
+        handlerAt(NOW.plusSeconds(60)).handle(notMet(MEMBER_B));
 
         // then
-        assertEquals(ExchangeErrorCode.CONFIRMATION_ALREADY_DECIDED, exception.getErrorCode());
         assertEquals(1, postPort.completeRequests().size());
         assertTrue(postPort.releaseRequests().isEmpty());
         assertEquals(PostInfo.Status.COMPLETED, postPort.statusOf(POST_P));

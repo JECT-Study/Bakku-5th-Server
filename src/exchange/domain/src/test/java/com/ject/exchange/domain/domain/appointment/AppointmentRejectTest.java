@@ -101,7 +101,7 @@ class AppointmentRejectTest {
     // ---- 진행 중이 아닌 제안 (AC-8) ----
 
     @ParameterizedTest
-    @EnumSource(value = AppointmentStatus.class, names = {"REJECTED", "WITHDRAWN", "EXPIRED", "AUTO_REJECTED",
+    @EnumSource(value = AppointmentStatus.class, names = {"REJECTED", "WITHDRAWN", "AUTO_REJECTED",
             "CONFIRMED", "CANCELED", "COMPLETED", "NOT_MET"})
     @DisplayName("저장 상태가 PROPOSED가 아니면 EXCHANGE_106이고 상태는 그대로다")
     void reject_notProposed_throwsProposalNotActive(AppointmentStatus status) {
@@ -111,33 +111,45 @@ class AppointmentRejectTest {
         assertEquals(status, appointment.getStatus());
     }
 
-    // ---- 만료된 제안 (AC-9) ----
+    // ---- 자동 만료 없음 (#117) ----
 
     @Test
-    @DisplayName("만료 시각이 지금과 같으면 EXCHANGE_106")
-    void reject_expiresAtNow_throwsProposalNotActive() {
-        Appointment proposal = proposal(AppointmentStatus.PROPOSED, scheduled(SCHEDULED_AT), NOW);
+    @DisplayName("제안 후 25시간이 지나 옛 만료 시각이 지났어도 REJECTED다")
+    void reject_pastOldExpiry_rejects() {
+        Appointment proposal = proposal(AppointmentStatus.PROPOSED, scheduled(SCHEDULED_AT), NOW.minus(Duration.ofHours(1)));
 
-        assertError(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE, () -> proposal.reject(OWNER_ID, NOW));
-        assertEquals(AppointmentStatus.PROPOSED, proposal.getStatus());
+        Appointment result = proposal.reject(OWNER_ID, NOW);
+
+        assertEquals(AppointmentStatus.REJECTED, result.getStatus());
     }
 
     @Test
-    @DisplayName("만료 시각과 약속 시각이 지났으면 EXCHANGE_106")
-    void reject_expiredAndScheduledAtPassed_throwsProposalNotActive() {
-        Instant oneHourAgo = NOW.minus(Duration.ofHours(1));
-        Appointment proposal = proposal(AppointmentStatus.PROPOSED, scheduled(oneHourAgo), oneHourAgo);
-
-        assertError(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE, () -> proposal.reject(OWNER_ID, NOW));
-    }
-
-    @Test
-    @DisplayName("지금 바로 약속의 만료 시각이 지났으면 EXCHANGE_106")
-    void reject_expiredNowAppointment_throwsProposalNotActive() {
+    @DisplayName("지금 바로 약속이 제안 후 25시간 지났어도 REJECTED다")
+    void reject_nowAppointmentPastOldExpiry_rejects() {
         Appointment proposal = proposal(AppointmentStatus.PROPOSED, new AppointmentTime(AppointmentTimeType.NOW, null),
                 NOW.minus(Duration.ofMinutes(1)));
 
-        assertError(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE, () -> proposal.reject(OWNER_ID, NOW));
+        assertEquals(AppointmentStatus.REJECTED, proposal.reject(OWNER_ID, NOW).getStatus());
+    }
+
+    @Test
+    @DisplayName("약속 시각이 이미 지난 제안이어도 REJECTED다")
+    void reject_scheduledAtPassed_rejects() {
+        Instant oneHourAgo = NOW.minus(Duration.ofHours(1));
+        Appointment proposal = proposal(AppointmentStatus.PROPOSED, scheduled(oneHourAgo), null);
+
+        assertEquals(AppointmentStatus.REJECTED, proposal.reject(OWNER_ID, NOW).getStatus());
+    }
+
+    @Test
+    @DisplayName("만료 시각이 null인 제안도 REJECTED이고 만료 시각은 null 그대로다")
+    void reject_nullExpiresAt_rejects() {
+        Appointment proposal = proposal(AppointmentStatus.PROPOSED, scheduled(SCHEDULED_AT), null);
+
+        Appointment result = proposal.reject(OWNER_ID, NOW);
+
+        assertEquals(AppointmentStatus.REJECTED, result.getStatus());
+        assertNull(result.getExpiresAt());
     }
 
     // ---- helpers ----
