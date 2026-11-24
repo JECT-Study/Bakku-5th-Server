@@ -3,6 +3,7 @@ package com.ject.post.api.controller.api;
 import com.ject.common.web.auth.LoginMember;
 import com.ject.common.web.response.ApiResponse;
 import com.ject.post.api.dto.enums.PostCategory;
+import com.ject.post.api.dto.enums.PostHub;
 import com.ject.post.api.dto.enums.PostSort;
 import com.ject.post.api.dto.response.CursorPageResponse;
 import com.ject.post.api.dto.response.PostSummaryResponse;
@@ -21,10 +22,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequestMapping("/api/v1/posts")
 public interface PostDiscoveryApi {
 
-    @Operation(summary = "PO-2 홈 목록", description = "교환 방식 · 카테고리로 거른 게시글을 최신순으로 보여줍니다. 교환 가능 게시글만 나옵니다(예약중이 되면 빠졌다가 약속이 취소되면 다시 나옴).")
+    @Operation(summary = "PO-2 홈 목록", description = "거점 · 교환 방식 · 카테고리로 거른 게시글을 최신순으로 보여줍니다. 교환 가능 게시글만 나옵니다(예약중이 되면 빠졌다가 약속이 취소되면 다시 나옴).")
     @GetMapping
     ApiResponse<CursorPageResponse<PostSummaryResponse>> getPosts(
             @LoginMember Long memberId,
+            @Parameter(description = "고른 거점. 생략 시 전체(모든 지역). 거점 밖 게시글은 전체에서만 보임")
+            @RequestParam(value = "hub", required = false) PostHub hub,
             @Parameter(description = "true 지금 교환 / false 일반 교환 / 생략 시 모두")
             @RequestParam(value = "nowExchange", required = false) Boolean nowExchange,
             @Parameter(description = "생략 시 전체")

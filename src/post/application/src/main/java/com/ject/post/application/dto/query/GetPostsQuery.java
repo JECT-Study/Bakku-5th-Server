@@ -7,6 +7,7 @@ public record GetPostsQuery(
         Long viewerId,
         Boolean nowExchange,
         String category,
+        String hub,
         Long cursorId,
         int size
 ) implements Query<PostPageResult> {

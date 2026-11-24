@@ -6,6 +6,7 @@ import com.ject.post.application.dto.PostPageResult;
 import com.ject.post.application.dto.PostSummaryResult;
 import com.ject.post.application.dto.query.GetPostsQuery;
 import com.ject.post.application.port.PostSummaryReader;
+import com.ject.post.domain.domain.Hub;
 import com.ject.post.domain.domain.PostCategory;
 import com.ject.post.domain.domain.PostStatus;
 import org.junit.jupiter.api.DisplayName;
@@ -36,7 +37,7 @@ class GetPostsHandlerTest {
         FakePostSummaryReader reader = new FakePostSummaryReader(rows(30, 29, 28));
 
         // when
-        PostPageResult result = handler(reader).handle(new GetPostsQuery(VIEWER_ID, null, null, null, 2));
+        PostPageResult result = handler(reader).handle(new GetPostsQuery(VIEWER_ID, null, null, null, null, 2));
 
         // then
         assertEquals(3, reader.receivedLimit);
@@ -52,7 +53,7 @@ class GetPostsHandlerTest {
         FakePostSummaryReader reader = new FakePostSummaryReader(rows(30, 29));
 
         // when
-        PostPageResult result = handler(reader).handle(new GetPostsQuery(VIEWER_ID, null, null, 31L, 2));
+        PostPageResult result = handler(reader).handle(new GetPostsQuery(VIEWER_ID, null, null, null, 31L, 2));
 
         // then
         assertEquals(2, result.content().size());
@@ -62,16 +63,16 @@ class GetPostsHandlerTest {
     }
 
     @Test
-    @DisplayName("교환 방식 · 카테고리 · 현재 시각을 조건으로 넘긴다")
+    @DisplayName("교환 방식 · 카테고리 · 거점 · 현재 시각을 조건으로 넘긴다")
     void handle_passesCondition() {
         // given
         FakePostSummaryReader reader = new FakePostSummaryReader(List.of());
 
         // when
-        handler(reader).handle(new GetPostsQuery(VIEWER_ID, true, "IDOL", null, 20));
+        handler(reader).handle(new GetPostsQuery(VIEWER_ID, true, "IDOL", "SINDORIM", null, 20));
 
         // then
-        assertEquals(new PostSummaryReader.Condition(true, PostCategory.IDOL, NOW), reader.receivedCondition);
+        assertEquals(new PostSummaryReader.Condition(true, PostCategory.IDOL, Hub.SINDORIM, NOW), reader.receivedCondition);
     }
 
     @Test
@@ -85,7 +86,7 @@ class GetPostsHandlerTest {
 
         // when
         List<PostSummaryResult> content = handler(reader)
-                .handle(new GetPostsQuery(VIEWER_ID, null, null, null, 20)).content();
+                .handle(new GetPostsQuery(VIEWER_ID, null, null, null, null, 20)).content();
 
         // then
         PostSummaryResult mine = content.get(0);

@@ -1,6 +1,7 @@
 package com.ject.post.infrastructure.repository;
 
 import com.ject.post.application.port.PostSummaryReader;
+import com.ject.post.domain.domain.Hub;
 import com.ject.post.domain.domain.PostCategory;
 import com.ject.post.domain.domain.PostStatus;
 import com.ject.post.infrastructure.entity.PostEntity;
@@ -38,6 +39,7 @@ public class JpaPostSummaryReader implements PostSummaryReader {
                         postEntity.status.eq(PostStatus.AVAILABLE),
                         exchangeType(condition.nowExchange(), condition.now()),
                         categoryEq(condition.category()),
+                        hubEq(condition.hub()),
                         idBefore(cursorId))
                 .orderBy(postEntity.id.desc())
                 .limit(limit)
@@ -83,6 +85,10 @@ public class JpaPostSummaryReader implements PostSummaryReader {
 
     private static BooleanExpression categoryEq(PostCategory category) {
         return category == null ? null : postEntity.category.eq(category);
+    }
+
+    private static BooleanExpression hubEq(Hub hub) {
+        return hub == null ? null : postEntity.hub.eq(hub);
     }
 
     private static BooleanExpression idBefore(Long cursorId) {
