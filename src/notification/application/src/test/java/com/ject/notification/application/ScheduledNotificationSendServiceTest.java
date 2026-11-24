@@ -114,7 +114,8 @@ class ScheduledNotificationSendServiceTest {
 
     private ScheduledNotificationSendService service(FakeNotificationRepository notificationRepository) {
         NotificationDispatchService dispatchService = new NotificationDispatchService(notificationRepository,
-                memberId -> "하치와레러버", memberId -> List.of(), memberIds -> List.of(), new FakePushSender());
+                memberId -> "하치와레러버", memberId -> List.of(), memberIds -> List.of(), pushTokens -> { },
+                new FakePushSender());
         return new ScheduledNotificationSendService(scheduledNotificationRepository, dispatchService,
                 new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul"))));
     }
