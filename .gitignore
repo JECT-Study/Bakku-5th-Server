@@ -324,3 +324,9 @@ gradle-app.setting
 ### Environment ###
 # 로컬 환경 변수 파일 (비밀값). 키 목록은 .env.example 참고
 .env
+
+### Secrets ###
+# Apple 키 · Firebase 서비스 계정 키는 커밋하지 않는다 (#123)
+*.p8
+*firebase-adminsdk*.json
+*service-account*.json

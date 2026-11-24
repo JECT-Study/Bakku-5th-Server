@@ -47,4 +47,9 @@ public class PushDeviceRepositoryAdapter implements PushDeviceRepository {
     public List<String> findPushTokensByMemberIds(Collection<Long> memberIds) {
         return pushDeviceJpaRepository.findPushTokensByMemberIds(memberIds);
     }
+
+    @Override
+    public void deleteByPushTokens(Collection<String> pushTokens) {
+        pushDeviceJpaRepository.deleteByPushTokens(pushTokens);
+    }
 }

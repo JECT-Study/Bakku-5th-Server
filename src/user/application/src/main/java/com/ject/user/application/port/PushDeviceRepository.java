@@ -33,4 +33,6 @@ public interface PushDeviceRepository {
     void deleteAllByMemberId(Long memberId);
 
     List<String> findPushTokensByMemberIds(Collection<Long> memberIds);
+
+    void deleteByPushTokens(Collection<String> pushTokens);
 }

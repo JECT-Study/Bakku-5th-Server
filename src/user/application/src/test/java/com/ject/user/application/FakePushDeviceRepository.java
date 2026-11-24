@@ -49,6 +49,11 @@ class FakePushDeviceRepository implements PushDeviceRepository {
                 .toList();
     }
 
+    @Override
+    public void deleteByPushTokens(Collection<String> pushTokens) {
+        byDeviceId.values().removeIf(device -> pushTokens.contains(device.getPushToken()));
+    }
+
     Optional<PushDevice> findByDeviceId(String deviceId) {
         return Optional.ofNullable(byDeviceId.get(deviceId));
     }

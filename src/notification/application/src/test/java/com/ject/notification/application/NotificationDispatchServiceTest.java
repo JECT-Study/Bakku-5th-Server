@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -28,12 +29,14 @@ class NotificationDispatchServiceTest {
 
     private FakeNotificationRepository notificationRepository;
     private FakePushSender pushSender;
+    private List<List<String>> deletedTokens;
     private NotificationDispatchService dispatchService;
 
     @BeforeEach
     void setUp() {
         notificationRepository = new FakeNotificationRepository();
         pushSender = new FakePushSender();
+        deletedTokens = new ArrayList<>();
         dispatchService = service(memberIds -> memberIds.stream()
                 .flatMap(memberId -> TOKENS.getOrDefault(memberId, List.of()).stream())
                 .toList());
@@ -170,9 +173,51 @@ class NotificationDispatchServiceTest {
         assertTrue(pushSender.sent().isEmpty());
     }
 
+    @Test
+    @DisplayName("FCM이 더 쓸 수 없다고 답한 토큰은 기기 행을 지운다")
+    void unusableTokensAreDeleted() {
+        // given
+        pushSender.markUnusable(List.of("fcm-303"));
+
+        // when
+        dispatchService.dispatch(request(NotificationType.EXCHANGE_REQUESTED, List.of(101L, 303L), SENDER_ID));
+
+        // then
+        assertEquals(List.of(List.of("fcm-303")), deletedTokens);
+    }
+
+    @Test
+    @DisplayName("모든 토큰이 정상이면 기기 정리를 부르지 않는다")
+    void noUnusableTokens() {
+        // when
+        dispatchService.dispatch(request(NotificationType.EXCHANGE_REQUESTED, List.of(101L), SENDER_ID));
+
+        // then
+        assertTrue(deletedTokens.isEmpty());
+    }
+
+    @Test
+    @DisplayName("기기 정리가 실패해도 알림 목록 저장은 남는다")
+    void cleanupFailureKeepsSaved() {
+        // given
+        pushSender.markUnusable(List.of("fcm-101"));
+        NotificationDispatchService failingCleanup = new NotificationDispatchService(notificationRepository,
+                memberId -> "하치와레러버", memberId -> List.of(), memberIds -> List.of("fcm-101"),
+                pushTokens -> {
+                    throw new IllegalStateException("삭제 실패");
+                }, pushSender);
+
+        // when
+        failingCleanup.dispatch(request(NotificationType.EXCHANGE_REQUESTED, List.of(101L), SENDER_ID));
+
+        // then
+        assertEquals(1, notificationRepository.findAll().size());
+    }
+
     private NotificationDispatchService service(PushTokenPort pushTokenPort) {
         return new NotificationDispatchService(notificationRepository, memberId -> "하치와레러버",
-                memberId -> BLOCKED.getOrDefault(memberId, List.of()), pushTokenPort, pushSender);
+                memberId -> BLOCKED.getOrDefault(memberId, List.of()), pushTokenPort,
+                pushTokens -> deletedTokens.add(List.copyOf(pushTokens)), pushSender);
     }
 
     private static NotificationRequested request(NotificationType type, List<Long> receiverIds, Long senderId) {

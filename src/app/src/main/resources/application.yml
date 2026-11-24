@@ -17,6 +17,10 @@ spring:
       ddl-auto: validate
   lifecycle:
     timeout-per-shutdown-phase: 30s
+  task:
+    execution:
+      # 알림 전용 실행기(notificationExecutor)가 있어도 Spring 기본 실행기(applicationTaskExecutor)를 그대로 만든다
+      mode: force
   servlet:
     multipart:
       max-file-size: 50MB
@@ -65,6 +69,9 @@ app:
       region: ${S3_REGION:garage}
       access-key: ${S3_ACCESS_KEY:}
       secret-key: ${S3_SECRET_KEY:}
+  fcm:
+    # Firebase 서비스 계정 키 JSON을 Base64로 인코딩한 값. 비우면 푸시를 보내지 않고 로그만 남긴다 (로컬 · 테스트)
+    credentials: ${FCM_CREDENTIALS:}
 
 server:
   shutdown: graceful
