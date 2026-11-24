@@ -31,8 +31,22 @@ public record AppointmentResult(
         boolean otherActiveProposalsOnPost,
         Instant confirmedAt,
         Instant createdAt,
-        ConfirmationSummary confirmation        // 확정 전이거나 취소된 약속이면 null
+        ConfirmationSummary confirmation,       // 확정 전이거나 취소된 약속이면 null
+        Long canceledByUserId                   // 취소된 약속이 아니면 null
 ) {
+
+    /**
+     * 취소 정보 없이 만드는 결과 (약속 취소 전 기능의 테스트 호환용)
+     */
+    public AppointmentResult(Long id, Long exchangeId, Long proposerUserId, Long receiverUserId,
+                             AppointmentStatus status, AppointmentTimeType timeType, Instant scheduledAt,
+                             Place place, List<AppointmentItemResult> items, Instant expiresAt,
+                             Integer myReminderOffsetMinutes, boolean otherActiveProposalsOnPost,
+                             Instant confirmedAt, Instant createdAt, ConfirmationSummary confirmation) {
+        this(id, exchangeId, proposerUserId, receiverUserId, status, timeType, scheduledAt, place, items,
+                expiresAt, myReminderOffsetMinutes, otherActiveProposalsOnPost, confirmedAt, createdAt, confirmation,
+                null);
+    }
 
     /**
      * 교환 확인 정보 없이 만드는 결과 (교환 확인 전 기능의 테스트 호환용)
@@ -71,7 +85,8 @@ public record AppointmentResult(
                 otherActiveProposalsOnPost,
                 appointment.getConfirmedAt(),
                 appointment.getCreatedAt(),
-                confirmationOf(appointment, viewerId, now)
+                confirmationOf(appointment, viewerId, now),
+                appointment.getCanceledByUserId()
         );
     }
 

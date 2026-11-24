@@ -55,8 +55,8 @@ public record AppointmentResponse(
         @Schema(description = "대기 중인 변경 제안. 없으면 null")
         AppointmentChangeResponse pendingChange,
 
-        @Schema(description = "처리 대기 중인 취소 요청 (REQUESTED 또는 REJECTED). 없으면 null")
-        CancellationResponse pendingCancellation,
+        @Schema(description = "약속을 취소한 사람. 취소된 약속(CANCELED)이 아니면 null", example = "101")
+        Long canceledByUserId,
 
         @Schema(description = "교환 확인 정보. 확정 전이거나 취소된 약속이면 null")
         ConfirmationResponse confirmation,
@@ -68,7 +68,7 @@ public record AppointmentResponse(
         OffsetDateTime createdAt
 ) {
     /**
-     * 약속 응답. 변경 제안 · 취소 요청은 아직 없으므로 null
+     * 약속 응답. 변경 제안은 아직 없으므로 null
      */
     public static AppointmentResponse from(AppointmentResult result, ImageUrlResolver imageUrlResolver) {
         return new AppointmentResponse(
@@ -88,7 +88,7 @@ public record AppointmentResponse(
                 result.myReminderOffsetMinutes(),
                 result.otherActiveProposalsOnPost(),
                 null,   // Todo: 약속 변경 제안 구현 후 반영
-                null,   // Todo: 약속 취소 구현 후 반영
+                result.canceledByUserId(),
                 confirmationOf(result.confirmation()),
                 toSeoul(result.confirmedAt()),
                 toSeoul(result.createdAt()));

@@ -34,6 +34,8 @@ public class AppointmentMapper {
                 .receiverReminderOffsetMinutes(appointment.getReceiverReminderOffsetMinutes())
                 .confirmedAt(appointment.getConfirmedAt())
                 .resolvedAt(appointment.getResolvedAt())
+                .canceledByUserId(appointment.getCanceledByUserId())
+                .cancelImminent(appointment.getCancelImminent())
                 .build();
     }
 
@@ -91,7 +93,9 @@ public class AppointmentMapper {
                                 confirmation.getAnsweredAt()))
                         .toList(),
                 entity.getCreatedAt(),
-                entity.getUpdatedAt()
+                entity.getUpdatedAt(),
+                entity.getCanceledByUserId(),
+                entity.getCancelImminent()
         );
     }
 }
