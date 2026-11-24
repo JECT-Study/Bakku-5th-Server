@@ -11,4 +11,6 @@ dependencies {
 
     // 테스트
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    // 알림 없음 예외 → NOTIFICATION_001 응답 확인
+    testImplementation project(':notification-domain')
 }

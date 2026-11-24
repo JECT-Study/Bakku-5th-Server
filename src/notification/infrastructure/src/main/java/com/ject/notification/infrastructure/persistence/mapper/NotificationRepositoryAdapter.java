@@ -4,8 +4,10 @@ import com.ject.notification.application.port.NotificationRepository;
 import com.ject.notification.domain.domain.Notification;
 import com.ject.notification.infrastructure.persistence.entity.NotificationJpaEntity;
 import com.ject.notification.infrastructure.persistence.repository.NotificationJpaRepository;
+import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 
 @Repository
@@ -24,9 +26,44 @@ public class NotificationRepositoryAdapter implements NotificationRepository {
                 .toList());
     }
 
+    @Override
+    public List<Notification> findPage(Long receiverId, Instant createdFrom, Long cursorId, int limit) {
+        Long before = cursorId == null ? Long.MAX_VALUE : cursorId;
+        return notificationJpaRepository.findPage(receiverId, before, createdFrom, Limit.of(limit)).stream()
+                .map(NotificationRepositoryAdapter::toDomain)
+                .toList();
+    }
+
+    @Override
+    public long countUnread(Long receiverId, Instant createdFrom) {
+        return notificationJpaRepository.countUnread(receiverId, createdFrom);
+    }
+
+    @Override
+    public boolean markRead(Long notificationId, Long receiverId, Instant readAt, Instant createdFrom) {
+        return notificationJpaRepository.markRead(notificationId, receiverId, readAt, createdFrom) > 0;
+    }
+
+    @Override
+    public boolean exists(Long notificationId, Long receiverId, Instant createdFrom) {
+        return notificationJpaRepository.existsByIdAndReceiverIdAndCreatedAtGreaterThanEqual(notificationId,
+                receiverId, createdFrom);
+    }
+
+    @Override
+    public long markAllRead(Long receiverId, Instant readAt, Instant createdFrom) {
+        return notificationJpaRepository.markAllRead(receiverId, readAt, createdFrom);
+    }
+
     private static NotificationJpaEntity toEntity(Notification notification) {
         return new NotificationJpaEntity(notification.getReceiverId(), notification.getType(),
                 notification.getTitle(), notification.getBody(), notification.getTargetType(),
                 notification.getTargetId());
+    }
+
+    private static Notification toDomain(NotificationJpaEntity entity) {
+        return Notification.restore(entity.getId(), entity.getReceiverId(), entity.getType(), entity.getTitle(),
+                entity.getBody(), entity.getTargetType(), entity.getTargetId(), entity.getReadAt(),
+                entity.getCreatedAt());
     }
 }
