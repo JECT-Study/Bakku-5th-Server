@@ -7,8 +7,10 @@ import com.ject.common.web.auth.LoginMemberArgumentResolver;
 import com.ject.common.web.image.ImageUrlResolver;
 import com.ject.post.api.exception.PostExceptionHandler;
 import com.ject.post.application.dto.PostPageResult;
+import com.ject.post.application.dto.PostSearchPageResult;
 import com.ject.post.application.dto.PostSummaryResult;
 import com.ject.post.application.dto.query.GetPostsQuery;
+import com.ject.post.application.dto.query.SearchPostsQuery;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,6 +38,7 @@ class PostDiscoveryControllerTest {
 
     private static final Long MEMBER_ID = 3L;
     private static final String CURSOR_ID_10 = "eyJpZCI6MTB9";
+    private static final String SEARCH_CURSOR_RANK2_ID57 = "eyJyYW5rIjoyLCJpZCI6NTd9";
 
     private final FakeQueryBus queryBus = new FakeQueryBus();
     private MockMvc mockMvc;
@@ -137,9 +140,51 @@ class PostDiscoveryControllerTest {
     }
 
     @Test
+    @DisplayName("PO-7 검색어 · 카테고리 · 커서(순위, id)를 Query로 넘기고, 다음 커서를 순위 · id로 만든다")
+    void searchPosts_sendsQueryAndCursor() throws Exception {
+        queryBus.searchResult = new PostSearchPageResult(List.of(summary(57L)), 3, 28L, true);
+
+        getPosts(get("/api/v1/posts/search")
+                .param("keyword", "# 치이 카와")
+                .param("category", "IDOL")
+                .param("cursor", SEARCH_CURSOR_RANK2_ID57)
+                .param("size", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].id").value(57))
+                .andExpect(jsonPath("$.data.nextCursor").value("eyJyYW5rIjozLCJpZCI6Mjh9"))
+                .andExpect(jsonPath("$.data.hasNext").value(true));
+
+        assertEquals(new SearchPostsQuery(MEMBER_ID, "# 치이 카와", "IDOL", 2, 57L, 5), queryBus.received);
+    }
+
+    @Test
+    @DisplayName("PO-7 마지막 페이지면 nextCursor는 null이다")
+    void searchPosts_lastPage_nullCursor() throws Exception {
+        queryBus.searchResult = new PostSearchPageResult(List.of(summary(1L)), null, null, false);
+
+        getPosts(get("/api/v1/posts/search").param("keyword", "치이카와"))
+                .andExpect(jsonPath("$.data", hasEntry(equalTo("nextCursor"), nullValue())));
+    }
+
+    @Test
+    @DisplayName("PO-7 검색 커서 형식이 아니면(홈 목록 커서 포함) COMMON_001")
+    void searchPosts_invalidCursor_returnsCommon001() throws Exception {
+        expectCommon001(getPosts(get("/api/v1/posts/search").param("keyword", "치이카와").param("cursor", CURSOR_ID_10)));
+        expectCommon001(getPosts(get("/api/v1/posts/search").param("keyword", "치이카와").param("cursor", "not-a-cursor")));
+    }
+
+    @Test
     @DisplayName("PO-7 검색어가 없으면 COMMON_001")
     void searchPosts_withoutKeyword_returnsCommon001() throws Exception {
-        expectCommon001(mockMvc.perform(get("/api/v1/posts/search")));
+        expectCommon001(getPosts(get("/api/v1/posts/search")));
+    }
+
+    @Test
+    @DisplayName("PO-7 로그인 정보가 없으면 AUTH_001")
+    void searchPosts_withoutLogin_returnsAuth001() throws Exception {
+        mockMvc.perform(get("/api/v1/posts/search").param("keyword", "치이카와"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTH_001"));
     }
 
     private ResultActions getPosts() throws Exception {
@@ -165,13 +210,14 @@ class PostDiscoveryControllerTest {
     static class FakeQueryBus implements QueryBus {
 
         PostPageResult result = new PostPageResult(List.of(), null, false);
+        PostSearchPageResult searchResult = new PostSearchPageResult(List.of(), null, null, false);
         Query<?> received;
 
         @Override
         @SuppressWarnings("unchecked")
         public <R> R send(Query<R> query) {
             received = query;
-            return (R) result;
+            return (R) (query instanceof SearchPostsQuery ? searchResult : result);
         }
     }
 }

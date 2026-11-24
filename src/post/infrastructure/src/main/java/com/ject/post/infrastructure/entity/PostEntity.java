@@ -41,6 +41,9 @@ public class PostEntity extends BaseEntity {
     @Column(name = "title", nullable = false, length = 40)
     private String title;
 
+    @Column(name = "title_normalized", insertable = false, updatable = false, length = 40)
+    private String titleNormalized;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "category", nullable = false, length = 20)
     private PostCategory category;

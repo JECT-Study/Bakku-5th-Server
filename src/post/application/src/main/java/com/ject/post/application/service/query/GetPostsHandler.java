@@ -7,7 +7,6 @@ import com.ject.post.application.dto.PostSummaryResult;
 import com.ject.post.application.dto.query.GetPostsQuery;
 import com.ject.post.application.port.PostSummaryReader;
 import com.ject.post.domain.domain.Hub;
-import com.ject.post.domain.domain.Post;
 import com.ject.post.domain.domain.PostCategory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -36,23 +35,9 @@ public class GetPostsHandler implements QueryHandler<GetPostsQuery, PostPageResu
         List<PostSummaryReader.Row> page = hasNext ? rows.subList(0, query.size()) : rows;
 
         List<PostSummaryResult> content = page.stream()
-                .map(row -> toResult(row, query.viewerId(), now))
+                .map(row -> PostSummaryResults.from(row, query.viewerId(), now, serviceTime))
                 .toList();
         Long nextCursorId = hasNext ? page.get(page.size() - 1).id() : null;
         return new PostPageResult(content, nextCursorId, hasNext);
-    }
-
-    private PostSummaryResult toResult(PostSummaryReader.Row row, Long viewerId, Instant now) {
-        return new PostSummaryResult(
-                row.id(),
-                row.thumbnailKey(),
-                row.title(),
-                row.regionName(),
-                row.status().name(),
-                Post.isNowExchange(row.status(), row.nowExchangeEndsAt(), now),
-                serviceTime.toOffset(row.nowExchangeEndsAt()),
-                row.wantedItem(),
-                row.authorId().equals(viewerId),
-                serviceTime.toOffset(row.createdAt()));
     }
 }

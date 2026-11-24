@@ -39,9 +39,10 @@ public interface PostDiscoveryApi {
             @Parameter(description = "1~50, 기본 20")
             @RequestParam(value = "size", defaultValue = "20") @Min(1) @Max(50) Integer size);
 
-    @Operation(summary = "PO-7 제품명 · 태그 검색 (stub)", description = "제품명 또는 태그에 검색어가 들어간 게시글을 전체 지역에서 찾습니다. 띄어쓰기 · 대소문자 · 앞의 #은 무시합니다.")
+    @Operation(summary = "PO-7 제품명 · 태그 검색", description = "제품명 또는 태그에 검색어가 들어간 교환 가능 게시글을 전체 지역에서 정확도순(태그 정확히 일치 → 제품명 포함 → 태그 일부 포함, 같으면 최신순)으로 찾습니다. 띄어쓰기 · 대소문자 · 앞의 #은 무시합니다.")
     @GetMapping("/search")
     ApiResponse<CursorPageResponse<PostSummaryResponse>> searchPosts(
+            @LoginMember Long memberId,
             @Parameter(description = "검색어. 띄어쓰기와 앞의 #을 뺀 길이로 2~30자")
             @RequestParam("keyword") @NotBlank @Size(min = 2, max = 30) String keyword,
             @Parameter(description = "생략 시 전체")
