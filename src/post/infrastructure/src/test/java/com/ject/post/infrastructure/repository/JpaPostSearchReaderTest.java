@@ -62,6 +62,18 @@ class JpaPostSearchReaderTest extends PostgresTest {
     }
 
     @Test
+    @DisplayName("태그로만 걸린 글도 교환 가능 · 카테고리 조건을 따른다")
+    void search_tagOnlyFollowsStatusAndCategory() {
+        Long character = insert("인형", PostStatus.AVAILABLE, PostCategory.CHARACTER, "치이카와");
+        Long idol = insert("포토카드", PostStatus.AVAILABLE, PostCategory.IDOL, "치이카와굿즈");
+        insert("쿠션", PostStatus.RESERVED, PostCategory.CHARACTER, "치이카와");
+        insert("키링", PostStatus.DELETED, PostCategory.CHARACTER, "치이카와굿즈");
+
+        assertEquals(List.of(character, idol), ids(reader.search(condition("치이카와", null), null, 10)));
+        assertEquals(List.of(character), ids(reader.search(condition("치이카와", PostCategory.CHARACTER), null, 10)));
+    }
+
+    @Test
     @DisplayName("커서로 10개씩 이어 받으면 30개가 빠짐 · 중복 없이 정확도순으로 나온다")
     void search_cursorPagination() {
         List<Long> expected = new ArrayList<>();

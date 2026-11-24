@@ -1,97 +1,114 @@
 package com.ject.post.infrastructure.repository;
 
 import com.ject.post.application.port.PostSearchReader;
-import com.ject.post.domain.domain.PostCategory;
 import com.ject.post.domain.domain.PostStatus;
 import com.ject.post.infrastructure.entity.PostEntity;
 import com.ject.post.infrastructure.entity.PostImageEntity;
 import com.ject.post.infrastructure.jpa.PostImageEntityRepository;
-import com.querydsl.core.Tuple;
-import com.querydsl.core.types.dsl.BooleanExpression;
-import com.querydsl.core.types.dsl.CaseBuilder;
-import com.querydsl.core.types.dsl.NumberExpression;
-import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.ject.post.infrastructure.entity.QPostEntity.postEntity;
-import static com.ject.post.infrastructure.entity.QPostTagEntity.postTagEntity;
-import static com.ject.post.infrastructure.entity.QPostTagLinkEntity.postTagLinkEntity;
 
 @Repository
 @RequiredArgsConstructor
 public class JpaPostSearchReader implements PostSearchReader {
 
+    private static final String AVAILABLE = PostStatus.AVAILABLE.name();
+
+    private static final String RANKED_HITS = """
+            SELECT c.id, c.rank
+            FROM (SELECT hit.id, min(hit.rank) AS rank
+                  FROM (SELECT p.id, 2 AS rank
+                        FROM post p
+                        WHERE p.status = '%s' AND p.title_normalized LIKE :pattern ESCAPE '!'
+                        UNION ALL
+                        SELECT l.post_id, CASE WHEN t.name = :keyword THEN 1 ELSE 3 END
+                        FROM post_tag t
+                        JOIN post_tag_link l ON l.tag_id = t.id
+                        WHERE t.name LIKE :pattern ESCAPE '!') hit
+                  GROUP BY hit.id) c
+            JOIN post p ON p.id = c.id AND p.status = '%s'
+            """.formatted(AVAILABLE, AVAILABLE);
+
+    private final EntityManager entityManager;
     private final JPAQueryFactory queryFactory;
     private final PostImageEntityRepository postImageEntityRepository;
 
     @Override
     @Transactional(readOnly = true)
     public List<Hit> search(Condition condition, Cursor cursor, int limit) {
-        String keyword = condition.keyword();
-        BooleanExpression titleContains = postEntity.titleNormalized.contains(keyword);
-        BooleanExpression tagExact = tagExists(postTagEntity.name.eq(keyword));
-        BooleanExpression tagContains = tagExists(postTagEntity.name.contains(keyword));
-        NumberExpression<Integer> rank = new CaseBuilder()
-                .when(tagExact).then(1)
-                .when(titleContains).then(2)
-                .otherwise(3);
+        List<Object[]> rankedIds = rankedIds(condition, cursor, limit);
+        if (rankedIds.isEmpty()) {
+            return List.of();
+        }
 
-        List<Tuple> tuples = queryFactory
-                .select(postEntity, rank)
-                .from(postEntity)
-                .where(
-                        postEntity.status.eq(PostStatus.AVAILABLE),
-                        categoryEq(condition.category()),
-                        titleContains.or(tagContains),
-                        after(rank, cursor))
-                .orderBy(rank.asc(), postEntity.id.desc())
-                .limit(limit)
-                .fetch();
+        List<Long> ids = rankedIds.stream().map(row -> ((Number) row[0]).longValue()).toList();
+        Map<Long, PostEntity> posts = queryFactory
+                .selectFrom(postEntity)
+                .where(postEntity.id.in(ids))
+                .fetch().stream()
+                .collect(Collectors.toMap(PostEntity::getId, Function.identity()));
+        Map<Long, String> thumbnails = findThumbnails(ids);
 
-        List<PostEntity> posts = tuples.stream().map(tuple -> tuple.get(postEntity)).toList();
-        Map<Long, String> thumbnails = findThumbnails(posts);
-        return tuples.stream()
-                .map(tuple -> {
-                    PostEntity post = tuple.get(postEntity);
-                    return new Hit(tuple.get(rank), JpaPostSummaryReader.toRow(post, thumbnails.get(post.getId())));
+        return rankedIds.stream()
+                .map(row -> {
+                    Long id = ((Number) row[0]).longValue();
+                    int rank = ((Number) row[1]).intValue();
+                    return new Hit(rank, JpaPostSummaryReader.toRow(posts.get(id), thumbnails.get(id)));
                 })
                 .toList();
     }
 
-    private static BooleanExpression tagExists(BooleanExpression tagCondition) {
-        return JPAExpressions.selectOne()
-                .from(postTagLinkEntity, postTagEntity)
-                .where(
-                        postTagLinkEntity.postId.eq(postEntity.id),
-                        postTagLinkEntity.tagId.eq(postTagEntity.id),
-                        tagCondition)
-                .exists();
-    }
-
-    private static BooleanExpression categoryEq(PostCategory category) {
-        return category == null ? null : postEntity.category.eq(category);
-    }
-
-    private static BooleanExpression after(NumberExpression<Integer> rank, Cursor cursor) {
-        if (cursor == null) {
-            return null;
+    @SuppressWarnings("unchecked")
+    private List<Object[]> rankedIds(Condition condition, Cursor cursor, int limit) {
+        List<String> filters = new ArrayList<>();
+        if (condition.category() != null) {
+            filters.add("p.category = :category");
         }
-        return rank.gt(cursor.rank())
-                .or(rank.eq(cursor.rank()).and(postEntity.id.lt(cursor.id())));
+        if (cursor != null) {
+            filters.add("(c.rank > :cursorRank OR (c.rank = :cursorRank AND c.id < :cursorId))");
+        }
+
+        StringBuilder sql = new StringBuilder(RANKED_HITS);
+        if (!filters.isEmpty()) {
+            sql.append("WHERE ").append(String.join(" AND ", filters)).append('\n');
+        }
+        sql.append("ORDER BY c.rank, c.id DESC\nLIMIT :limit");
+
+        Query query = entityManager.createNativeQuery(sql.toString())
+                .setParameter("pattern", containsPattern(condition.keyword()))
+                .setParameter("keyword", condition.keyword())
+                .setParameter("limit", limit);
+        if (condition.category() != null) {
+            query.setParameter("category", condition.category().name());
+        }
+        if (cursor != null) {
+            query.setParameter("cursorRank", cursor.rank());
+            query.setParameter("cursorId", cursor.id());
+        }
+        return query.getResultList();
     }
 
-    private Map<Long, String> findThumbnails(List<PostEntity> posts) {
-        if (posts.isEmpty()) {
-            return Map.of();
-        }
-        List<Long> postIds = posts.stream().map(PostEntity::getId).toList();
+    private static String containsPattern(String keyword) {
+        String escaped = keyword
+                .replace("!", "!!")
+                .replace("%", "!%")
+                .replace("_", "!_");
+        return "%" + escaped + "%";
+    }
+
+    private Map<Long, String> findThumbnails(List<Long> postIds) {
         return postImageEntityRepository
                 .findByPostIdInAndSortOrder(postIds, JpaPostSummaryReader.THUMBNAIL_SORT_ORDER).stream()
                 .collect(Collectors.toMap(PostImageEntity::getPostId, PostImageEntity::getImageKey));
