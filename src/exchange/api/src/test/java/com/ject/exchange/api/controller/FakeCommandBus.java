@@ -3,12 +3,12 @@ package com.ject.exchange.api.controller;
 import com.ject.common.core.cqrs.command.Command;
 import com.ject.common.core.cqrs.command.CommandBus;
 import com.ject.exchange.application.dto.command.AcceptAppointmentCommand;
+import com.ject.exchange.application.dto.command.CancelAppointmentCommand;
 import com.ject.exchange.application.dto.command.CreateExchangeCommand;
 import com.ject.exchange.application.dto.command.ProposeAppointmentCommand;
 import com.ject.exchange.application.dto.command.RejectAppointmentCommand;
 import com.ject.exchange.application.dto.command.RespondConfirmationCommand;
 import com.ject.exchange.application.dto.command.UpdateNewItemCommand;
-import com.ject.exchange.application.dto.command.UpdateReminderCommand;
 import com.ject.exchange.application.dto.command.WithdrawAppointmentCommand;
 import com.ject.exchange.application.service.command.CreateExchangeHandler;
 import com.ject.exchange.application.service.command.UpdateNewItemHandler;
@@ -30,8 +30,8 @@ class FakeCommandBus implements CommandBus {
     private Function<AcceptAppointmentCommand, Long> acceptAppointmentResponder;
     private Function<RejectAppointmentCommand, Long> rejectAppointmentResponder;
     private Function<WithdrawAppointmentCommand, Long> withdrawAppointmentResponder;
-    private Function<UpdateReminderCommand, Long> updateReminderResponder;
     private Function<RespondConfirmationCommand, Long> respondConfirmationResponder;
+    private Function<CancelAppointmentCommand, Long> cancelAppointmentResponder;
 
     FakeCommandBus(UpdateNewItemHandler updateNewItemHandler, CreateExchangeHandler createExchangeHandler) {
         this.updateNewItemHandler = updateNewItemHandler;
@@ -65,14 +65,14 @@ class FakeCommandBus implements CommandBus {
         this.withdrawAppointmentResponder = responder;
     }
 
-    /** A-7 커맨드 응답(약속 id 또는 예외)을 정한다. */
-    void onUpdateReminder(Function<UpdateReminderCommand, Long> responder) {
-        this.updateReminderResponder = responder;
-    }
-
     /** F-1 커맨드 응답(약속 id 또는 예외)을 정한다. */
     void onRespondConfirmation(Function<RespondConfirmationCommand, Long> responder) {
         this.respondConfirmationResponder = responder;
+    }
+
+    /** A-8 커맨드 응답(약속 id 또는 예외)을 정한다. */
+    void onCancelAppointment(Function<CancelAppointmentCommand, Long> responder) {
+        this.cancelAppointmentResponder = responder;
     }
 
     @Override
@@ -101,13 +101,13 @@ class FakeCommandBus implements CommandBus {
                 && withdrawAppointmentResponder != null) {
             return (R) withdrawAppointmentResponder.apply(withdrawAppointmentCommand);
         }
-        if (command instanceof UpdateReminderCommand updateReminderCommand
-                && updateReminderResponder != null) {
-            return (R) updateReminderResponder.apply(updateReminderCommand);
-        }
         if (command instanceof RespondConfirmationCommand respondConfirmationCommand
                 && respondConfirmationResponder != null) {
             return (R) respondConfirmationResponder.apply(respondConfirmationCommand);
+        }
+        if (command instanceof CancelAppointmentCommand cancelAppointmentCommand
+                && cancelAppointmentResponder != null) {
+            return (R) cancelAppointmentResponder.apply(cancelAppointmentCommand);
         }
         throw new IllegalStateException("이 테스트가 다루지 않는 커맨드: " + command);
     }

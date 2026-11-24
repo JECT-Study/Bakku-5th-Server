@@ -27,22 +27,12 @@ public enum ExchangeErrorCode implements ErrorCode {
     SCHEDULED_AT_PASSED("EXCHANGE_107", 409, "약속 시각이 이미 지났습니다."),
     POST_RESERVED_ELSEWHERE("EXCHANGE_108", 409, "다른 분과 약속이 잡혀 있는 글입니다."),
     INVALID_APPOINTMENT_STATUS("EXCHANGE_109", 409, "처리할 수 없는 약속 상태입니다."),
-    REMINDER_NOT_ALLOWED("EXCHANGE_110", 409, "지금 바로 약속은 알림을 설정할 수 없습니다."),
+    // 출시 후 검토 (E-06-1, #117): 각자 알림 변경(A-7)에서만 썼다
+    // REMINDER_NOT_ALLOWED("EXCHANGE_110", 409, "지금 바로 약속은 알림을 설정할 수 없습니다."),
     INVALID_OFFERED_ITEMS("EXCHANGE_111", 400, "교환할 물건 지정이 올바르지 않습니다."),
     ITEM_NOT_AVAILABLE("EXCHANGE_112", 409, "교환할 수 있는 아이템이 아닙니다."),
 
-    CHANGE_NOT_FOUND("EXCHANGE_121", 404, "변경 제안을 찾을 수 없습니다."),
-    CHANGE_ALREADY_PENDING("EXCHANGE_122", 409, "대기 중인 변경 제안이 이미 있습니다."),
-    CHANGE_TIME_PASSED("EXCHANGE_123", 409, "약속 시각이 지나 변경할 수 없습니다."),
-    NOT_CHANGE_RECEIVER("EXCHANGE_124", 403, "변경 제안을 받은 사람이 아닙니다."),
-    CHANGE_NOT_PENDING("EXCHANGE_125", 409, "이미 처리되었거나 만료된 변경 제안입니다."),
-
-    CANCELLATION_NOT_FOUND("EXCHANGE_201", 404, "취소 요청을 찾을 수 없습니다."),
-    CANCELLATION_ALREADY_PENDING("EXCHANGE_202", 409, "진행 중인 취소 요청이 이미 있습니다."),
-    NOT_CANCELLATION_RECEIVER("EXCHANGE_203", 403, "취소 요청을 받은 사람이 아닙니다."),
-    NOT_CANCELLATION_REQUESTER("EXCHANGE_204", 403, "취소 요청자가 아닙니다."),
-    CANCELLATION_ALREADY_RESOLVED("EXCHANGE_205", 409, "이미 처리된 취소 요청입니다."),
-    FORCE_CANCEL_TOO_EARLY("EXCHANGE_206", 409, "아직 일방 취소할 수 없습니다."),
+    CANCEL_AFTER_CONFIRMATION_OPEN("EXCHANGE_207", 409, "교환 확인이 시작되어 약속을 취소할 수 없습니다."),
 
     CONFIRMATION_NOT_OPEN("EXCHANGE_301", 409, "아직 교환 확인에 응답할 수 없습니다."),
     CONFIRMATION_ALREADY_ANSWERED("EXCHANGE_302", 409, "이미 교환 확인에 응답했습니다."),

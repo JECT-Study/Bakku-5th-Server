@@ -1,5 +1,6 @@
 package com.ject.notification.api.controller.api;
 
+import com.ject.common.web.auth.LoginMember;
 import com.ject.common.web.response.ApiResponse;
 import com.ject.notification.api.dto.response.CursorPageResponse;
 import com.ject.notification.api.dto.response.NotificationReadResponse;
@@ -22,10 +23,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 public interface NotificationApi {
 
     @Operation(summary = "NT-1 알림 목록",
-            description = "최신순, 30일 지난 알림은 보이지 않습니다. 알림은 이벤트마다 1건씩 저장합니다 (채팅도 메시지마다). 문구(title · body)는 서버가 만듭니다. "
-                    + "누르면 NT-3으로 읽음 처리 후 target으로 이동합니다. 1차 알림은 9종이고 모두 CHAT_ROOM으로 이동합니다.")
+            description = "최신순, 30일 지난 알림은 보이지 않습니다. 채팅 메시지는 푸시로만 보내고 목록에 없습니다 (X-01-1). "
+                    + "문구(title · body)는 서버가 만듭니다. 누르면 NT-3으로 읽음 처리 후 target으로 이동하고, target이 null이면 이동하지 않습니다. "
+                    + "에러: COMMON_001 cursor 형식 오류 · size 범위 밖")
     @GetMapping
     ApiResponse<CursorPageResponse<NotificationResponse>> getNotifications(
+            @LoginMember Long memberId,
             @Parameter(description = "이전 응답의 nextCursor. 첫 요청은 생략")
             @RequestParam(value = "cursor", required = false) String cursor,
             @Parameter(description = "1~50, 기본 20")
@@ -34,16 +37,18 @@ public interface NotificationApi {
     @Operation(summary = "NT-2 안 읽은 알림 수",
             description = "상단 알림 아이콘 배지에 씁니다. 앱 실행 · 앱이 앞으로 돌아올 때 · 푸시를 받았을 때 FE가 다시 부릅니다.")
     @GetMapping("/unread-count")
-    ApiResponse<UnreadCountResponse> getUnreadCount();
+    ApiResponse<UnreadCountResponse> getUnreadCount(@LoginMember Long memberId);
 
     @Operation(summary = "NT-3 알림 읽음",
             description = "알림을 누르면 읽음 처리한 뒤 해당 화면으로 갑니다. 이미 읽은 알림이어도 성공으로 처리합니다. "
                     + "에러: NOTIFICATION_001 알림 없음 (남의 알림 · 30일 지나 삭제됨 포함) → 목록 새로고침")
     @PostMapping("/{notificationId}/read")
     ApiResponse<NotificationReadResponse> read(
+            @LoginMember Long memberId,
             @Parameter(description = "알림 ID") @PathVariable("notificationId") Long notificationId);
 
-    @Operation(summary = "NT-4 모두 읽음", description = "안 읽은 알림을 전부 읽음 처리합니다.")
+    @Operation(summary = "NT-4 모두 읽음",
+            description = "30일 안에 받은 안 읽은 알림을 전부 읽음 처리하고, 이번에 읽음 처리한 수를 돌려줍니다.")
     @PostMapping("/read-all")
-    ApiResponse<ReadAllResponse> readAll();
+    ApiResponse<ReadAllResponse> readAll(@LoginMember Long memberId);
 }

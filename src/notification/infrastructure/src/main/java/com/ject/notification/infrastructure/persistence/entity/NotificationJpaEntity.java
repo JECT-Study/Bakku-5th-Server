@@ -57,4 +57,36 @@ public class NotificationJpaEntity extends BaseEntity {
         this.targetType = targetType;
         this.targetId = targetId;
     }
+
+    public Long getId() {
+        return id;
+    }
+
+    public Long getReceiverId() {
+        return receiverId;
+    }
+
+    public NotificationType getType() {
+        return type;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getBody() {
+        return body;
+    }
+
+    public NotificationTargetType getTargetType() {
+        return targetType;
+    }
+
+    public Long getTargetId() {
+        return targetId;
+    }
+
+    public Instant getReadAt() {
+        return readAt;
+    }
 }

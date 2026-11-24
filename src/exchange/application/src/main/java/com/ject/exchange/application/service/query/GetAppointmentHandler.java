@@ -43,7 +43,7 @@ public class GetAppointmentHandler implements QueryHandler<GetAppointmentQuery, 
         }
         Instant now = serviceTime.now();
         return AppointmentResult.of(appointment, exchange, sourcePostsOf(appointment, exchange), query.viewerId(),
-                appointmentRepository.existsPendingProposalOnPost(exchange.getPostId(), exchange.getId(), now), now);
+                appointmentRepository.existsPendingProposalOnPost(exchange.getPostId(), exchange.getId()), now);
     }
 
     private Map<Long, PostInfo> sourcePostsOf(Appointment appointment, Exchange exchange) {

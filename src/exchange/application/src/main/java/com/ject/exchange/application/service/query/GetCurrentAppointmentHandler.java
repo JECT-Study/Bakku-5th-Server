@@ -45,7 +45,7 @@ public class GetCurrentAppointmentHandler implements QueryHandler<GetCurrentAppo
         return Appointment.currentAmong(appointmentRepository.findAllByExchangeId(exchange.getId()), now)
                 .map(appointment -> AppointmentResult.of(appointment, exchange, sourcePostsOf(appointment, exchange),
                         query.viewerId(),
-                        appointmentRepository.existsPendingProposalOnPost(exchange.getPostId(), exchange.getId(), now),
+                        appointmentRepository.existsPendingProposalOnPost(exchange.getPostId(), exchange.getId()),
                         now));
     }
 

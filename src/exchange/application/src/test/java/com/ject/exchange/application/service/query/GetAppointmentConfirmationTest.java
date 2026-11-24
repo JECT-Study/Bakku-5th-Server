@@ -71,7 +71,7 @@ class GetAppointmentConfirmationTest {
 
     @ParameterizedTest
     @EnumSource(value = AppointmentStatus.class,
-            names = {"PROPOSED", "REJECTED", "WITHDRAWN", "EXPIRED", "AUTO_REJECTED", "CANCELED"})
+            names = {"PROPOSED", "REJECTED", "WITHDRAWN", "AUTO_REJECTED", "CANCELED"})
     @DisplayName("확정 전이거나 취소된 약속이면 confirmation은 null이다")
     void handle_notConfirmedOrCanceled_confirmationNull(AppointmentStatus status) {
         Instant confirmedAt = status == AppointmentStatus.CANCELED ? CONFIRMED_AT : null;

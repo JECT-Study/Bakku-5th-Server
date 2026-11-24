@@ -10,16 +10,16 @@ public record NotificationResponse(
         @Schema(description = "알림 ID", example = "9001")
         Long notificationId,
 
-        @Schema(description = "알림 종류", example = "APPOINTMENT_PROPOSED")
+        @Schema(description = "알림 종류", example = "EXCHANGE_REQUESTED")
         NotificationType type,
 
-        @Schema(description = "제목 (서버 생성)", example = "교환 약속 제안이 왔어요")
+        @Schema(description = "제목 (서버 생성, 상대방 닉네임)", example = "하치와레러버")
         String title,
 
-        @Schema(description = "내용 (서버 생성)", example = "하치와레러버님이 12/2(화) 15:00 홍대입구역에서 만나자고 했어요")
+        @Schema(description = "내용 (서버 생성, [제품명] 문장)", example = "[포켓몬 카드] 교환 요청이 왔어요")
         String body,
 
-        @Schema(description = "누르면 이동할 대상")
+        @Schema(description = "누르면 이동할 대상. 없으면 null", nullable = true)
         NotificationTargetResponse target,
 
         @Schema(description = "읽음 여부. 안 읽은 알림은 강조", example = "false")

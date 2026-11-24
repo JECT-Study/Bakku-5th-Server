@@ -1,12 +1,9 @@
 package com.ject.exchange.api.dto.request;
 
 import com.ject.exchange.api.dto.enums.AppointmentTimeType;
-import com.ject.exchange.api.dto.validation.TenMinuteStep;
 import com.ject.exchange.application.dto.command.ProposeAppointmentCommand;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
@@ -28,11 +25,12 @@ public record ProposeAppointmentRequest(
 
         @Schema(description = "교환할 물건 (이 교환의 첨부 아이템 ID, 중복 불가). 고를 수 있는 아이템이 1개면 생략 가능", example = "[31]")
         @Size(min = 1)
-        List<@NotNull Long> offeredItemIds,
+        List<@NotNull Long> offeredItemIds
 
-        @Schema(description = "내 약속 전 알림(분). null 끄기, 10분 단위 10~1440. NOW면 무시", example = "30")
-        @Min(10) @Max(1440) @TenMinuteStep
-        Integer reminderOffsetMinutes
+        // 출시 후 검토 (E-06-1, #117): 내 약속 전 알림(분). 이번 출시는 30분 고정이라 받지 않는다
+        // @Schema(description = "내 약속 전 알림(분). null 끄기, 10분 단위 10~1440. NOW면 무시", example = "30")
+        // @Min(10) @Max(1440) @TenMinuteStep
+        // Integer reminderOffsetMinutes
 ) {
         public ProposeAppointmentCommand toCommand(Long exchangeId, Long proposerId) {
                 return new ProposeAppointmentCommand(
@@ -41,7 +39,6 @@ public record ProposeAppointmentRequest(
                         com.ject.exchange.domain.domain.appointment.AppointmentTimeType.valueOf(timeType.name()),
                         scheduledAt == null ? null : scheduledAt.toInstant(),
                         place.toPlace(),
-                        offeredItemIds,
-                        reminderOffsetMinutes);
+                        offeredItemIds);
         }
 }

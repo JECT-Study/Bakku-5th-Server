@@ -102,7 +102,7 @@ class GetAppointmentHandlerTest {
         assertEquals(PLACE, result.place());
         assertEquals(List.of(new AppointmentItemResult(ITEM_31, OfferType.POST, "우사기 미니 피규어", THUMBNAIL_31)),
                 result.items());
-        assertEquals(EXPIRES_AT, result.expiresAt());
+        assertNull(result.expiresAt());
         assertEquals(30, result.myReminderOffsetMinutes());
         assertFalse(result.otherActiveProposalsOnPost());
         assertNull(result.confirmedAt());
@@ -213,19 +213,19 @@ class GetAppointmentHandlerTest {
     }
 
     @Test
-    @DisplayName("다른 교환의 PROPOSED가 만료 시각을 지났으면 otherActiveProposalsOnPost가 false다")
-    void handle_expiredProposalInOtherExchange_returnsFalse() {
+    @DisplayName("다른 교환의 PROPOSED가 옛 만료 시각을 지났어도 otherActiveProposalsOnPost가 true다")
+    void handle_pastOldExpiryProposalInOtherExchange_returnsTrue() {
         givenAppointmentAndOtherExchange(POST_ID);
         appointmentRepository.preload(appointment(OTHER_APPOINTMENT_ID, OTHER_EXCHANGE_ID,
                 AppointmentStatus.PROPOSED, NOW.minus(Duration.ofMinutes(10)), List.of(41L)));
 
         AppointmentResult result = handler.handle(new GetAppointmentQuery(APPOINTMENT_ID, REQUESTER_ID));
 
-        assertFalse(result.otherActiveProposalsOnPost());
+        assertTrue(result.otherActiveProposalsOnPost());
     }
 
     @ParameterizedTest
-    @EnumSource(value = AppointmentStatus.class, names = {"CONFIRMED", "REJECTED", "WITHDRAWN", "EXPIRED"})
+    @EnumSource(value = AppointmentStatus.class, names = {"CONFIRMED", "REJECTED", "WITHDRAWN", "AUTO_REJECTED"})
     @DisplayName("다른 교환의 약속이 PROPOSED가 아니면 otherActiveProposalsOnPost가 false다")
     void handle_notProposedInOtherExchange_returnsFalse(AppointmentStatus status) {
         givenAppointmentAndOtherExchange(POST_ID);

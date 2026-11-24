@@ -57,7 +57,8 @@ public class AppointmentEntity extends BaseEntity {
     @Column(name = "place_lng", nullable = false)
     private Double placeLng;
 
-    @Column(name = "expires_at", nullable = false)
+    // 자동 만료가 출시 후로 밀려 새 제안은 비워 둔다 (E-10-1, #117)
+    @Column(name = "expires_at")
     private Instant expiresAt;
 
     @Column(name = "proposer_reminder_offset_minutes")
@@ -72,6 +73,12 @@ public class AppointmentEntity extends BaseEntity {
     @Column(name = "resolved_at")
     private Instant resolvedAt;
 
+    @Column(name = "canceled_by_user_id")
+    private Long canceledByUserId;
+
+    @Column(name = "cancel_imminent")
+    private Boolean cancelImminent;
+
     protected AppointmentEntity() {}
 
     @Builder
@@ -79,7 +86,8 @@ public class AppointmentEntity extends BaseEntity {
                              AppointmentStatus status, AppointmentTimeType timeType, Instant scheduledAt,
                              String placeName, String placeAddress, Double placeLat, Double placeLng,
                              Instant expiresAt, Integer proposerReminderOffsetMinutes,
-                             Integer receiverReminderOffsetMinutes, Instant confirmedAt, Instant resolvedAt) {
+                             Integer receiverReminderOffsetMinutes, Instant confirmedAt, Instant resolvedAt,
+                             Long canceledByUserId, Boolean cancelImminent) {
         this.id = id;
         this.exchangeId = exchangeId;
         this.proposerUserId = proposerUserId;
@@ -96,5 +104,7 @@ public class AppointmentEntity extends BaseEntity {
         this.receiverReminderOffsetMinutes = receiverReminderOffsetMinutes;
         this.confirmedAt = confirmedAt;
         this.resolvedAt = resolvedAt;
+        this.canceledByUserId = canceledByUserId;
+        this.cancelImminent = cancelImminent;
     }
 }

@@ -53,7 +53,6 @@ class AppointmentControllerTest {
     private static final Long OWNER_ID = 200L;
     private static final Long ITEM_31 = 31L;
     private static final Instant SCHEDULED_AT = Instant.parse("2026-10-27T06:00:00Z");
-    private static final Instant EXPIRES_AT = Instant.parse("2026-10-27T05:00:00Z");
     private static final Instant CREATED_AT = Instant.parse("2026-10-26T05:00:00Z");
     private static final String PLACE_NAME = "홍대입구역 3번 출구 앞 편의점";
     private static final String PLACE_ADDRESS = "서울 마포구 양화로 160";
@@ -82,7 +81,7 @@ class AppointmentControllerTest {
     // ---- 정상 흐름 ----
 
     @Test
-    @DisplayName("A-1 유효한 시간 지정 제안이면 201과 약속 응답을 반환한다")
+    @DisplayName("A-1 유효한 시간 지정 제안이면 201과 약속 응답(만료 null · 내 알림 30 · pendingChange 없음)을 반환한다")
     void proposeAppointment_valid_returns201WithAppointment() throws Exception {
         mockMvc.perform(proposeRequest(REQUESTER_ID, validBody()))
                 .andExpect(status().isCreated())
@@ -103,11 +102,11 @@ class AppointmentControllerTest {
                 .andExpect(jsonPath("$.data.items[0].type").value("POST"))
                 .andExpect(jsonPath("$.data.items[0].name").value("우사기 미니 피규어"))
                 .andExpect(jsonPath("$.data.items[0].thumbnailUrl").value(THUMBNAIL_URL))
-                .andExpect(jsonPath("$.data.expiresAt").value("2026-10-27T14:00:00+09:00"))
+                .andExpect(jsonPath("$.data.expiresAt").doesNotExist())
                 .andExpect(jsonPath("$.data.myReminderOffsetMinutes").value(30))
                 .andExpect(jsonPath("$.data.otherActiveProposalsOnPost").value(false))
                 .andExpect(jsonPath("$.data.pendingChange").doesNotExist())
-                .andExpect(jsonPath("$.data.pendingCancellation").doesNotExist())
+                .andExpect(jsonPath("$.data.canceledByUserId").doesNotExist())
                 .andExpect(jsonPath("$.data.confirmation").doesNotExist())
                 .andExpect(jsonPath("$.data.confirmedAt").doesNotExist())
                 .andExpect(jsonPath("$.data.createdAt").value("2026-10-26T14:00:00+09:00"));
@@ -127,7 +126,8 @@ class AppointmentControllerTest {
         assertEquals(SCHEDULED_AT, command.scheduledAt());
         assertEquals(new Place(PLACE_NAME, PLACE_ADDRESS, 37.5571, 126.9245), command.place());
         assertEquals(List.of(ITEM_31), command.offeredItemIds());
-        assertEquals(30, command.reminderOffsetMinutes());
+        assertEquals(new ProposeAppointmentCommand(EXCHANGE_ID, REQUESTER_ID, AppointmentTimeType.SCHEDULED,
+                SCHEDULED_AT, new Place(PLACE_NAME, PLACE_ADDRESS, 37.5571, 126.9245), List.of(ITEM_31)), command);
 
         GetAppointmentQuery query = assertInstanceOf(GetAppointmentQuery.class, queryBus.sentQueries().get(0));
         assertEquals(APPOINTMENT_ID, query.appointmentId());
@@ -184,23 +184,40 @@ class AppointmentControllerTest {
                 .andExpect(status().isCreated());
     }
 
-    @ParameterizedTest
-    @MethodSource("validReminders")
-    @DisplayName("A-1 알림 값 10 · 1440 · null(끔)이면 201이고 커맨드에 그대로 실린다")
-    void proposeAppointment_boundaryReminder_returns201(String reminderJson, Integer expected) throws Exception {
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("legacyReminders")
+    @DisplayName("A-1 본문에 옛 알림 값(10 · 5 · 15 · 2000 · null · 없음)을 보내도 201이고 커맨드는 알림 없이 같다")
+    void proposeAppointment_legacyReminder_ignored(String reminderJson) throws Exception {
         String body = body(quote("SCHEDULED"), quote("2026-10-27T15:00:00+09:00"), VALID_PLACE, "[31]",
                 reminderJson);
 
         mockMvc.perform(proposeRequest(REQUESTER_ID, body))
-                .andExpect(status().isCreated());
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.myReminderOffsetMinutes").value(30));
 
-        ProposeAppointmentCommand command = (ProposeAppointmentCommand) commandBus.sentCommands().get(0);
-        assertEquals(expected, command.reminderOffsetMinutes());
+        assertEquals(List.of(new ProposeAppointmentCommand(EXCHANGE_ID, REQUESTER_ID, AppointmentTimeType.SCHEDULED,
+                SCHEDULED_AT, new Place(PLACE_NAME, PLACE_ADDRESS, 37.5571, 126.9245), List.of(ITEM_31))),
+                commandBus.sentCommands());
     }
 
-    static Stream<Arguments> validReminders() {
-        return Stream.of(Arguments.of("10", 10), Arguments.of("1440", 1440), Arguments.of("null", null),
-                Arguments.of(null, null));
+    static Stream<String> legacyReminders() {
+        return Stream.of("10", "5", "15", "2000", "9", "1441", "null", null);
+    }
+
+    @Test
+    @DisplayName("A-1 지금 바로 제안이면 201이고 응답 내 알림은 null이다")
+    void proposeAppointment_now_returnsNullReminder() throws Exception {
+        queryBus.willReturnAppointment(new AppointmentResult(APPOINTMENT_ID, EXCHANGE_ID, REQUESTER_ID, OWNER_ID,
+                AppointmentStatus.PROPOSED, AppointmentTimeType.NOW, null,
+                new Place(PLACE_NAME, PLACE_ADDRESS, 37.5571, 126.9245),
+                List.of(new AppointmentItemResult(ITEM_31, OfferType.POST, "우사기 미니 피규어", THUMBNAIL)),
+                null, null, false, null, CREATED_AT));
+
+        mockMvc.perform(proposeRequest(REQUESTER_ID, body(quote("NOW"), null, VALID_PLACE, "[31]", "30")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.timeType").value("NOW"))
+                .andExpect(jsonPath("$.data.myReminderOffsetMinutes").doesNotExist())
+                .andExpect(jsonPath("$.data.expiresAt").doesNotExist());
     }
 
     // ---- 요청 검증 실패 ----
@@ -232,11 +249,7 @@ class AppointmentControllerTest {
                         place(quote(PLACE_NAME), null, null, "126.9"), "[31]", "30"), "place.lat"),
                 Arguments.of("경도 누락", body(scheduled, time,
                         place(quote(PLACE_NAME), null, "37.5", null), "[31]", "30"), "place.lng"),
-                Arguments.of("아이템 빈 배열", body(scheduled, time, VALID_PLACE, "[]", "30"), "offeredItemIds"),
-                Arguments.of("알림 9", body(scheduled, time, VALID_PLACE, "[31]", "9"), "reminderOffsetMinutes"),
-                Arguments.of("알림 1441", body(scheduled, time, VALID_PLACE, "[31]", "1441"),
-                        "reminderOffsetMinutes"),
-                Arguments.of("알림 15", body(scheduled, time, VALID_PLACE, "[31]", "15"), "reminderOffsetMinutes"));
+                Arguments.of("아이템 빈 배열", body(scheduled, time, VALID_PLACE, "[]", "30"), "offeredItemIds"));
     }
 
     @ParameterizedTest(name = "{0}")
@@ -317,13 +330,14 @@ class AppointmentControllerTest {
 
     /** 각 인자는 JSON 값 그대로다. Java null이면 해당 필드를 본문에서 뺀다. */
     private static String body(String timeTypeJson, String scheduledAtJson, String placeJson,
-                               String offeredItemIdsJson, String reminderJson) {
+                               String offeredItemIdsJson, String legacyReminderJson) {
         List<String> fields = new ArrayList<>();
         addField(fields, "timeType", timeTypeJson);
         addField(fields, "scheduledAt", scheduledAtJson);
         addField(fields, "place", placeJson);
         addField(fields, "offeredItemIds", offeredItemIdsJson);
-        addField(fields, "reminderOffsetMinutes", reminderJson);
+        // 옛 FE가 보내던 필드. 서버는 무시한다 (#117)
+        addField(fields, "reminderOffsetMinutes", legacyReminderJson);
         return "{" + String.join(", ", fields) + "}";
     }
 
@@ -351,6 +365,6 @@ class AppointmentControllerTest {
         return new AppointmentResult(APPOINTMENT_ID, EXCHANGE_ID, REQUESTER_ID, OWNER_ID, AppointmentStatus.PROPOSED,
                 AppointmentTimeType.SCHEDULED, SCHEDULED_AT, new Place(PLACE_NAME, PLACE_ADDRESS, 37.5571, 126.9245),
                 List.of(new AppointmentItemResult(ITEM_31, OfferType.POST, "우사기 미니 피규어", THUMBNAIL)),
-                EXPIRES_AT, 30, false, null, CREATED_AT);
+                null, 30, false, null, CREATED_AT);
     }
 }

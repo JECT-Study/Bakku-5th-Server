@@ -188,7 +188,7 @@ class AcceptAppointmentPostConnectTest {
         // when
         ExchangeException exception = assertThrows(ExchangeException.class,
                 () -> proposeHandler.handle(new ProposeAppointmentCommand(EXCHANGE_Y, MEMBER_C,
-                        AppointmentTimeType.SCHEDULED, SCHEDULED_AT, PLACE, List.of(ITEM_OF_C), 30)));
+                        AppointmentTimeType.SCHEDULED, SCHEDULED_AT, PLACE, List.of(ITEM_OF_C))));
 
         // then
         assertEquals(ExchangeErrorCode.POST_RESERVED_ELSEWHERE, exception.getErrorCode());
@@ -245,7 +245,7 @@ class AcceptAppointmentPostConnectTest {
     }
 
     private static AcceptAppointmentCommand accept(Long appointmentId) {
-        return new AcceptAppointmentCommand(appointmentId, MEMBER_B, null);
+        return new AcceptAppointmentCommand(appointmentId, MEMBER_B);
     }
 
     /** 교환 X: A가 P에 Q1 · Q2를 첨부 */

@@ -5,13 +5,12 @@ import com.ject.common.core.cqrs.query.QueryBus;
 import com.ject.common.web.image.ImageUrlResolver;
 import com.ject.common.web.response.ApiResponse;
 import com.ject.exchange.api.controller.api.AppointmentApi;
-import com.ject.exchange.api.dto.request.AcceptAppointmentRequest;
 import com.ject.exchange.api.dto.request.ConfirmationRequest;
 import com.ject.exchange.api.dto.request.ProposeAppointmentRequest;
-import com.ject.exchange.api.dto.request.UpdateReminderRequest;
 import com.ject.exchange.api.dto.response.AppointmentResponse;
 import com.ject.exchange.application.dto.command.AcceptAppointmentCommand;
 import com.ject.exchange.application.dto.command.RejectAppointmentCommand;
+import com.ject.exchange.application.dto.command.CancelAppointmentCommand;
 import com.ject.exchange.application.dto.command.WithdrawAppointmentCommand;
 import com.ject.exchange.application.dto.dto.AppointmentResult;
 import com.ject.exchange.application.dto.query.GetAppointmentQuery;
@@ -50,12 +49,8 @@ public class AppointmentController implements AppointmentApi {
     }
 
     @Override
-    public ApiResponse<AppointmentResponse> acceptAppointment(Long memberId, Long appointmentId, AcceptAppointmentRequest request) {
-        // 본문은 생략할 수 있고, 생략하면 받는 사람 알림을 끈 채로 수락한다
-        AcceptAppointmentCommand command = request == null
-                ? new AcceptAppointmentCommand(appointmentId, memberId, null)
-                : request.toCommand(appointmentId, memberId);
-        Long acceptedId = commandBus.send(command);
+    public ApiResponse<AppointmentResponse> acceptAppointment(Long memberId, Long appointmentId) {
+        Long acceptedId = commandBus.send(new AcceptAppointmentCommand(appointmentId, memberId));
         AppointmentResult result = queryBus.send(new GetAppointmentQuery(acceptedId, memberId));
         return ApiResponse.success(AppointmentResponse.from(result, imageUrlResolver));
     }
@@ -68,18 +63,26 @@ public class AppointmentController implements AppointmentApi {
     }
 
     @Override
+    public ApiResponse<AppointmentResponse> cancelAppointment(Long memberId, Long appointmentId) {
+        Long canceledId = commandBus.send(new CancelAppointmentCommand(appointmentId, memberId));
+        AppointmentResult result = queryBus.send(new GetAppointmentQuery(canceledId, memberId));
+        return ApiResponse.success(AppointmentResponse.from(result, imageUrlResolver));
+    }
+
+    @Override
     public ApiResponse<AppointmentResponse> withdrawAppointment(Long memberId, Long appointmentId) {
         Long withdrawnId = commandBus.send(new WithdrawAppointmentCommand(appointmentId, memberId));
         AppointmentResult result = queryBus.send(new GetAppointmentQuery(withdrawnId, memberId));
         return ApiResponse.success(AppointmentResponse.from(result, imageUrlResolver));
     }
 
-    @Override
-    public ApiResponse<AppointmentResponse> updateReminder(Long memberId, Long appointmentId, UpdateReminderRequest request) {
-        Long changedId = commandBus.send(request.toCommand(appointmentId, memberId));
-        AppointmentResult result = queryBus.send(new GetAppointmentQuery(changedId, memberId));
-        return ApiResponse.success(AppointmentResponse.from(result, imageUrlResolver));
-    }
+    // 출시 후 검토 (E-06-1, #117): A-7 내 약속 전 알림 변경
+    // @Override
+    // public ApiResponse<AppointmentResponse> updateReminder(Long memberId, Long appointmentId, UpdateReminderRequest request) {
+    //     Long changedId = commandBus.send(request.toCommand(appointmentId, memberId));
+    //     AppointmentResult result = queryBus.send(new GetAppointmentQuery(changedId, memberId));
+    //     return ApiResponse.success(AppointmentResponse.from(result, imageUrlResolver));
+    // }
 
     @Override
     public ApiResponse<AppointmentResponse> respondConfirmation(Long memberId, Long appointmentId, ConfirmationRequest request) {

@@ -29,10 +29,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 
-import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -65,7 +63,7 @@ class AppointmentAcceptControllerTest {
         commandBus = new FakeCommandBus();
         queryBus = new FakeQueryBus(new FakeExchangeRepository());
         commandBus.onAcceptAppointment(command -> APPOINTMENT_ID);
-        queryBus.willReturnAppointment(confirmedResult(60));
+        queryBus.willReturnAppointment(confirmedResult(30));
         mockMvc = MockMvcBuilders.standaloneSetup(
                         new AppointmentController(commandBus, queryBus, IMAGE_URL_RESOLVER))
                 .setControllerAdvice(new ExchangeExceptionHandler())
@@ -77,9 +75,9 @@ class AppointmentAcceptControllerTest {
     // ---- 정상 흐름 ----
 
     @Test
-    @DisplayName("A-4 받는 사람이 수락하면 200 · CONFIRMED · 확정 시각 +09:00 · 만료 null이다")
+    @DisplayName("A-4 받는 사람이 본문 없이 수락하면 200 · CONFIRMED · 확정 시각 +09:00 · 만료 null · 내 알림 30이다")
     void acceptAppointment_byReceiver_returns200Confirmed() throws Exception {
-        mockMvc.perform(acceptRequest(OWNER_ID, "{\"reminderOffsetMinutes\": 60}"))
+        mockMvc.perform(post(ACCEPT_URL, APPOINTMENT_ID).requestAttr(LoginMember.ATTRIBUTE, OWNER_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.id").value(APPOINTMENT_ID))
@@ -87,21 +85,20 @@ class AppointmentAcceptControllerTest {
                 .andExpect(jsonPath("$.data.status").value("CONFIRMED"))
                 .andExpect(jsonPath("$.data.scheduledAt").value("2026-10-27T15:00:00+09:00"))
                 .andExpect(jsonPath("$.data.confirmedAt").value("2026-10-26T17:00:00+09:00"))
-                .andExpect(jsonPath("$.data.expiresAt").doesNotExist());
+                .andExpect(jsonPath("$.data.expiresAt").doesNotExist())
+                .andExpect(jsonPath("$.data.myReminderOffsetMinutes").value(30));
     }
 
     @Test
-    @DisplayName("A-4 경로 id · 로그인 회원 · 알림 값이 커맨드로 가고 반환 id와 수락자로 조회한다")
+    @DisplayName("A-4 경로 id · 로그인 회원만 커맨드로 가고 반환 id와 수락자로 조회한다")
     void acceptAppointment_sendsCommandThenQueryAsAccepter() throws Exception {
-        mockMvc.perform(acceptRequest(OWNER_ID, "{\"reminderOffsetMinutes\": 60}"))
+        mockMvc.perform(post(ACCEPT_URL, APPOINTMENT_ID).requestAttr(LoginMember.ATTRIBUTE, OWNER_ID))
                 .andExpect(status().isOk());
 
         assertEquals(1, commandBus.sentCommands().size());
         AcceptAppointmentCommand command = assertInstanceOf(AcceptAppointmentCommand.class,
                 commandBus.sentCommands().get(0));
-        assertEquals(APPOINTMENT_ID, command.appointmentId());
-        assertEquals(OWNER_ID, command.accepterId());
-        assertEquals(60, command.reminderOffsetMinutes());
+        assertEquals(new AcceptAppointmentCommand(APPOINTMENT_ID, OWNER_ID), command);
 
         assertEquals(1, queryBus.sentQueries().size());
         GetAppointmentQuery query = assertInstanceOf(GetAppointmentQuery.class, queryBus.sentQueries().get(0));
@@ -109,70 +106,42 @@ class AppointmentAcceptControllerTest {
         assertEquals(OWNER_ID, query.viewerId());
     }
 
-    @Test
-    @DisplayName("A-4 응답의 내 알림은 수락자 기준 값 60이다")
-    void acceptAppointment_returnsAccepterReminder() throws Exception {
-        mockMvc.perform(acceptRequest(OWNER_ID, "{\"reminderOffsetMinutes\": 60}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.myReminderOffsetMinutes").value(60));
-    }
-
     @ParameterizedTest
-    @ValueSource(ints = {10, 1440})
-    @DisplayName("A-4 알림 경계값 10 · 1440이면 200이고 그 값이 커맨드로 간다")
-    void acceptAppointment_boundaryReminder_returns200(int reminder) throws Exception {
-        mockMvc.perform(acceptRequest(OWNER_ID, "{\"reminderOffsetMinutes\": " + reminder + "}"))
-                .andExpect(status().isOk());
+    @ValueSource(strings = {"{\"reminderOffsetMinutes\": 10}", "{\"reminderOffsetMinutes\": 5}",
+            "{\"reminderOffsetMinutes\": 2000}", "{\"reminderOffsetMinutes\": 15}",
+            "{\"reminderOffsetMinutes\": null}", "{}"})
+    @DisplayName("A-4 본문에 옛 알림 값을 보내도 200이고 커맨드는 같으며 응답 내 알림은 30이다")
+    void acceptAppointment_legacyReminderBody_ignored(String body) throws Exception {
+        mockMvc.perform(acceptRequest(OWNER_ID, body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("CONFIRMED"))
+                .andExpect(jsonPath("$.data.myReminderOffsetMinutes").value(30));
 
-        AcceptAppointmentCommand command = (AcceptAppointmentCommand) commandBus.sentCommands().get(0);
-        assertEquals(reminder, command.reminderOffsetMinutes());
+        assertEquals(List.of(new AcceptAppointmentCommand(APPOINTMENT_ID, OWNER_ID)), commandBus.sentCommands());
     }
 
     @Test
-    @DisplayName("A-4 본문 없이 수락하면 200이고 커맨드 알림은 null이다")
-    void acceptAppointment_withoutBody_sendsNullReminder() throws Exception {
-        queryBus.willReturnAppointment(confirmedResult(null));
+    @DisplayName("A-4 지금 바로 약속을 수락하면 200이고 내 알림은 null이다")
+    void acceptAppointment_nowAppointment_returnsNullReminder() throws Exception {
+        queryBus.willReturnAppointment(new AppointmentResult(APPOINTMENT_ID, EXCHANGE_ID, REQUESTER_ID, OWNER_ID,
+                AppointmentStatus.CONFIRMED, AppointmentTimeType.NOW, null,
+                new Place("홍대입구역 3번 출구 앞 편의점", "서울 마포구 양화로 160", 37.5571, 126.9245),
+                List.of(new AppointmentItemResult(ITEM_31, OfferType.POST, "우사기 미니 피규어", THUMBNAIL)),
+                null, null, false, CONFIRMED_AT, CREATED_AT));
 
         mockMvc.perform(post(ACCEPT_URL, APPOINTMENT_ID).requestAttr(LoginMember.ATTRIBUTE, OWNER_ID))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status").value("CONFIRMED"))
+                .andExpect(jsonPath("$.data.timeType").value("NOW"))
                 .andExpect(jsonPath("$.data.myReminderOffsetMinutes").doesNotExist());
-
-        AcceptAppointmentCommand command = assertInstanceOf(AcceptAppointmentCommand.class,
-                commandBus.sentCommands().get(0));
-        assertEquals(APPOINTMENT_ID, command.appointmentId());
-        assertEquals(OWNER_ID, command.accepterId());
-        assertNull(command.reminderOffsetMinutes());
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"{\"reminderOffsetMinutes\": null}", "{}"})
-    @DisplayName("A-4 알림 null 또는 빈 본문이면 200이고 커맨드 알림은 null이다")
-    void acceptAppointment_nullReminder_sendsNullReminder(String body) throws Exception {
-        queryBus.willReturnAppointment(confirmedResult(null));
-
-        mockMvc.perform(acceptRequest(OWNER_ID, body))
+    @Test
+    @DisplayName("A-4 응답에 pendingChange 키가 없고 myReminderOffsetMinutes 키는 있다")
+    void acceptAppointment_responseHasNoPendingChange() throws Exception {
+        mockMvc.perform(post(ACCEPT_URL, APPOINTMENT_ID).requestAttr(LoginMember.ATTRIBUTE, OWNER_ID))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status").value("CONFIRMED"));
-
-        AcceptAppointmentCommand command = (AcceptAppointmentCommand) commandBus.sentCommands().get(0);
-        assertNull(command.reminderOffsetMinutes());
-    }
-
-    // ---- 입력 형식 ----
-
-    @ParameterizedTest
-    @ValueSource(ints = {5, 9, 0, -10, 1441, 1450, 15, 1435})
-    @DisplayName("A-4 알림 값이 10분 단위 10~1440이 아니면 400 COMMON_001이고 커맨드를 보내지 않는다")
-    void acceptAppointment_invalidReminder_returnsCommon001(int reminder) throws Exception {
-        mockMvc.perform(acceptRequest(OWNER_ID, "{\"reminderOffsetMinutes\": " + reminder + "}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.code").value("COMMON_001"))
-                .andExpect(jsonPath("$.errors[*].field", hasItem("reminderOffsetMinutes")));
-
-        assertTrue(commandBus.sentCommands().isEmpty());
-        assertTrue(queryBus.sentQueries().isEmpty());
+                .andExpect(jsonPath("$.data.pendingChange").doesNotExist())
+                .andExpect(jsonPath("$.data.myReminderOffsetMinutes").exists());
     }
 
     // ---- 인증 ----
@@ -182,7 +151,7 @@ class AppointmentAcceptControllerTest {
     void acceptAppointment_withoutLoginMember_returnsAuth001() throws Exception {
         mockMvc.perform(post(ACCEPT_URL, APPOINTMENT_ID)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"reminderOffsetMinutes\": 60}"))
+                        .content("{}"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("AUTH_001"));
@@ -220,6 +189,12 @@ class AppointmentAcceptControllerTest {
         assertFailure(ExchangeErrorCode.NOT_APPOINTMENT_RECEIVER, 403);
     }
 
+    @Test
+    @DisplayName("A-4 약속 시각이 지난 제안이면 409 EXCHANGE_107")
+    void acceptAppointment_scheduledAtPassed_returnsExchange107() throws Exception {
+        assertFailure(ExchangeErrorCode.SCHEDULED_AT_PASSED, 409);
+    }
+
     @ParameterizedTest
     @EnumSource(value = ExchangeErrorCode.class, names = {"PROPOSAL_NOT_ACTIVE", "SCHEDULED_AT_PASSED",
             "POST_RESERVED_ELSEWHERE", "POST_NOT_REQUESTABLE", "ITEM_NOT_AVAILABLE", "EXCHANGE_CLOSED"})
@@ -235,7 +210,7 @@ class AppointmentAcceptControllerTest {
             throw new ExchangeException(errorCode);
         });
 
-        mockMvc.perform(acceptRequest(OWNER_ID, "{\"reminderOffsetMinutes\": 60}"))
+        mockMvc.perform(post(ACCEPT_URL, APPOINTMENT_ID).requestAttr(LoginMember.ATTRIBUTE, OWNER_ID))
                 .andExpect(status().is(httpStatus))
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value(errorCode.getCode()));

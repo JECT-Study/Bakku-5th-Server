@@ -102,7 +102,7 @@ class GetCurrentAppointmentHandlerTest {
         assertEquals(PLACE, result.place());
         assertEquals(List.of(new AppointmentItemResult(ITEM_31, OfferType.POST, "우사기 미니 피규어", THUMBNAIL_31)),
                 result.items());
-        assertEquals(EXPIRES_AT, result.expiresAt());
+        assertNull(result.expiresAt());
         assertEquals(30, result.myReminderOffsetMinutes());
         assertNull(result.confirmedAt());
         assertEquals(CREATED_AT, result.createdAt());
@@ -124,7 +124,7 @@ class GetCurrentAppointmentHandlerTest {
         assertEquals(AppointmentStatus.PROPOSED, result.status());
         assertEquals(SCHEDULED_AT, result.scheduledAt());
         assertEquals(PLACE, result.place());
-        assertEquals(EXPIRES_AT, result.expiresAt());
+        assertNull(result.expiresAt());
         assertNull(result.myReminderOffsetMinutes());
     }
 
@@ -176,36 +176,50 @@ class GetCurrentAppointmentHandlerTest {
     }
 
     @Test
-    @DisplayName("PROPOSED 약속의 만료 시각이 지났으면 빈 결과이고 저장 상태는 그대로다")
-    void handle_expiredProposal_returnsEmptyAndKeepsStatus() {
+    @DisplayName("PROPOSED 약속이 제안 후 25시간 지나 옛 만료 시각이 지났어도 그 제안을 PROPOSED · 만료 시각 null로 반환한다")
+    void handle_pastOldExpiryProposal_returnsIt() {
         exchangeRepository.preload(exchange(EXCHANGE_ID, REQUESTER_ID, ExchangeStatus.ACTIVE));
         appointmentRepository.preload(appointment(APPOINTMENT_ID, EXCHANGE_ID, AppointmentStatus.PROPOSED,
-                NOW.minus(Duration.ofMinutes(10)), SCHEDULED_AT));
+                NOW.minus(Duration.ofHours(1)), SCHEDULED_AT));
 
-        Optional<AppointmentResult> current = handler.handle(new GetCurrentAppointmentQuery(EXCHANGE_ID,
-                REQUESTER_ID));
+        AppointmentResult result = handler.handle(new GetCurrentAppointmentQuery(EXCHANGE_ID, REQUESTER_ID))
+                .orElseThrow();
 
-        assertTrue(current.isEmpty());
+        assertEquals(APPOINTMENT_ID, result.id());
+        assertEquals(AppointmentStatus.PROPOSED, result.status());
+        assertNull(result.expiresAt());
         assertEquals(0, appointmentRepository.saveCount());
-        assertEquals(AppointmentStatus.PROPOSED,
-                appointmentRepository.findById(APPOINTMENT_ID).orElseThrow().getStatus());
     }
 
     @Test
-    @DisplayName("PROPOSED 약속의 만료 시각이 지금과 같으면 만료로 보고 빈 결과다")
-    void handle_proposalExpiringNow_returnsEmpty() {
+    @DisplayName("PROPOSED 약속의 옛 만료 시각이 지금과 같아도 그 제안을 반환한다")
+    void handle_proposalAtOldExpiry_returnsIt() {
         exchangeRepository.preload(exchange(EXCHANGE_ID, REQUESTER_ID, ExchangeStatus.ACTIVE));
         appointmentRepository.preload(appointment(APPOINTMENT_ID, EXCHANGE_ID, AppointmentStatus.PROPOSED,
                 NOW, SCHEDULED_AT));
 
-        Optional<AppointmentResult> current = handler.handle(new GetCurrentAppointmentQuery(EXCHANGE_ID,
-                REQUESTER_ID));
+        AppointmentResult result = handler.handle(new GetCurrentAppointmentQuery(EXCHANGE_ID, REQUESTER_ID))
+                .orElseThrow();
 
-        assertTrue(current.isEmpty());
+        assertEquals(APPOINTMENT_ID, result.id());
+    }
+
+    @Test
+    @DisplayName("PROPOSED 약속의 약속 시각이 지났어도 그 제안을 PROPOSED로 반환한다")
+    void handle_proposalPastSchedule_returnsIt() {
+        exchangeRepository.preload(exchange(EXCHANGE_ID, REQUESTER_ID, ExchangeStatus.ACTIVE));
+        appointmentRepository.preload(appointment(APPOINTMENT_ID, EXCHANGE_ID, AppointmentStatus.PROPOSED,
+                null, NOW.minus(Duration.ofHours(1))));
+
+        AppointmentResult result = handler.handle(new GetCurrentAppointmentQuery(EXCHANGE_ID, REQUESTER_ID))
+                .orElseThrow();
+
+        assertEquals(APPOINTMENT_ID, result.id());
+        assertEquals(AppointmentStatus.PROPOSED, result.status());
     }
 
     @ParameterizedTest
-    @EnumSource(value = AppointmentStatus.class, names = {"REJECTED", "WITHDRAWN", "EXPIRED", "AUTO_REJECTED",
+    @EnumSource(value = AppointmentStatus.class, names = {"REJECTED", "WITHDRAWN", "AUTO_REJECTED",
             "CANCELED", "COMPLETED", "NOT_MET"})
     @DisplayName("끝난 상태의 약속만 있으면 빈 결과다")
     void handle_endedOnly_returnsEmpty(AppointmentStatus status) {
@@ -314,8 +328,8 @@ class GetCurrentAppointmentHandlerTest {
     }
 
     @Test
-    @DisplayName("다른 교환의 PROPOSED가 만료 시각을 지났으면 otherActiveProposalsOnPost가 false다")
-    void handle_expiredProposalInOtherExchange_returnsFalse() {
+    @DisplayName("다른 교환의 PROPOSED가 옛 만료 시각을 지났어도 otherActiveProposalsOnPost가 true다")
+    void handle_pastOldExpiryProposalInOtherExchange_returnsTrue() {
         givenCurrentAndOtherExchange();
         appointmentRepository.preload(appointment(OTHER_APPOINTMENT_ID, OTHER_EXCHANGE_ID,
                 AppointmentStatus.PROPOSED, NOW.minus(Duration.ofMinutes(10)), SCHEDULED_AT));
@@ -323,12 +337,12 @@ class GetCurrentAppointmentHandlerTest {
         AppointmentResult result = handler.handle(new GetCurrentAppointmentQuery(EXCHANGE_ID, REQUESTER_ID))
                 .orElseThrow();
 
-        assertFalse(result.otherActiveProposalsOnPost());
+        assertTrue(result.otherActiveProposalsOnPost());
     }
 
     @Test
-    @DisplayName("다른 교환의 PROPOSED 만료 시각이 지금과 같으면 otherActiveProposalsOnPost가 false다")
-    void handle_proposalExpiringNowInOtherExchange_returnsFalse() {
+    @DisplayName("다른 교환의 PROPOSED 옛 만료 시각이 지금과 같아도 otherActiveProposalsOnPost가 true다")
+    void handle_proposalAtOldExpiryInOtherExchange_returnsTrue() {
         givenCurrentAndOtherExchange();
         appointmentRepository.preload(appointment(OTHER_APPOINTMENT_ID, OTHER_EXCHANGE_ID,
                 AppointmentStatus.PROPOSED, NOW, SCHEDULED_AT));
@@ -336,7 +350,7 @@ class GetCurrentAppointmentHandlerTest {
         AppointmentResult result = handler.handle(new GetCurrentAppointmentQuery(EXCHANGE_ID, REQUESTER_ID))
                 .orElseThrow();
 
-        assertFalse(result.otherActiveProposalsOnPost());
+        assertTrue(result.otherActiveProposalsOnPost());
     }
 
     // ---- 종료된 교환 ----

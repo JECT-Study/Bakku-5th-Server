@@ -2,10 +2,8 @@ package com.ject.exchange.api.controller.api;
 
 import com.ject.common.web.auth.LoginMember;
 import com.ject.common.web.response.ApiResponse;
-import com.ject.exchange.api.dto.request.AcceptAppointmentRequest;
 import com.ject.exchange.api.dto.request.ConfirmationRequest;
 import com.ject.exchange.api.dto.request.ProposeAppointmentRequest;
-import com.ject.exchange.api.dto.request.UpdateReminderRequest;
 import com.ject.exchange.api.dto.response.AppointmentResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -15,12 +13,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
-@Tag(name = "Appointment", description = "약속 제안 · 수락 · 거절 · 철회 · 알림 변경 · 교환 확인")
+@Tag(name = "Appointment", description = "약속 제안 · 수락 · 거절 · 철회 · 알림 변경 · 취소 · 교환 확인")
 @RequestMapping("/api/v1")
 public interface AppointmentApi {
 
@@ -31,7 +28,7 @@ public interface AppointmentApi {
                                                         @PathVariable("exchangeId") Long exchangeId,
                                                         @Valid @RequestBody ProposeAppointmentRequest request);
 
-    @Operation(summary = "A-2 약속 상세", description = "약속 · 변경 제안 · 취소 요청 · 교환 확인 카드의 버튼 상태와 약속 상세 화면에 사용합니다.")
+    @Operation(summary = "A-2 약속 상세", description = "약속 · 변경 제안 · 교환 확인 카드의 버튼 상태와 약속 상세 화면에 사용합니다.")
     @GetMapping("/appointments/{appointmentId}")
     ApiResponse<AppointmentResponse> getAppointment(@Parameter(hidden = true) @LoginMember Long memberId,
                                                     @PathVariable("appointmentId") Long appointmentId);
@@ -41,11 +38,10 @@ public interface AppointmentApi {
     ApiResponse<AppointmentResponse> getCurrentAppointment(@Parameter(hidden = true) @LoginMember Long memberId,
                                                            @PathVariable("exchangeId") Long exchangeId);
 
-    @Operation(summary = "A-4 약속 수락", description = "제안받은 사람이 약속을 수락합니다. 약속이 확정됩니다. 본문은 생략할 수 있습니다.")
+    @Operation(summary = "A-4 약속 수락", description = "제안받은 사람이 약속을 수락합니다. 약속이 확정됩니다. 본문은 없습니다.")
     @PostMapping("/appointments/{appointmentId}/accept")
     ApiResponse<AppointmentResponse> acceptAppointment(@Parameter(hidden = true) @LoginMember Long memberId,
-                                                       @PathVariable("appointmentId") Long appointmentId,
-                                                       @Valid @RequestBody(required = false) AcceptAppointmentRequest request);
+                                                       @PathVariable("appointmentId") Long appointmentId);
 
     @Operation(summary = "A-5 약속 제안 거절", description = "제안을 무효로 하고 제안자에게 알림을 보냅니다.")
     @PostMapping("/appointments/{appointmentId}/reject")
@@ -57,11 +53,17 @@ public interface AppointmentApi {
     ApiResponse<AppointmentResponse> withdrawAppointment(@Parameter(hidden = true) @LoginMember Long memberId,
                                                          @PathVariable("appointmentId") Long appointmentId);
 
-    @Operation(summary = "A-7 내 약속 전 알림 변경", description = "상대의 설정에는 영향을 주지 않습니다. 알림 시각이 이미 지났으면 저장은 하되 발송하지 않습니다.")
-    @PutMapping("/appointments/{appointmentId}/reminder")
-    ApiResponse<AppointmentResponse> updateReminder(@Parameter(hidden = true) @LoginMember Long memberId,
-                                                    @PathVariable("appointmentId") Long appointmentId,
-                                                    @Valid @RequestBody UpdateReminderRequest request);
+    // 출시 후 검토 (E-06-1, #117): 각자 약속 전 알림 설정. 이번 출시는 30분 고정이라 쓰지 않는다
+    // @Operation(summary = "A-7 내 약속 전 알림 변경", description = "상대의 설정에는 영향을 주지 않습니다. 알림 시각이 이미 지났으면 저장은 하되 발송하지 않습니다.")
+    // @PutMapping("/appointments/{appointmentId}/reminder")
+    // ApiResponse<AppointmentResponse> updateReminder(@Parameter(hidden = true) @LoginMember Long memberId,
+    //                                                 @PathVariable("appointmentId") Long appointmentId,
+    //                                                 @Valid @RequestBody UpdateReminderRequest request);
+
+    @Operation(summary = "A-8 약속 취소", description = "확정된 약속을 상대 동의 없이 바로 취소합니다. 교환글과 고른 첨부 글은 교환 가능으로 돌아갑니다. 교환 확인이 시작된 뒤(약속 시각 30분 뒤, 지금 바로는 확정 30분 뒤)에는 취소할 수 없습니다.")
+    @PostMapping("/appointments/{appointmentId}/cancel")
+    ApiResponse<AppointmentResponse> cancelAppointment(@Parameter(hidden = true) @LoginMember Long memberId,
+                                                       @PathVariable("appointmentId") Long appointmentId);
 
     @Operation(summary = "F-1 교환 확인 응답", description = "한 명만 답해도 처리되고, 응답은 1인 1회이며 바꿀 수 없습니다.")
     @PostMapping("/appointments/{appointmentId}/confirmation")

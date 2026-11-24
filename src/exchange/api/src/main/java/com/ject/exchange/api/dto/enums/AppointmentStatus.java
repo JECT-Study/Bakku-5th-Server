@@ -4,7 +4,8 @@ public enum AppointmentStatus {
     PROPOSED,
     REJECTED,
     WITHDRAWN,
-    EXPIRED,
+    // 출시 후 검토 (E-10-1, #117): 자동 만료
+    // EXPIRED,
     AUTO_REJECTED,
     CONFIRMED,
     COMPLETED,
