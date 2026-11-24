@@ -37,12 +37,7 @@ public enum ExchangeErrorCode implements ErrorCode {
     NOT_CHANGE_RECEIVER("EXCHANGE_124", 403, "변경 제안을 받은 사람이 아닙니다."),
     CHANGE_NOT_PENDING("EXCHANGE_125", 409, "이미 처리되었거나 만료된 변경 제안입니다."),
 
-    CANCELLATION_NOT_FOUND("EXCHANGE_201", 404, "취소 요청을 찾을 수 없습니다."),
-    CANCELLATION_ALREADY_PENDING("EXCHANGE_202", 409, "진행 중인 취소 요청이 이미 있습니다."),
-    NOT_CANCELLATION_RECEIVER("EXCHANGE_203", 403, "취소 요청을 받은 사람이 아닙니다."),
-    NOT_CANCELLATION_REQUESTER("EXCHANGE_204", 403, "취소 요청자가 아닙니다."),
-    CANCELLATION_ALREADY_RESOLVED("EXCHANGE_205", 409, "이미 처리된 취소 요청입니다."),
-    FORCE_CANCEL_TOO_EARLY("EXCHANGE_206", 409, "아직 일방 취소할 수 없습니다."),
+    CANCEL_AFTER_CONFIRMATION_OPEN("EXCHANGE_207", 409, "교환 확인이 시작되어 약속을 취소할 수 없습니다."),
 
     CONFIRMATION_NOT_OPEN("EXCHANGE_301", 409, "아직 교환 확인에 응답할 수 없습니다."),
     CONFIRMATION_ALREADY_ANSWERED("EXCHANGE_302", 409, "이미 교환 확인에 응답했습니다."),
