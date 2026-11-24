@@ -56,13 +56,13 @@ class FakeAppointmentRepository implements AppointmentRepository {
     }
 
     @Override
-    public boolean existsPendingProposalOnPost(Long postId, Long excludedExchangeId, Instant now) {
+    public boolean existsPendingProposalOnPost(Long postId, Long excludedExchangeId) {
         return store.values().stream()
                 .filter(appointment -> !appointment.getExchangeId().equals(excludedExchangeId))
                 .filter(appointment -> exchangeRepository.findById(appointment.getExchangeId())
                         .map(exchange -> exchange.getPostId().equals(postId))
                         .orElse(false))
-                .anyMatch(appointment -> appointment.isPendingProposalAt(now));
+                .anyMatch(appointment -> appointment.getStatus() == AppointmentStatus.PROPOSED);
     }
 
     /** 잠금은 DB에서만 의미가 있으므로 Fake는 findById와 같다. 호출 횟수만 센다. */
@@ -97,11 +97,9 @@ class FakeAppointmentRepository implements AppointmentRepository {
     }
 
     @Override
-    public List<Appointment> findPendingProposalsInvolving(Collection<Long> postIds, Long excludedExchangeId,
-                                                           Instant now) {
+    public List<Appointment> findPendingProposalsInvolving(Collection<Long> postIds, Long excludedExchangeId) {
         return store.values().stream()
                 .filter(appointment -> appointment.getStatus() == AppointmentStatus.PROPOSED)
-                .filter(appointment -> appointment.getExpiresAt().isAfter(now))
                 .filter(appointment -> !appointment.getExchangeId().equals(excludedExchangeId))
                 .filter(appointment -> exchangeRepository.findById(appointment.getExchangeId())
                         .map(exchange -> postIdsInvolvedIn(exchange, appointment).stream()

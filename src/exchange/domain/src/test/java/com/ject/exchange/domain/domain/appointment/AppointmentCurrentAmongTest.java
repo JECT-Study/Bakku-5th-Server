@@ -52,27 +52,43 @@ class AppointmentCurrentAmongTest {
     }
 
     @Test
-    @DisplayName("PROPOSED이고 만료 시각이 지금과 같으면 현재 약속이 없다")
-    void currentAmong_proposedAtExpiry_returnsEmpty() {
+    @DisplayName("PROPOSED이고 옛 만료 시각이 지금과 같아도 현재 약속이다")
+    void currentAmong_proposedAtOldExpiry_returnsIt() {
         Appointment proposed = appointment(3L, AppointmentStatus.PROPOSED, NOW, FUTURE_SCHEDULED_AT);
 
-        assertTrue(Appointment.currentAmong(List.of(proposed), NOW).isEmpty());
+        assertEquals(3L, Appointment.currentAmong(List.of(proposed), NOW).orElseThrow().getId());
     }
 
     @Test
-    @DisplayName("PROPOSED이고 만료 시각이 지났으면 현재 약속이 없고 저장 상태는 PROPOSED 그대로다")
-    void currentAmong_proposedAfterExpiry_returnsEmptyAndKeepsStatus() {
+    @DisplayName("PROPOSED이고 제안 후 25시간이 지나 옛 만료 시각이 지났어도 현재 약속이다")
+    void currentAmong_proposedAfterOldExpiry_returnsIt() {
         Appointment proposed = appointment(3L, AppointmentStatus.PROPOSED, NOW.minus(Duration.ofHours(1)),
                 FUTURE_SCHEDULED_AT);
 
         Optional<Appointment> current = Appointment.currentAmong(List.of(proposed), NOW);
 
-        assertTrue(current.isEmpty());
+        assertEquals(3L, current.orElseThrow().getId());
         assertEquals(AppointmentStatus.PROPOSED, proposed.getStatus());
     }
 
+    @Test
+    @DisplayName("PROPOSED이고 약속 시각이 이미 지났어도 현재 약속이다")
+    void currentAmong_proposedPastSchedule_returnsIt() {
+        Appointment proposed = appointment(3L, AppointmentStatus.PROPOSED, null, PAST_SCHEDULED_AT);
+
+        assertEquals(3L, Appointment.currentAmong(List.of(proposed), NOW).orElseThrow().getId());
+    }
+
+    @Test
+    @DisplayName("PROPOSED이고 만료 시각이 null이면 현재 약속이다")
+    void currentAmong_proposedWithoutExpiry_returnsIt() {
+        Appointment proposed = appointment(3L, AppointmentStatus.PROPOSED, null, FUTURE_SCHEDULED_AT);
+
+        assertEquals(3L, Appointment.currentAmong(List.of(proposed), NOW).orElseThrow().getId());
+    }
+
     @ParameterizedTest
-    @EnumSource(value = AppointmentStatus.class, names = {"REJECTED", "WITHDRAWN", "EXPIRED", "AUTO_REJECTED",
+    @EnumSource(value = AppointmentStatus.class, names = {"REJECTED", "WITHDRAWN", "AUTO_REJECTED",
             "CANCELED", "COMPLETED", "NOT_MET"})
     @DisplayName("끝난 상태의 약속만 있으면 만료 시각이 남았어도 현재 약속이 없다")
     void currentAmong_endedOnly_returnsEmpty(AppointmentStatus status) {

@@ -8,7 +8,6 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -17,6 +16,7 @@ public interface AppointmentEntityRepository extends JpaRepository<AppointmentEn
 
     List<AppointmentEntity> findByExchangeIdOrderById(Long exchangeId);
 
+    // 출시 후 검토 (E-10-1, #117): 자동 만료 조건 "and a.expiresAt > :now"를 뺐다
     @Query("""
             select count(a) > 0
             from AppointmentEntity a, ExchangeEntity e
@@ -24,12 +24,10 @@ public interface AppointmentEntityRepository extends JpaRepository<AppointmentEn
               and e.postId = :postId
               and e.id <> :excludedExchangeId
               and a.status = :status
-              and a.expiresAt > :now
             """)
-    boolean existsByPostAndStatusAfter(@Param("postId") Long postId,
-                                       @Param("excludedExchangeId") Long excludedExchangeId,
-                                       @Param("status") AppointmentStatus status,
-                                       @Param("now") Instant now);
+    boolean existsByPostAndStatus(@Param("postId") Long postId,
+                                  @Param("excludedExchangeId") Long excludedExchangeId,
+                                  @Param("status") AppointmentStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select a from AppointmentEntity a where a.id = :id")
@@ -78,20 +76,20 @@ public interface AppointmentEntityRepository extends JpaRepository<AppointmentEn
                                             @Param("status") AppointmentStatus status,
                                             @Param("excludedExchangeId") Long excludedExchangeId);
 
+    // 출시 후 검토 (E-10-1, #117): 자동 만료 조건 "and a.expiresAt > :now"를 뺐다
     @Query("""
             select distinct a.id
             from AppointmentEntity a, ExchangeEntity e
             where a.exchangeId = e.id
               and e.id <> :excludedExchangeId
               and a.status = :status
-              and a.expiresAt > :now
               and e.postId in :postIds
             """)
-    List<Long> findIdsByExchangePostAndStatusAfter(@Param("postIds") Collection<Long> postIds,
-                                                   @Param("excludedExchangeId") Long excludedExchangeId,
-                                                   @Param("status") AppointmentStatus status,
-                                                   @Param("now") Instant now);
+    List<Long> findIdsByExchangePostAndStatus(@Param("postIds") Collection<Long> postIds,
+                                              @Param("excludedExchangeId") Long excludedExchangeId,
+                                              @Param("status") AppointmentStatus status);
 
+    // 출시 후 검토 (E-10-1, #117): 자동 만료 조건 "and a.expiresAt > :now"를 뺐다
     @Query("""
             select distinct a.id
             from AppointmentEntity a, AppointmentItemEntity ai, OfferedItemEntity o
@@ -99,11 +97,9 @@ public interface AppointmentEntityRepository extends JpaRepository<AppointmentEn
               and ai.offeredItemId = o.id
               and a.exchangeId <> :excludedExchangeId
               and a.status = :status
-              and a.expiresAt > :now
               and o.sourcePostId in :postIds
             """)
-    List<Long> findIdsByChosenSourcePostAndStatusAfter(@Param("postIds") Collection<Long> postIds,
-                                                       @Param("excludedExchangeId") Long excludedExchangeId,
-                                                       @Param("status") AppointmentStatus status,
-                                                       @Param("now") Instant now);
+    List<Long> findIdsByChosenSourcePostAndStatus(@Param("postIds") Collection<Long> postIds,
+                                                  @Param("excludedExchangeId") Long excludedExchangeId,
+                                                  @Param("status") AppointmentStatus status);
 }

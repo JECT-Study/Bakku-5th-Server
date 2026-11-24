@@ -13,10 +13,8 @@ public enum AppointmentStatus {
      * 제안자가 철회함
      */
     WITHDRAWN,
-    /**
-     * 응답 없이 만료됨
-     */
-    EXPIRED,
+    // 출시 후 검토 (E-10-1, #117): 응답 없이 만료됨
+    // EXPIRED,
     /**
      * 같은 글의 다른 약속이 확정되어 자동 거절됨
      */

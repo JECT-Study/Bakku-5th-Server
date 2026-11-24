@@ -26,7 +26,7 @@ public record AppointmentResult(
         Instant scheduledAt,
         Place place,
         List<AppointmentItemResult> items,
-        Instant expiresAt,                      // PROPOSED가 아니면 null
+        Instant expiresAt,                      // 자동 만료 전까지 항상 null (E-10-1)
         Integer myReminderOffsetMinutes,
         boolean otherActiveProposalsOnPost,
         Instant confirmedAt,
@@ -61,9 +61,9 @@ public record AppointmentResult(
     }
 
     /**
-     * 조회자 기준 약속 결과. 상태는 조회 시점에 보여 줄 상태(만료 시각이 지난 제안은 EXPIRED)
+     * 조회자 기준 약속 결과. 자동 만료가 없어 상태는 저장 상태 그대로다 (E-10-1 출시 후)
      * @param sourcePosts 약속에서 고른 첨부 글 정보 (ID별). {@link #sourcePostIdsOf}로 조회한다
-     * @param otherActiveProposalsOnPost 같은 글의 다른 교환에 만료 전 제안이 있는지
+     * @param otherActiveProposalsOnPost 같은 글의 다른 교환에 수락을 기다리는 제안이 있는지
      */
     public static AppointmentResult of(Appointment appointment, Exchange exchange, Map<Long, PostInfo> sourcePosts,
                                        Long viewerId, boolean otherActiveProposalsOnPost, Instant now) {
@@ -80,7 +80,8 @@ public record AppointmentResult(
                 chosenItemsOf(appointment, exchange).stream()
                         .map(item -> toItemResult(item, exchange.getOfferType(), sourcePosts))
                         .toList(),
-                displayStatus == AppointmentStatus.PROPOSED ? appointment.getExpiresAt() : null,
+                // 자동 만료가 출시 후 기능이라 만료 시각은 보여 주지 않는다. 예전에 저장된 값도 판정에 쓰지 않는다 (E-10-1, #117)
+                null,
                 appointment.reminderOffsetMinutesOf(viewerId),
                 otherActiveProposalsOnPost,
                 appointment.getConfirmedAt(),

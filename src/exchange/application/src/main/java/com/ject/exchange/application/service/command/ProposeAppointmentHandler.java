@@ -58,7 +58,7 @@ public class ProposeAppointmentHandler implements CommandHandler<ProposeAppointm
 
         // Todo: 채팅방 "교환을 제안해요" 카드 · 상대 알림
         Appointment appointment = Appointment.propose(exchange.getId(), command.proposerId(), receiverId,
-                time, command.place(), itemIds, command.reminderOffsetMinutes(), now);
+                time, command.place(), itemIds, now);
         return appointmentRepository.save(appointment).getId();
     }
 

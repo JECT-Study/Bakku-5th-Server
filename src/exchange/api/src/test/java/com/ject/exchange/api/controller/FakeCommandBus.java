@@ -9,7 +9,6 @@ import com.ject.exchange.application.dto.command.ProposeAppointmentCommand;
 import com.ject.exchange.application.dto.command.RejectAppointmentCommand;
 import com.ject.exchange.application.dto.command.RespondConfirmationCommand;
 import com.ject.exchange.application.dto.command.UpdateNewItemCommand;
-import com.ject.exchange.application.dto.command.UpdateReminderCommand;
 import com.ject.exchange.application.dto.command.WithdrawAppointmentCommand;
 import com.ject.exchange.application.service.command.CreateExchangeHandler;
 import com.ject.exchange.application.service.command.UpdateNewItemHandler;
@@ -31,7 +30,6 @@ class FakeCommandBus implements CommandBus {
     private Function<AcceptAppointmentCommand, Long> acceptAppointmentResponder;
     private Function<RejectAppointmentCommand, Long> rejectAppointmentResponder;
     private Function<WithdrawAppointmentCommand, Long> withdrawAppointmentResponder;
-    private Function<UpdateReminderCommand, Long> updateReminderResponder;
     private Function<RespondConfirmationCommand, Long> respondConfirmationResponder;
     private Function<CancelAppointmentCommand, Long> cancelAppointmentResponder;
 
@@ -65,11 +63,6 @@ class FakeCommandBus implements CommandBus {
     /** A-6 커맨드 응답(약속 id 또는 예외)을 정한다. */
     void onWithdrawAppointment(Function<WithdrawAppointmentCommand, Long> responder) {
         this.withdrawAppointmentResponder = responder;
-    }
-
-    /** A-7 커맨드 응답(약속 id 또는 예외)을 정한다. */
-    void onUpdateReminder(Function<UpdateReminderCommand, Long> responder) {
-        this.updateReminderResponder = responder;
     }
 
     /** F-1 커맨드 응답(약속 id 또는 예외)을 정한다. */
@@ -107,10 +100,6 @@ class FakeCommandBus implements CommandBus {
         if (command instanceof WithdrawAppointmentCommand withdrawAppointmentCommand
                 && withdrawAppointmentResponder != null) {
             return (R) withdrawAppointmentResponder.apply(withdrawAppointmentCommand);
-        }
-        if (command instanceof UpdateReminderCommand updateReminderCommand
-                && updateReminderResponder != null) {
-            return (R) updateReminderResponder.apply(updateReminderCommand);
         }
         if (command instanceof RespondConfirmationCommand respondConfirmationCommand
                 && respondConfirmationResponder != null) {

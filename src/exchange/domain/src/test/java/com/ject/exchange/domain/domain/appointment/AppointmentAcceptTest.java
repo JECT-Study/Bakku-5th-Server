@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -39,13 +38,13 @@ class AppointmentAcceptTest {
     // ---- 수락 ----
 
     @Test
-    @DisplayName("받는 사람이 수락하면 CONFIRMED · 확정 시각 now이고 나머지 값은 그대로다")
+    @DisplayName("받는 사람이 수락하면 CONFIRMED · 확정 시각 now · 받는 사람 알림 30이고 나머지 값은 그대로다")
     void accept_byReceiver_confirms() {
         // given
         Appointment proposal = proposal(AppointmentStatus.PROPOSED, scheduled(SCHEDULED_AT), EXPIRES_AT);
 
         // when
-        Appointment accepted = proposal.accept(OWNER_ID, 60, NOW);
+        Appointment accepted = proposal.accept(OWNER_ID, NOW);
 
         // then
         assertEquals(AppointmentStatus.CONFIRMED, accepted.getStatus());
@@ -58,6 +57,7 @@ class AppointmentAcceptTest {
         assertEquals(PLACE, accepted.getPlace());
         assertEquals(List.of(31L), accepted.getItemIds().values());
         assertEquals(30, accepted.getProposerReminderOffsetMinutes());
+        assertEquals(30, accepted.getReceiverReminderOffsetMinutes());
         assertEquals(CREATED_AT, accepted.getCreatedAt());
     }
 
@@ -66,61 +66,47 @@ class AppointmentAcceptTest {
     void accept_returnsNewObject_keepsOriginal() {
         Appointment proposal = proposal(AppointmentStatus.PROPOSED, scheduled(SCHEDULED_AT), EXPIRES_AT);
 
-        proposal.accept(OWNER_ID, 60, NOW);
+        proposal.accept(OWNER_ID, NOW);
 
         assertEquals(AppointmentStatus.PROPOSED, proposal.getStatus());
         assertNull(proposal.getConfirmedAt());
     }
 
     @Test
-    @DisplayName("받는 사람 알림 60으로 수락하면 받는 사람 알림 60 · 제안자 알림 30이다")
-    void accept_withReminder_setsReceiverReminderOnly() {
-        Appointment accepted = proposal(AppointmentStatus.PROPOSED, scheduled(SCHEDULED_AT), EXPIRES_AT)
-                .accept(OWNER_ID, 60, NOW);
+    @DisplayName("약속 시각이 20분 뒤라 알림 시각이 이미 지났어도 받는 사람 알림은 30으로 저장된다")
+    void accept_reminderAlreadyPassed_keepsThirty() {
+        Instant twentyMinutesLater = NOW.plus(Duration.ofMinutes(20));
+        Appointment accepted = proposal(AppointmentStatus.PROPOSED, scheduled(twentyMinutesLater), null)
+                .accept(OWNER_ID, NOW);
 
-        assertEquals(60, accepted.getReceiverReminderOffsetMinutes());
-        assertEquals(30, accepted.getProposerReminderOffsetMinutes());
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = {10, 1440})
-    @DisplayName("받는 사람 알림 경계값 10 · 1440이면 그대로 담긴다")
-    void accept_boundaryReminder_keepsValue(int reminder) {
-        Appointment accepted = proposal(AppointmentStatus.PROPOSED, scheduled(SCHEDULED_AT), EXPIRES_AT)
-                .accept(OWNER_ID, reminder, NOW);
-
-        assertEquals(reminder, accepted.getReceiverReminderOffsetMinutes());
+        assertEquals(30, accepted.getReceiverReminderOffsetMinutes());
     }
 
     @Test
-    @DisplayName("알림 시각이 이미 지났어도(1시간 뒤 약속 · 1440분 전) 받는 사람 알림은 저장된다")
-    void accept_reminderAlreadyPassed_keepsValue() {
-        Instant oneHourLater = NOW.plus(Duration.ofHours(1));
-        Appointment accepted = proposal(AppointmentStatus.PROPOSED, scheduled(oneHourLater), oneHourLater)
-                .accept(OWNER_ID, 1440, NOW);
+    @DisplayName("제안자 알림이 30이 아닌 옛 제안을 수락해도 받는 사람 알림은 30이고 제안자 알림은 그대로다")
+    void accept_legacyProposerReminder_setsReceiverThirtyOnly() {
+        Appointment legacy = Appointment.of(APPOINTMENT_ID, EXCHANGE_ID, REQUESTER_ID, OWNER_ID,
+                AppointmentStatus.PROPOSED, scheduled(SCHEDULED_AT), PLACE, new AppointmentItemIds(List.of(31L)),
+                EXPIRES_AT, 60, null, null, CREATED_AT, CREATED_AT);
 
-        assertEquals(1440, accepted.getReceiverReminderOffsetMinutes());
+        Appointment accepted = legacy.accept(OWNER_ID, NOW);
+
+        assertEquals(30, accepted.getReceiverReminderOffsetMinutes());
+        assertEquals(60, accepted.getProposerReminderOffsetMinutes());
     }
 
     @Test
-    @DisplayName("알림 null로 수락하면 받는 사람 알림은 null이다")
-    void accept_nullReminder_keepsNull() {
-        Appointment accepted = proposal(AppointmentStatus.PROPOSED, scheduled(SCHEDULED_AT), EXPIRES_AT)
-                .accept(OWNER_ID, null, NOW);
+    @DisplayName("지금 바로 약속을 수락하면 CONFIRMED이고 두 사람 알림은 null이다")
+    void accept_nowAppointment_noReminder() {
+        Appointment nowProposal = Appointment.of(APPOINTMENT_ID, EXCHANGE_ID, REQUESTER_ID, OWNER_ID,
+                AppointmentStatus.PROPOSED, new AppointmentTime(AppointmentTimeType.NOW, null), PLACE,
+                new AppointmentItemIds(List.of(31L)), null, null, null, null, CREATED_AT, CREATED_AT);
+
+        Appointment accepted = nowProposal.accept(OWNER_ID, NOW);
 
         assertEquals(AppointmentStatus.CONFIRMED, accepted.getStatus());
         assertNull(accepted.getReceiverReminderOffsetMinutes());
-    }
-
-    @Test
-    @DisplayName("지금 바로 약속을 알림 30으로 수락하면 CONFIRMED이고 받는 사람 알림은 null이다")
-    void accept_nowAppointment_dropsReminder() {
-        Appointment accepted = proposal(AppointmentStatus.PROPOSED,
-                new AppointmentTime(AppointmentTimeType.NOW, null), NOW.plus(Duration.ofHours(23)))
-                .accept(OWNER_ID, 30, NOW);
-
-        assertEquals(AppointmentStatus.CONFIRMED, accepted.getStatus());
-        assertNull(accepted.getReceiverReminderOffsetMinutes());
+        assertNull(accepted.getProposerReminderOffsetMinutes());
     }
 
     @Test
@@ -128,7 +114,7 @@ class AppointmentAcceptTest {
     void accept_justBeforeExpiry_confirms() {
         Instant expiresAt = NOW.plusSeconds(1);
         Appointment accepted = proposal(AppointmentStatus.PROPOSED, scheduled(expiresAt), expiresAt)
-                .accept(OWNER_ID, null, NOW);
+                .accept(OWNER_ID, NOW);
 
         assertEquals(AppointmentStatus.CONFIRMED, accepted.getStatus());
     }
@@ -140,7 +126,7 @@ class AppointmentAcceptTest {
     void accept_byProposer_throwsNotReceiver() {
         Appointment proposal = proposal(AppointmentStatus.PROPOSED, scheduled(SCHEDULED_AT), EXPIRES_AT);
 
-        assertError(ExchangeErrorCode.NOT_APPOINTMENT_RECEIVER, () -> proposal.accept(REQUESTER_ID, null, NOW));
+        assertError(ExchangeErrorCode.NOT_APPOINTMENT_RECEIVER, () -> proposal.accept(REQUESTER_ID, NOW));
         assertEquals(AppointmentStatus.PROPOSED, proposal.getStatus());
     }
 
@@ -172,12 +158,12 @@ class AppointmentAcceptTest {
 
     @ParameterizedTest
     @EnumSource(value = AppointmentStatus.class,
-            names = {"REJECTED", "WITHDRAWN", "EXPIRED", "CONFIRMED", "CANCELED", "COMPLETED", "NOT_MET"})
+            names = {"REJECTED", "WITHDRAWN", "CONFIRMED", "CANCELED", "COMPLETED", "NOT_MET"})
     @DisplayName("진행 중이 아닌 제안을 수락하면 EXCHANGE_106이고 상태는 그대로다")
     void accept_notProposed_throwsProposalNotActive(AppointmentStatus status) {
         Appointment appointment = proposal(status, scheduled(SCHEDULED_AT), EXPIRES_AT);
 
-        assertError(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE, () -> appointment.accept(OWNER_ID, null, NOW));
+        assertError(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE, () -> appointment.accept(OWNER_ID, NOW));
         assertEquals(status, appointment.getStatus());
     }
 
@@ -186,63 +172,82 @@ class AppointmentAcceptTest {
     void accept_autoRejected_throwsPostReservedElsewhere() {
         Appointment appointment = proposal(AppointmentStatus.AUTO_REJECTED, scheduled(SCHEDULED_AT), EXPIRES_AT);
 
-        assertError(ExchangeErrorCode.POST_RESERVED_ELSEWHERE, () -> appointment.accept(OWNER_ID, null, NOW));
+        assertError(ExchangeErrorCode.POST_RESERVED_ELSEWHERE, () -> appointment.accept(OWNER_ID, NOW));
         assertEquals(AppointmentStatus.AUTO_REJECTED, appointment.getStatus());
     }
 
     // ---- 시각 ----
 
     @Test
-    @DisplayName("만료 시각과 약속 시각이 모두 지금과 같으면 EXCHANGE_107")
-    void accept_expiresAndScheduledAtNow_throwsScheduledAtPassed() {
-        Appointment proposal = proposal(AppointmentStatus.PROPOSED, scheduled(NOW), NOW);
+    @DisplayName("약속 시각이 지금과 같으면 EXCHANGE_107이고 PROPOSED 그대로다")
+    void accept_scheduledAtNow_throwsScheduledAtPassed() {
+        Appointment proposal = proposal(AppointmentStatus.PROPOSED, scheduled(NOW), null);
 
-        assertError(ExchangeErrorCode.SCHEDULED_AT_PASSED, () -> proposal.accept(OWNER_ID, null, NOW));
+        assertError(ExchangeErrorCode.SCHEDULED_AT_PASSED, () -> proposal.accept(OWNER_ID, NOW));
         assertEquals(AppointmentStatus.PROPOSED, proposal.getStatus());
     }
 
     @Test
-    @DisplayName("만료 시각과 약속 시각이 지났으면 EXCHANGE_107")
+    @DisplayName("약속 시각이 지났으면 EXCHANGE_107")
     void accept_scheduledAtPassed_throwsScheduledAtPassed() {
         Instant oneHourAgo = NOW.minus(Duration.ofHours(1));
         Appointment proposal = proposal(AppointmentStatus.PROPOSED, scheduled(oneHourAgo), oneHourAgo);
 
-        assertError(ExchangeErrorCode.SCHEDULED_AT_PASSED, () -> proposal.accept(OWNER_ID, null, NOW));
-    }
-
-    @Test
-    @DisplayName("만료 시각이 지금과 같고 약속 시각은 뒤면 EXCHANGE_106")
-    void accept_expiredAtNowBeforeScheduledAt_throwsProposalNotActive() {
-        Appointment proposal = proposal(AppointmentStatus.PROPOSED, scheduled(NOW.plus(Duration.ofHours(1))), NOW);
-
-        assertError(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE, () -> proposal.accept(OWNER_ID, null, NOW));
+        assertError(ExchangeErrorCode.SCHEDULED_AT_PASSED, () -> proposal.accept(OWNER_ID, NOW));
         assertEquals(AppointmentStatus.PROPOSED, proposal.getStatus());
     }
 
     @Test
-    @DisplayName("만료 시각이 지났고 약속 시각은 뒤면 EXCHANGE_106")
-    void accept_expiredBeforeScheduledAt_throwsProposalNotActive() {
-        Appointment proposal = proposal(AppointmentStatus.PROPOSED, scheduled(NOW.plus(Duration.ofHours(1))),
-                NOW.minus(Duration.ofMinutes(1)));
+    @DisplayName("약속 시각 1초 전이면 수락된다")
+    void accept_oneSecondBeforeScheduledAt_confirms() {
+        Appointment proposal = proposal(AppointmentStatus.PROPOSED, scheduled(NOW.plusSeconds(1)), null);
 
-        assertError(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE, () -> proposal.accept(OWNER_ID, null, NOW));
+        assertEquals(AppointmentStatus.CONFIRMED, proposal.accept(OWNER_ID, NOW).getStatus());
     }
 
     @Test
-    @DisplayName("지금 바로 약속의 만료 시각이 지났으면 EXCHANGE_106")
-    void accept_expiredNowAppointment_throwsProposalNotActive() {
+    @DisplayName("옛 만료 시각이 지금과 같고 약속 시각은 뒤면 수락된다")
+    void accept_oldExpiryNowBeforeScheduledAt_confirms() {
+        Appointment proposal = proposal(AppointmentStatus.PROPOSED, scheduled(NOW.plus(Duration.ofHours(1))), NOW);
+
+        assertEquals(AppointmentStatus.CONFIRMED, proposal.accept(OWNER_ID, NOW).getStatus());
+    }
+
+    @Test
+    @DisplayName("제안 후 25시간이 지나 옛 만료 시각이 지났고 약속 시각은 뒤면 수락된다")
+    void accept_pastOldExpiryBeforeScheduledAt_confirms() {
+        Appointment proposal = proposal(AppointmentStatus.PROPOSED, scheduled(SCHEDULED_AT),
+                NOW.minus(Duration.ofHours(1)));
+
+        Appointment accepted = proposal.accept(OWNER_ID, NOW);
+
+        assertEquals(AppointmentStatus.CONFIRMED, accepted.getStatus());
+        assertEquals(30, accepted.getReceiverReminderOffsetMinutes());
+    }
+
+    @Test
+    @DisplayName("지금 바로 약속이 제안 후 25시간 지났어도 수락된다")
+    void accept_nowAppointmentPastOldExpiry_confirms() {
         Appointment proposal = proposal(AppointmentStatus.PROPOSED,
-                new AppointmentTime(AppointmentTimeType.NOW, null), NOW);
+                new AppointmentTime(AppointmentTimeType.NOW, null), NOW.minus(Duration.ofHours(1)));
 
-        assertError(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE, () -> proposal.accept(OWNER_ID, null, NOW));
+        assertEquals(AppointmentStatus.CONFIRMED, proposal.accept(OWNER_ID, NOW).getStatus());
     }
 
     @Test
-    @DisplayName("제안자가 만료된 제안을 수락해도 EXCHANGE_104가 먼저다")
-    void accept_byProposerAfterExpiry_throwsNotReceiver() {
+    @DisplayName("제안자가 약속 시각이 지난 제안을 수락해도 EXCHANGE_104가 먼저다")
+    void accept_byProposerAfterScheduledAt_throwsNotReceiver() {
         Appointment proposal = proposal(AppointmentStatus.PROPOSED, scheduled(NOW), NOW);
 
-        assertError(ExchangeErrorCode.NOT_APPOINTMENT_RECEIVER, () -> proposal.accept(REQUESTER_ID, null, NOW));
+        assertError(ExchangeErrorCode.NOT_APPOINTMENT_RECEIVER, () -> proposal.accept(REQUESTER_ID, NOW));
+    }
+
+    @Test
+    @DisplayName("약속 시각이 지난 거절된 제안을 수락하면 EXCHANGE_106이 먼저다")
+    void accept_rejectedPastSchedule_throwsProposalNotActive() {
+        Appointment proposal = proposal(AppointmentStatus.REJECTED, scheduled(NOW.minus(Duration.ofHours(1))), null);
+
+        assertError(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE, () -> proposal.accept(OWNER_ID, NOW));
     }
 
     // ---- 자동 거절 ----

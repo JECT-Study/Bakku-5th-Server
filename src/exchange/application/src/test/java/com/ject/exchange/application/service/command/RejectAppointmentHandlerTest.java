@@ -325,7 +325,7 @@ class RejectAppointmentHandlerTest {
     // ---- 진행 중이 아닌 제안 (AC-8) ----
 
     @ParameterizedTest
-    @EnumSource(value = AppointmentStatus.class, names = {"REJECTED", "WITHDRAWN", "EXPIRED", "AUTO_REJECTED",
+    @EnumSource(value = AppointmentStatus.class, names = {"REJECTED", "WITHDRAWN", "AUTO_REJECTED",
             "CONFIRMED", "CANCELED", "COMPLETED", "NOT_MET"})
     @DisplayName("진행 중이 아닌 제안을 거절하면 EXCHANGE_106이고 상태는 그대로다")
     void handle_proposalNotActive_throwsProposalNotActive(AppointmentStatus status) {
@@ -338,50 +338,65 @@ class RejectAppointmentHandlerTest {
         assertEquals(status, stored(APPOINTMENT_ID).getStatus());
     }
 
-    // ---- 만료된 제안 (AC-9) ----
+    // ---- 자동 만료 없음 (#117) ----
 
     @Test
-    @DisplayName("만료 시각이 지금이면 EXCHANGE_106이고 저장 상태는 PROPOSED 그대로다")
-    void handle_expiresAtNow_throwsProposalNotActive() {
+    @DisplayName("약속 시각이 3일 뒤인 제안을 제안 후 25시간에 reject하면 REJECTED다")
+    void handle_proposal25HoursOld_rejects() {
         exchangeRepository.preload(defaultExchange(ExchangeStatus.ACTIVE));
-        appointmentRepository.preload(scheduledProposal(NOW, NOW.plus(Duration.ofHours(1))));
+        appointmentRepository.preload(scheduledProposal(NOW.minus(Duration.ofHours(1)), NOW.plus(Duration.ofDays(3))));
 
-        assertRejected(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE,
-                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID)));
-        assertEquals(AppointmentStatus.PROPOSED, stored(APPOINTMENT_ID).getStatus());
+        Long id = handler.handle(command(APPOINTMENT_ID, OWNER_ID));
+
+        assertEquals(APPOINTMENT_ID, id);
+        assertEquals(AppointmentStatus.REJECTED, stored(APPOINTMENT_ID).getStatus());
     }
 
     @Test
-    @DisplayName("만료 시각과 약속 시각이 지났으면 EXCHANGE_106")
-    void handle_expiredAndScheduledAtPassed_throwsProposalNotActive() {
+    @DisplayName("옛 만료 시각이 지금인 제안도 REJECTED다")
+    void handle_oldExpiryNow_rejects() {
+        exchangeRepository.preload(defaultExchange(ExchangeStatus.ACTIVE));
+        appointmentRepository.preload(scheduledProposal(NOW, NOW.plus(Duration.ofHours(1))));
+
+        handler.handle(command(APPOINTMENT_ID, OWNER_ID));
+
+        assertEquals(AppointmentStatus.REJECTED, stored(APPOINTMENT_ID).getStatus());
+    }
+
+    @Test
+    @DisplayName("약속 시각이 1시간 지난 제안도 REJECTED다")
+    void handle_scheduledAtPassed_rejects() {
         exchangeRepository.preload(defaultExchange(ExchangeStatus.ACTIVE));
         Instant oneHourAgo = NOW.minus(Duration.ofHours(1));
         appointmentRepository.preload(scheduledProposal(oneHourAgo, oneHourAgo));
 
-        assertRejected(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE,
-                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID)));
+        handler.handle(command(APPOINTMENT_ID, OWNER_ID));
+
+        assertEquals(AppointmentStatus.REJECTED, stored(APPOINTMENT_ID).getStatus());
     }
 
     @Test
-    @DisplayName("만료 시각과 약속 시각이 모두 지금이면 EXCHANGE_106")
-    void handle_expiredAndScheduledAtNow_throwsProposalNotActive() {
+    @DisplayName("약속 시각이 지금인 제안도 REJECTED다")
+    void handle_scheduledAtNow_rejects() {
         exchangeRepository.preload(defaultExchange(ExchangeStatus.ACTIVE));
         appointmentRepository.preload(scheduledProposal(NOW, NOW));
 
-        assertRejected(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE,
-                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID)));
+        handler.handle(command(APPOINTMENT_ID, OWNER_ID));
+
+        assertEquals(AppointmentStatus.REJECTED, stored(APPOINTMENT_ID).getStatus());
     }
 
     @Test
-    @DisplayName("지금 바로 약속의 만료 시각이 지났으면 EXCHANGE_106")
-    void handle_expiredNowAppointment_throwsProposalNotActive() {
+    @DisplayName("지금 바로 제안을 제안 후 25시간에 reject해도 REJECTED다")
+    void handle_nowProposal25HoursOld_rejects() {
         exchangeRepository.preload(defaultExchange(ExchangeStatus.ACTIVE));
         appointmentRepository.preload(appointment(APPOINTMENT_ID, EXCHANGE_ID, REQUESTER_ID, OWNER_ID,
                 AppointmentStatus.PROPOSED, new AppointmentTime(AppointmentTimeType.NOW, null),
-                NOW.minus(Duration.ofMinutes(1)), List.of(ITEM_31)));
+                NOW.minus(Duration.ofHours(1)), List.of(ITEM_31)));
 
-        assertRejected(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE,
-                () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID)));
+        handler.handle(command(APPOINTMENT_ID, OWNER_ID));
+
+        assertEquals(AppointmentStatus.REJECTED, stored(APPOINTMENT_ID).getStatus());
     }
 
     // ---- 종료된 교환 (AC-10) ----
@@ -433,7 +448,7 @@ class RejectAppointmentHandlerTest {
 
         // when
         handler.handle(command(APPOINTMENT_ID, OWNER_ID));
-        acceptHandler().handle(new AcceptAppointmentCommand(OTHER_APPOINTMENT_ID, OWNER_ID, null));
+        acceptHandler().handle(new AcceptAppointmentCommand(OTHER_APPOINTMENT_ID, OWNER_ID));
 
         // then
         assertEquals(AppointmentStatus.REJECTED, stored(APPOINTMENT_ID).getStatus());
@@ -447,7 +462,7 @@ class RejectAppointmentHandlerTest {
         givenDefaultExchangeAndProposal();
         exchangeRepository.preload(otherExchangeOnSamePost());
         appointmentRepository.preload(otherProposalOnSamePost());
-        acceptHandler().handle(new AcceptAppointmentCommand(OTHER_APPOINTMENT_ID, OWNER_ID, null));
+        acceptHandler().handle(new AcceptAppointmentCommand(OTHER_APPOINTMENT_ID, OWNER_ID));
 
         // when
         ExchangeException late = assertThrows(ExchangeException.class,
@@ -466,7 +481,7 @@ class RejectAppointmentHandlerTest {
         givenDefaultExchangeAndProposal();
         exchangeRepository.preload(sourcePostExchange());
         appointmentRepository.preload(sourcePostProposal());
-        acceptHandler().handle(new AcceptAppointmentCommand(SOURCE_POST_APPOINTMENT_ID, REQUESTER_ID, null));
+        acceptHandler().handle(new AcceptAppointmentCommand(SOURCE_POST_APPOINTMENT_ID, REQUESTER_ID));
 
         // when
         ExchangeException late = assertThrows(ExchangeException.class,
@@ -486,7 +501,7 @@ class RejectAppointmentHandlerTest {
         appointmentRepository.preload(sourcePostProposal());
 
         handler.handle(command(APPOINTMENT_ID, OWNER_ID));
-        acceptHandler().handle(new AcceptAppointmentCommand(SOURCE_POST_APPOINTMENT_ID, REQUESTER_ID, null));
+        acceptHandler().handle(new AcceptAppointmentCommand(SOURCE_POST_APPOINTMENT_ID, REQUESTER_ID));
 
         assertEquals(AppointmentStatus.REJECTED, stored(APPOINTMENT_ID).getStatus());
         assertEquals(AppointmentStatus.CONFIRMED, stored(SOURCE_POST_APPOINTMENT_ID).getStatus());
@@ -496,7 +511,7 @@ class RejectAppointmentHandlerTest {
     @DisplayName("같은 제안을 수락한 뒤 거절하면 EXCHANGE_106이고 CONFIRMED 그대로다")
     void handle_rejectAfterAcceptOnSameProposal_throwsProposalNotActive() {
         givenDefaultExchangeAndProposal();
-        acceptHandler().handle(new AcceptAppointmentCommand(APPOINTMENT_ID, OWNER_ID, null));
+        acceptHandler().handle(new AcceptAppointmentCommand(APPOINTMENT_ID, OWNER_ID));
 
         ExchangeException late = assertThrows(ExchangeException.class,
                 () -> handler.handle(command(APPOINTMENT_ID, OWNER_ID)));
@@ -512,7 +527,7 @@ class RejectAppointmentHandlerTest {
         handler.handle(command(APPOINTMENT_ID, OWNER_ID));
 
         ExchangeException late = assertThrows(ExchangeException.class,
-                () -> acceptHandler().handle(new AcceptAppointmentCommand(APPOINTMENT_ID, OWNER_ID, null)));
+                () -> acceptHandler().handle(new AcceptAppointmentCommand(APPOINTMENT_ID, OWNER_ID)));
 
         assertEquals(ExchangeErrorCode.PROPOSAL_NOT_ACTIVE, late.getErrorCode());
         assertEquals(AppointmentStatus.REJECTED, stored(APPOINTMENT_ID).getStatus());
@@ -554,7 +569,7 @@ class RejectAppointmentHandlerTest {
 
     private static ProposeAppointmentCommand proposeCommand(Long proposerId) {
         return new ProposeAppointmentCommand(EXCHANGE_ID, proposerId, AppointmentTimeType.SCHEDULED, SCHEDULED_AT,
-                PLACE, List.of(ITEM_32), 30);
+                PLACE, List.of(ITEM_32));
     }
 
     /** 교환 E: 글 G · 첨부 글 S1(ITEM_31) · S2(ITEM_32) */

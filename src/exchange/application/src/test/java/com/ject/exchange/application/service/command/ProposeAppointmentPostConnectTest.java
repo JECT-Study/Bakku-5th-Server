@@ -113,7 +113,7 @@ class ProposeAppointmentPostConnectTest {
 
     private static ProposeAppointmentCommand command(List<Long> itemIds) {
         return new ProposeAppointmentCommand(EXCHANGE_X, MEMBER_A, AppointmentTimeType.SCHEDULED, SCHEDULED_AT,
-                PLACE, itemIds, 30);
+                PLACE, itemIds);
     }
 
     private static PostInfo post(Long id, Long ownerId, PostInfo.Status status) {

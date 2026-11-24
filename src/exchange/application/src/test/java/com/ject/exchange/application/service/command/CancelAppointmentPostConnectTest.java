@@ -311,7 +311,7 @@ class CancelAppointmentPostConnectTest {
 
     private static ProposeAppointmentCommand propose(Long exchangeId, Long proposerId, Long itemId) {
         return new ProposeAppointmentCommand(exchangeId, proposerId, AppointmentTimeType.SCHEDULED,
-                NEXT_SCHEDULED_AT, PLACE, List.of(itemId), 30);
+                NEXT_SCHEDULED_AT, PLACE, List.of(itemId));
     }
 
     /** D가 B의 글 P에 D의 글을 첨부해 교환을 요청한다 */

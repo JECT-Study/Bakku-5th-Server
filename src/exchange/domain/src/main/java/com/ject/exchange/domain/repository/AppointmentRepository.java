@@ -3,7 +3,6 @@ package com.ject.exchange.domain.repository;
 import com.ject.exchange.domain.domain.appointment.Appointment;
 import com.ject.exchange.domain.domain.appointment.AppointmentStatus;
 
-import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -18,12 +17,11 @@ public interface AppointmentRepository {
     List<Appointment> findAllByExchangeId(Long exchangeId);
 
     /**
-     * 같은 글의 다른 교환에 만료 전 제안(PROPOSED)이 있는지
+     * 같은 글의 다른 교환에 수락을 기다리는 제안(PROPOSED)이 있는지. 자동 만료가 없어 시각은 보지 않는다 (E-10-1 출시 후)
      * @param postId 요청받은 교환글 ID
      * @param excludedExchangeId 제외할 교환 ID (지금 보고 있는 교환)
-     * @param now 만료 판단 기준 시각
      */
-    boolean existsPendingProposalOnPost(Long postId, Long excludedExchangeId, Instant now);
+    boolean existsPendingProposalOnPost(Long postId, Long excludedExchangeId);
 
     /**
      * 약속을 잠그고 조회한다 (수락처럼 상태를 바꾸는 처리용). 같은 트랜잭션에서 처음 읽어야 최신 상태가 보인다
@@ -43,8 +41,8 @@ public interface AppointmentRepository {
     Set<Long> findPostIdsBoundBy(Collection<Long> postIds, AppointmentStatus status, Long excludedExchangeId);
 
     /**
-     * 주어진 글에 걸린 다른 교환의 만료 전 제안(PROPOSED, 만료 시각 > now).
+     * 주어진 글에 걸린 다른 교환의 수락을 기다리는 제안(PROPOSED). 자동 만료가 없어 시각은 보지 않는다.
      * "걸림" = 그 교환의 글이 주어진 글이거나, 그 제안이 고른 첨부 글이 주어진 글. 교환 상태는 보지 않는다
      */
-    List<Appointment> findPendingProposalsInvolving(Collection<Long> postIds, Long excludedExchangeId, Instant now);
+    List<Appointment> findPendingProposalsInvolving(Collection<Long> postIds, Long excludedExchangeId);
 }

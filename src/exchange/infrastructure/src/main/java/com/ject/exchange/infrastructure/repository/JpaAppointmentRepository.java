@@ -14,7 +14,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -78,9 +77,9 @@ public class JpaAppointmentRepository implements AppointmentRepository {
 
     @Override
     @Transactional(readOnly = true)
-    public boolean existsPendingProposalOnPost(Long postId, Long excludedExchangeId, Instant now) {
-        return appointmentEntityRepository.existsByPostAndStatusAfter(
-                postId, excludedExchangeId, AppointmentStatus.PROPOSED, now);
+    public boolean existsPendingProposalOnPost(Long postId, Long excludedExchangeId) {
+        return appointmentEntityRepository.existsByPostAndStatus(
+                postId, excludedExchangeId, AppointmentStatus.PROPOSED);
     }
 
     @Override
@@ -111,15 +110,15 @@ public class JpaAppointmentRepository implements AppointmentRepository {
     }
 
     @Override
-    public List<Appointment> findPendingProposalsInvolving(Collection<Long> postIds, Long excludedExchangeId, Instant now) {
+    public List<Appointment> findPendingProposalsInvolving(Collection<Long> postIds, Long excludedExchangeId) {
         if (postIds.isEmpty()) {
             return List.of();
         }
         List<Long> appointmentIds = Stream.concat(
-                        appointmentEntityRepository.findIdsByExchangePostAndStatusAfter(
-                                postIds, excludedExchangeId, AppointmentStatus.PROPOSED, now).stream(),
-                        appointmentEntityRepository.findIdsByChosenSourcePostAndStatusAfter(
-                                postIds, excludedExchangeId, AppointmentStatus.PROPOSED, now).stream())
+                        appointmentEntityRepository.findIdsByExchangePostAndStatus(
+                                postIds, excludedExchangeId, AppointmentStatus.PROPOSED).stream(),
+                        appointmentEntityRepository.findIdsByChosenSourcePostAndStatus(
+                                postIds, excludedExchangeId, AppointmentStatus.PROPOSED).stream())
                 .distinct()
                 .sorted()
                 .toList();

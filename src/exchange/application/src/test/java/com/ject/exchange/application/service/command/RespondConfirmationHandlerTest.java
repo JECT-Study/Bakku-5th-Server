@@ -336,29 +336,135 @@ class RespondConfirmationHandlerTest {
         assertTrue(stored().replyOf(OWNER_ID).isEmpty());
     }
 
-    // ---- AC-5 · AC-6 결과가 정해진 뒤 ----
+    // ---- 결과가 정해진 뒤 (#117 답이 엇갈릴 때) ----
 
     @Test
-    @DisplayName("COMPLETED 뒤 B가 NOT_MET으로 답하면 EXCHANGE_303이고 B의 응답은 없다")
-    void handle_notMetAfterCompleted_throwsAlreadyDecided() {
+    @DisplayName("A의 DONE으로 COMPLETED된 뒤 B가 1일 뒤 NOT_MET · NO_SHOW로 답하면 200이고 B의 응답만 저장된다")
+    void handle_notMetAfterCompleted_savesDisputedReply() {
+        // given
+        givenConfirmedAppointment();
+        handlerAt(NOW).handle(done(REQUESTER_ID));
+        Instant oneDayLater = NOW.plus(Duration.ofDays(1));
+
+        // when
+        Long respondedId = handlerAt(oneDayLater).handle(notMet(OWNER_ID, NotMetReason.NO_SHOW, null));
+
+        // then
+        assertEquals(APPOINTMENT_ID, respondedId);
+        Appointment saved = stored();
+        assertEquals(AppointmentStatus.COMPLETED, saved.getStatus());
+        assertEquals(NOW, saved.getResolvedAt());
+        assertEquals(Optional.of(new ConfirmationReply(OWNER_ID, ConfirmationAnswer.NOT_MET, NotMetReason.NO_SHOW,
+                null, oneDayLater)), saved.replyOf(OWNER_ID));
+        assertEquals(ConfirmationAnswer.DONE, saved.replyOf(REQUESTER_ID).orElseThrow().answer());
+        assertEquals(2, appointmentRepository.saveCount());
+    }
+
+    @Test
+    @DisplayName("완료 뒤 B의 NOT_MET은 교환 COMPLETED 그대로 · post 요청 추가 없음 · 완료 이벤트 추가 발행 없음이다")
+    void handle_notMetAfterCompleted_keepsExchangeAndPostsAndEvents() {
+        // given
+        givenConfirmedAppointment();
+        handlerAt(NOW).handle(done(REQUESTER_ID));
+        Instant completedAt = storedExchange().getCompletedAt();
+
+        // when
+        handlerAt(NOW.plus(Duration.ofDays(1))).handle(notMet(OWNER_ID, NotMetReason.NO_SHOW, null));
+
+        // then
+        Exchange exchange = storedExchange();
+        assertEquals(ExchangeStatus.COMPLETED, exchange.getStatus());
+        assertEquals(completedAt, exchange.getCompletedAt());
+        assertEquals(1, exchangeRepository.saveCount());
+        assertEquals(1, postPort.completeRequests().size());
+        assertTrue(postPort.releaseRequests().isEmpty());
+        assertTrue(postPort.reserveRequests().isEmpty());
+        assertEquals(1, publishedEvents.size());
+    }
+
+    @Test
+    @DisplayName("완료 뒤 B가 열림 시각 + 3일 1초 전에 NOT_MET으로 답하면 저장된다")
+    void handle_notMetAfterCompletedJustBeforeDeadline_saves() {
+        givenConfirmedAppointment();
+        handlerAt(NOW).handle(done(REQUESTER_ID));
+
+        handlerAt(REASON_DEADLINE.minusSeconds(1)).handle(notMet(OWNER_ID, NotMetReason.NO_SHOW, null));
+
+        assertTrue(stored().replyOf(OWNER_ID).isPresent());
+        assertEquals(AppointmentStatus.COMPLETED, stored().getStatus());
+    }
+
+    @Test
+    @DisplayName("완료 뒤 B가 열림 시각 + 3일 정각에 NOT_MET으로 답하면 EXCHANGE_303이고 응답은 저장되지 않는다")
+    void handle_notMetAfterCompletedAtDeadline_throwsAlreadyDecided() {
         givenConfirmedAppointment();
         handlerAt(NOW).handle(done(REQUESTER_ID));
 
         assertRejected(ExchangeErrorCode.CONFIRMATION_ALREADY_DECIDED,
-                () -> handlerAt(NOW.plusSeconds(60)).handle(notMet(OWNER_ID, NotMetReason.NO_SHOW, null)));
+                () -> handlerAt(REASON_DEADLINE).handle(notMet(OWNER_ID, NotMetReason.NO_SHOW, null)));
         assertTrue(stored().replyOf(OWNER_ID).isEmpty());
         assertEquals(AppointmentStatus.COMPLETED, stored().getStatus());
     }
 
     @Test
-    @DisplayName("COMPLETED 뒤 B가 DONE으로 답하면 교환이 COMPLETED여도 EXCHANGE_303이다")
-    void handle_doneAfterCompleted_throwsAlreadyDecidedNotClosed() {
+    @DisplayName("COMPLETED 뒤 B가 DONE으로 답하면 EXCHANGE_303이고 B의 응답은 없다")
+    void handle_doneAfterCompleted_throwsAlreadyDecided() {
         givenConfirmedAppointment();
         handlerAt(NOW).handle(done(REQUESTER_ID));
 
         assertRejected(ExchangeErrorCode.CONFIRMATION_ALREADY_DECIDED,
                 () -> handlerAt(NOW.plusSeconds(60)).handle(done(OWNER_ID)));
         assertTrue(stored().replyOf(OWNER_ID).isEmpty());
+        assertEquals(1, publishedEvents.size());
+    }
+
+    @Test
+    @DisplayName("COMPLETED 뒤 A가 다시 답하면 EXCHANGE_302")
+    void handle_firstResponderAgainAfterCompleted_throwsAlreadyAnswered() {
+        givenConfirmedAppointment();
+        handlerAt(NOW).handle(done(REQUESTER_ID));
+
+        assertRejected(ExchangeErrorCode.CONFIRMATION_ALREADY_ANSWERED,
+                () -> handlerAt(NOW.plusSeconds(60)).handle(notMet(REQUESTER_ID, NotMetReason.NO_SHOW, null)));
+        assertEquals(ConfirmationAnswer.DONE, stored().replyOf(REQUESTER_ID).orElseThrow().answer());
+    }
+
+    @Test
+    @DisplayName("엇갈린 응답 뒤 B가 A-2로 보면 COMPLETED · 결과 COMPLETED · myAnswer NOT_MET이다")
+    void handle_disputedReplyThenGetAppointment_showsCompletedWithOwnersAnswer() {
+        // given
+        givenConfirmedAppointment();
+        handlerAt(NOW).handle(done(REQUESTER_ID));
+        handlerAt(NOW.plus(Duration.ofDays(1))).handle(notMet(OWNER_ID, NotMetReason.NO_SHOW, null));
+
+        // when
+        AppointmentResult forOwner = getHandlerAt(NOW.plus(Duration.ofDays(1)).plusSeconds(10))
+                .handle(new GetAppointmentQuery(APPOINTMENT_ID, OWNER_ID));
+        AppointmentResult forRequester = getHandlerAt(NOW.plus(Duration.ofDays(1)).plusSeconds(10))
+                .handle(new GetAppointmentQuery(APPOINTMENT_ID, REQUESTER_ID));
+
+        // then
+        assertEquals(AppointmentStatus.COMPLETED, forOwner.status());
+        assertEquals(AppointmentStatus.COMPLETED, forOwner.confirmation().result());
+        assertEquals(ConfirmationAnswer.NOT_MET, forOwner.confirmation().myAnswer());
+        assertEquals(NOW, forOwner.confirmation().resolvedAt());
+        assertEquals(ConfirmationAnswer.DONE, forRequester.confirmation().myAnswer());
+        assertEquals(AppointmentStatus.COMPLETED, forRequester.confirmation().result());
+    }
+
+    @Test
+    @DisplayName("엇갈린 응답을 남긴 B가 다시 NOT_MET · OTHER 또는 DONE을 보내면 EXCHANGE_302이고 이유 NO_SHOW 그대로다")
+    void handle_againAfterDisputedReply_throwsAlreadyAnswered() {
+        givenConfirmedAppointment();
+        handlerAt(NOW).handle(done(REQUESTER_ID));
+        handlerAt(NOW.plus(Duration.ofDays(1))).handle(notMet(OWNER_ID, NotMetReason.NO_SHOW, null));
+
+        assertRejected(ExchangeErrorCode.CONFIRMATION_ALREADY_ANSWERED, () -> handlerAt(NOW.plus(Duration.ofDays(2)))
+                .handle(notMet(OWNER_ID, NotMetReason.OTHER, "다시")));
+        assertRejected(ExchangeErrorCode.CONFIRMATION_ALREADY_ANSWERED, () -> handlerAt(NOW.plus(Duration.ofDays(2)))
+                .handle(done(OWNER_ID)));
+        assertEquals(NotMetReason.NO_SHOW, stored().replyOf(OWNER_ID).orElseThrow().notMetReason());
+        assertEquals(AppointmentStatus.COMPLETED, stored().getStatus());
     }
 
     @Test
@@ -663,7 +769,7 @@ class RespondConfirmationHandlerTest {
 
     @ParameterizedTest
     @EnumSource(value = AppointmentStatus.class,
-            names = {"PROPOSED", "REJECTED", "WITHDRAWN", "EXPIRED", "AUTO_REJECTED", "CANCELED"})
+            names = {"PROPOSED", "REJECTED", "WITHDRAWN", "AUTO_REJECTED", "CANCELED"})
     @DisplayName("확정이 아닌 약속에 답하면 EXCHANGE_109이고 상태 그대로다")
     void handle_notConfirmed_throwsInvalidStatus(AppointmentStatus status) {
         exchangeRepository.preload(defaultExchange(ExchangeStatus.ACTIVE));
@@ -747,17 +853,18 @@ class RespondConfirmationHandlerTest {
     }
 
     @Test
-    @DisplayName("DONE + NOT_MET이면 COMPLETED이고 NOT_MET은 EXCHANGE_303 · 해제 요청은 없다")
-    void handle_doneAndNotMet_firstWins() {
+    @DisplayName("DONE + NOT_MET이면 COMPLETED 그대로이고 NOT_MET 응답은 저장 · 해제 요청은 없다")
+    void handle_doneAndNotMet_keepsCompletedAndSavesReply() {
         givenConfirmedAppointment();
 
         handlerAt(NOW).handle(done(REQUESTER_ID));
-        assertRejected(ExchangeErrorCode.CONFIRMATION_ALREADY_DECIDED,
-                () -> handlerAt(NOW).handle(notMet(OWNER_ID, NotMetReason.NO_SHOW, null)));
+        handlerAt(NOW).handle(notMet(OWNER_ID, NotMetReason.NO_SHOW, null));
 
         assertEquals(AppointmentStatus.COMPLETED, stored().getStatus());
+        assertEquals(ConfirmationAnswer.NOT_MET, stored().replyOf(OWNER_ID).orElseThrow().answer());
         assertEquals(1, postPort.completeRequests().size());
         assertTrue(postPort.releaseRequests().isEmpty());
+        assertEquals(1, publishedEvents.size());
     }
 
     @Test
@@ -813,7 +920,7 @@ class RespondConfirmationHandlerTest {
         // when
         ExchangeException exception = assertThrows(ExchangeException.class,
                 () -> acceptHandlerAt(NOW.plusSeconds(60)).handle(new AcceptAppointmentCommand(E2_APPOINTMENT_ID,
-                        OWNER_ID, null)));
+                        OWNER_ID)));
 
         // then
         assertEquals(ExchangeErrorCode.POST_NOT_REQUESTABLE, exception.getErrorCode());
@@ -829,7 +936,7 @@ class RespondConfirmationHandlerTest {
 
         ExchangeException exception = assertThrows(ExchangeException.class,
                 () -> acceptHandlerAt(NOW.plusSeconds(60)).handle(new AcceptAppointmentCommand(E3_APPOINTMENT_ID,
-                        REQUESTER_ID, null)));
+                        REQUESTER_ID)));
 
         assertEquals(ExchangeErrorCode.ITEM_NOT_AVAILABLE, exception.getErrorCode());
         assertEquals(AppointmentStatus.PROPOSED, stored(E3_APPOINTMENT_ID).getStatus());
@@ -843,7 +950,7 @@ class RespondConfirmationHandlerTest {
         handlerAt(NOW).handle(notMet(REQUESTER_ID, NotMetReason.NO_SHOW, null));
 
         Long acceptedId = acceptHandlerAt(NOW.plusSeconds(60)).handle(new AcceptAppointmentCommand(E2_APPOINTMENT_ID,
-                OWNER_ID, null));
+                OWNER_ID));
 
         assertEquals(E2_APPOINTMENT_ID, acceptedId);
         assertEquals(AppointmentStatus.CONFIRMED, stored(E2_APPOINTMENT_ID).getStatus());
@@ -857,7 +964,7 @@ class RespondConfirmationHandlerTest {
         handlerAt(NOW).handle(notMet(REQUESTER_ID, NotMetReason.NO_SHOW, null));
 
         Long acceptedId = acceptHandlerAt(NOW.plusSeconds(60)).handle(new AcceptAppointmentCommand(E3_APPOINTMENT_ID,
-                REQUESTER_ID, null));
+                REQUESTER_ID));
 
         assertEquals(E3_APPOINTMENT_ID, acceptedId);
         assertEquals(AppointmentStatus.CONFIRMED, stored(E3_APPOINTMENT_ID).getStatus());

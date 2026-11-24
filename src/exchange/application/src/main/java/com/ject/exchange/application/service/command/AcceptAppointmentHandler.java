@@ -51,7 +51,7 @@ public class AcceptAppointmentHandler implements CommandHandler<AcceptAppointmen
         exchange.validateActive();
 
         Instant now = serviceTime.now();
-        Appointment confirmed = appointment.accept(command.accepterId(), command.reminderOffsetMinutes(), now);
+        Appointment confirmed = appointment.accept(command.accepterId(), now);
         List<Long> sourcePostIds = postIds.stream()
                 .filter(postId -> !postId.equals(exchange.getPostId()))
                 .toList();
@@ -60,7 +60,7 @@ public class AcceptAppointmentHandler implements CommandHandler<AcceptAppointmen
         validateSourcePostsAvailable(exchange.getId(), sourcePostIds);
 
         List<Appointment> autoRejected = appointmentRepository
-                .findPendingProposalsInvolving(postIds, exchange.getId(), now).stream()
+                .findPendingProposalsInvolving(postIds, exchange.getId()).stream()
                 .map(Appointment::autoReject)
                 .toList();
         // 예약중 요청이 실패하면 확정 · 자동 거절도 남지 않아야 하므로 저장보다 먼저 요청한다 (E-04-1 "한 번에 처리")
