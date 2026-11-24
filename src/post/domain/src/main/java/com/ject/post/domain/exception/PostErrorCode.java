@@ -11,7 +11,8 @@ public enum PostErrorCode implements ErrorCode {
     INVALID_IMAGE_KEY("POST_005", 400, "사용할 수 없는 이미지입니다."),
     RESTRICTED_MEMBER("POST_006", 403, "이용이 제한된 회원입니다."),
     CONFLICT("POST_007", 409, "다른 변경이 먼저 반영되어 처리할 수 없습니다."),
-    INVALID_STATUS("POST_008", 409, "지금 상태에서는 바꿀 수 없는 글입니다.");
+    INVALID_STATUS("POST_008", 409, "지금 상태에서는 바꿀 수 없는 글입니다."),
+    INVALID_KEYWORD("POST_009", 400, "검색어는 띄어쓰기와 #을 빼고 2~30자여야 합니다.");
 
     private final String code;
     private final int status;

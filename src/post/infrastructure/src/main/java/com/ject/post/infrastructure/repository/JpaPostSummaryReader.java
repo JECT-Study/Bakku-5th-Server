@@ -25,7 +25,7 @@ import static com.ject.post.infrastructure.entity.QPostImageEntity.postImageEnti
 @RequiredArgsConstructor
 public class JpaPostSummaryReader implements PostSummaryReader {
 
-    private static final int THUMBNAIL_SORT_ORDER = 1;
+    static final int THUMBNAIL_SORT_ORDER = 1;
 
     private final JPAQueryFactory queryFactory;
     private final PostImageEntityRepository postImageEntityRepository;
@@ -104,7 +104,7 @@ public class JpaPostSummaryReader implements PostSummaryReader {
                 .collect(Collectors.toMap(PostImageEntity::getPostId, PostImageEntity::getImageKey));
     }
 
-    private static Row toRow(PostEntity post, String thumbnailKey) {
+    static Row toRow(PostEntity post, String thumbnailKey) {
         return new Row(
                 post.getId(),
                 post.getAuthorId(),
