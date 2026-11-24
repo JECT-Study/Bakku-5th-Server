@@ -1,5 +1,6 @@
 package com.ject.exchange.application.service.query;
 
+import com.ject.common.core.time.ServiceTime;
 import com.ject.exchange.application.dto.dto.ExchangeResult;
 import com.ject.exchange.application.dto.dto.Participant;
 import com.ject.exchange.application.dto.dto.PostInfo;
@@ -18,6 +19,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.Clock;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -49,7 +52,7 @@ class GetExchangeHandlerParticipantTest {
         postPort = new FakePostPort();
         userPort = new FakeUserPort();
         handler = new GetExchangeHandler(exchangeRepository, new FakeAppointmentRepository(exchangeRepository, NOW),
-                postPort, userPort);
+                postPort, userPort, new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul"))));
 
         postPort.register(new PostInfo(POST_ID, "치이카와 교환해요", null, MEMBER_B, PostInfo.Status.AVAILABLE));
         exchangeRepository.preload(exchangeOf(MEMBER_A, MEMBER_B));

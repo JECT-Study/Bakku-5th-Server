@@ -1,12 +1,15 @@
 package com.ject.exchange.application.service.query;
 
 import com.ject.common.core.cqrs.query.QueryHandler;
+import com.ject.common.core.time.ServiceTime;
+import com.ject.exchange.application.dto.dto.AppointmentButton;
 import com.ject.exchange.application.dto.dto.ExchangeResult;
 import com.ject.exchange.application.dto.dto.PostInfo;
 import com.ject.exchange.application.dto.dto.UserInfo;
 import com.ject.exchange.application.dto.query.GetExchangeQuery;
 import com.ject.exchange.application.port.PostPort;
 import com.ject.exchange.application.port.UserPort;
+import com.ject.exchange.domain.domain.appointment.Appointment;
 import com.ject.exchange.domain.domain.appointment.AppointmentStatus;
 import com.ject.exchange.domain.domain.exchange.Exchange;
 import com.ject.exchange.domain.domain.exchange.OfferedItem;
@@ -21,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -33,6 +37,7 @@ public class GetExchangeHandler implements QueryHandler<GetExchangeQuery, Exchan
     private final AppointmentRepository appointmentRepository;
     private final PostPort postPort;
     private final UserPort userPort;
+    private final ServiceTime serviceTime;
 
     @Override
     @Transactional(readOnly = true)
@@ -47,7 +52,13 @@ public class GetExchangeHandler implements QueryHandler<GetExchangeQuery, Exchan
                 .collect(Collectors.toMap(PostInfo::id, p -> p));
         Map<Long, UserInfo> users = userPort.findAllByIds(List.of(exchange.getRequestUserId(), exchange.getOwnerId())).stream()
                 .collect(Collectors.toMap(UserInfo::id, u -> u));
-        return ExchangeResult.of(exchange, posts, users, reservedHerePostIdsOf(exchange));
+        Optional<Appointment> confirmed = appointmentRepository.findAllByExchangeId(exchange.getId()).stream()
+                .filter(appointment -> appointment.getStatus() == AppointmentStatus.CONFIRMED)
+                .findFirst();
+        AppointmentButton button = AppointmentButton.of(exchange, posts.get(exchange.getPostId()), confirmed,
+                serviceTime.now());
+        return ExchangeResult.of(exchange, posts, users, reservedHerePostIdsOf(exchange), query.viewerId(), button,
+                confirmed.isPresent());
     }
 
     /**

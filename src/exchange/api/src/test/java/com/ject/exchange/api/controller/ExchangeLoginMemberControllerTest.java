@@ -1,5 +1,6 @@
 package com.ject.exchange.api.controller;
 
+import com.ject.common.core.time.ServiceTime;
 import com.ject.common.web.auth.LoginMember;
 import com.ject.common.web.auth.LoginMemberArgumentResolver;
 import com.ject.common.web.image.ImageUrlResolver;
@@ -27,6 +28,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.Clock;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -73,10 +76,12 @@ class ExchangeLoginMemberControllerTest {
         exchangeRepository = new FakeExchangeRepository();
         postPort = new FakePostPort();
         userPort = new FakeUserPort();
-        commandBus = new FakeCommandBus(new UpdateNewItemHandler(exchangeRepository, new FakeImagePort()),
+        commandBus = new FakeCommandBus(new UpdateNewItemHandler(exchangeRepository, new FakeAppointmentRepository(exchangeRepository, NOW),
+                new FakePostLockRepository(), new FakeImagePort()),
                 new CreateExchangeHandler(exchangeRepository, postPort, userPort, new FakeImagePort()));
         queryBus = new FakeQueryBus(new GetExchangeHandler(exchangeRepository,
-                new FakeAppointmentRepository(exchangeRepository, NOW), postPort, userPort));
+                new FakeAppointmentRepository(exchangeRepository, NOW), postPort, userPort,
+                new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul")))));
         mockMvc = MockMvcBuilders.standaloneSetup(
                         new ExchangeController(commandBus, queryBus, IMAGE_URL_RESOLVER))
                 .setControllerAdvice(new ExchangeExceptionHandler())
