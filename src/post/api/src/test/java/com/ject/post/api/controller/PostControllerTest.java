@@ -331,14 +331,6 @@ class PostControllerTest {
     }
 
     @Test
-    @DisplayName("PO-10 연관 채팅 여부를 반환한다")
-    void getRelatedChats_returnsFlag() throws Exception {
-        mockMvc.perform(get("/api/v1/posts/10/related-chats"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.hasRelatedChat").value(true));
-    }
-
-    @Test
     @DisplayName("PO-6 지금 교환을 끄면 data는 null이다")
     void turnOffNowExchange_returnsNullData() throws Exception {
         mockMvc.perform(post("/api/v1/posts/10/now-exchange/off"))

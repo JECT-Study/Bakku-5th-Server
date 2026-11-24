@@ -10,7 +10,7 @@ public record AuthorResponse(
         @Schema(description = "닉네임. 탈퇴한 사용자면 '탈퇴한 사용자'", example = "하치와레러버")
         String nickname,
 
-        @Schema(description = "교환 완료 횟수. 매너 지표는 2차", example = "12")
+        @Schema(description = "교환 완료 횟수", example = "12")
         int completedCount
 ) {
 }

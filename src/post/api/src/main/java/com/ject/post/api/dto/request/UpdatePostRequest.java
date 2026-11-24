@@ -13,7 +13,7 @@ import jakarta.validation.constraints.Size;
 import java.util.HashSet;
 import java.util.List;
 
-@Schema(description = "교환글 수정 (전체 교체: 보내지 않은 tags · description · wantedItem · place.memo는 지워짐)")
+@Schema(description = "게시글 수정 (전체 교체: 보내지 않은 tags · description · wantedItem · place.memo는 지워짐)")
 public record UpdatePostRequest(
         @Schema(description = "1~5개. 첫 장이 대표, 중복 불가. 기존 사진은 받은 key 그대로, 새 사진은 업로드한 key", example = "[\"post/10/8f14e45f.jpg\", \"post/tmp/3/c9f0f895.jpg\"]")
         @NotNull @Size(min = 1, max = 5)
@@ -31,7 +31,7 @@ public record UpdatePostRequest(
         @NotNull
         Boolean opened,
 
-        @Schema(description = "태그 최대 5개, 1개당 1~20자, 중복 불가, # 제외. 태그는 2차라 1차에는 보내지 않거나 빈 배열", example = "[\"치이카와\", \"하치와레\"]")
+        @Schema(description = "태그 최대 5개, 1개당 1~20자, 중복 불가, # 제외", example = "[\"치이카와\", \"하치와레\"]")
         @Size(max = 5)
         List<@NotBlank @Size(max = 20) @Pattern(regexp = "^[^#]+$", message = "#은 넣을 수 없습니다.") String> tags,
 
@@ -39,7 +39,7 @@ public record UpdatePostRequest(
         @Size(max = 1000)
         String description,
 
-        @Schema(description = "원하는 아이템 1~50자. null이거나 생략하면 '아무거나 상관없어요'", example = "치이카와 가챠 키링 (하치와레, 모몽가 제외)")
+        @Schema(description = "원하는 제품 1~50자. null이거나 생략하면 '아무거나 상관없어요'", example = "치이카와 가챠 키링 (하치와레, 모몽가 제외)")
         @Size(min = 1, max = 50) @Pattern(regexp = ".*\\S.*", message = "공백만 입력할 수 없습니다.")
         String wantedItem,
 

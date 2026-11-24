@@ -31,7 +31,7 @@ class PostStatusChangeServiceTest {
     }
 
     @Test
-    @DisplayName("예약: 교환글과 첨부 글이 모두 예약중이 된다")
+    @DisplayName("예약: 게시글과 첨부 글이 모두 예약중이 된다")
     void reserve_all() {
         Long first = save(PostStatus.AVAILABLE);
         Long second = save(PostStatus.AVAILABLE);

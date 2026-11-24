@@ -14,7 +14,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-@Schema(description = "교환글 작성")
+@Schema(description = "게시글 작성")
 public record CreatePostRequest(
         @Schema(description = "업로드된 key 1~5개. 첫 장이 대표, 중복 불가", example = "[\"post/tmp/3/8f14e45f.jpg\", \"post/tmp/3/c9f0f895.jpg\"]")
         @NotNull @Size(min = 1, max = 5)
@@ -40,7 +40,7 @@ public record CreatePostRequest(
         @Size(max = 1000)
         String description,
 
-        @Schema(description = "원하는 아이템 1~50자. null이거나 생략하면 '아무거나 상관없어요'", example = "치이카와 가챠 키링 (하치와레, 모몽가 제외)")
+        @Schema(description = "원하는 제품 1~50자. null이거나 생략하면 '아무거나 상관없어요'", example = "치이카와 가챠 키링 (하치와레, 모몽가 제외)")
         @Size(min = 1, max = 50) @Pattern(regexp = ".*\\S.*", message = "공백만 입력할 수 없습니다.")
         String wantedItem,
 

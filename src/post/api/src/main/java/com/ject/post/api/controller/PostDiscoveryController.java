@@ -8,9 +8,6 @@ import com.ject.post.api.dto.enums.PostCategory;
 import com.ject.post.api.dto.enums.PostSort;
 import com.ject.post.api.dto.enums.PostStatus;
 import com.ject.post.api.dto.response.CursorPageResponse;
-import com.ject.post.api.dto.response.MapMarkerResponse;
-import com.ject.post.api.dto.response.MapMarkersResponse;
-import com.ject.post.api.dto.response.PostCountResponse;
 import com.ject.post.api.dto.response.PostSummaryResponse;
 import com.ject.post.application.dto.PostPageResult;
 import com.ject.post.application.dto.query.GetPostsQuery;
@@ -31,9 +28,9 @@ public class PostDiscoveryController implements PostDiscoveryApi {
     private final ImageUrlResolver imageUrlResolver;
 
     @Override
-    public ApiResponse<CursorPageResponse<PostSummaryResponse>> getPosts(Long memberId, Double lat, Double lng,
-                                                                         Boolean nowExchange, PostCategory category,
-                                                                         PostSort sort, String cursor, Integer size) {
+    public ApiResponse<CursorPageResponse<PostSummaryResponse>> getPosts(Long memberId, Boolean nowExchange,
+                                                                         PostCategory category, PostSort sort,
+                                                                         String cursor, Integer size) {
         GetPostsQuery query = new GetPostsQuery(memberId, nowExchange,
                 category == null ? null : category.name(), PostCursor.decode(cursor), size);
         PostPageResult result = queryBus.send(query);
@@ -48,19 +45,6 @@ public class PostDiscoveryController implements PostDiscoveryApi {
     public ApiResponse<CursorPageResponse<PostSummaryResponse>> searchPosts(String keyword, PostCategory category,
                                                                             PostSort sort, String cursor, Integer size) {
         return ApiResponse.success(page());
-    }
-
-    @Override
-    public ApiResponse<MapMarkersResponse> getMapMarkers(Double swLat, Double swLng, Double neLat, Double neLng,
-                                                         Integer zoom, Boolean nowExchange, PostCategory category) {
-        return ApiResponse.success(new MapMarkersResponse(List.of(
-                new MapMarkerResponse(37.5563, 126.9236, 12),
-                new MapMarkerResponse(37.5512, 126.9198, 3))));
-    }
-
-    @Override
-    public ApiResponse<PostCountResponse> countPosts(Double lat, Double lng, Boolean nowExchange, PostCategory category) {
-        return ApiResponse.success(new PostCountResponse(12));
     }
 
     private static CursorPageResponse<PostSummaryResponse> page() {
