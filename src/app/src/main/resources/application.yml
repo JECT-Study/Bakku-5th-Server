@@ -17,6 +17,10 @@ spring:
       ddl-auto: validate
   lifecycle:
     timeout-per-shutdown-phase: 30s
+  task:
+    execution:
+      # 알림 전용 실행기(notificationExecutor)가 있어도 Spring 기본 실행기(applicationTaskExecutor)를 그대로 만든다
+      mode: force
   servlet:
     multipart:
       max-file-size: 50MB

@@ -2,6 +2,7 @@ package com.ject.notification.application;
 
 import com.ject.common.event.notification.NotificationRequested;
 import com.ject.common.event.notification.NotificationType;
+import com.ject.notification.application.event.NotificationAsyncDispatcher;
 import com.ject.notification.application.event.NotificationRequestedListener;
 import com.ject.notification.application.service.NotificationDispatchService;
 import com.ject.notification.application.service.NotificationScheduleService;
@@ -123,11 +124,56 @@ class NotificationRequestedListenerTest {
                 request(NotificationType.EXCHANGE_CONFIRMATION, 101L, 202L, null, null)));
     }
 
+    @Test
+    @DisplayName("예약 저장이 실패해도 예외를 넘기지 않는다")
+    void scheduleFailureIsNotPropagated() {
+        // given
+        NotificationRequestedListener failing = listener(notificationRepository,
+                new NotificationScheduleService(new FakeScheduledNotificationRepository() {
+                    @Override
+                    public void saveAll(List<ScheduledNotification> notifications) {
+                        throw new IllegalStateException("DB 오류");
+                    }
+                }));
+
+        // when & then
+        assertDoesNotThrow(() -> failing.handle(
+                request(NotificationType.EXCHANGE_CONFIRMATION, 101L, 202L, FIRE_AT, KEY)));
+    }
+
+    @Test
+    @DisplayName("예약 취소가 실패해도 바로 보낼 알림(약속 취소)은 보낸다")
+    void cancelFailureStillDispatches() {
+        // given
+        NotificationRequestedListener failing = listener(notificationRepository,
+                new NotificationScheduleService(new FakeScheduledNotificationRepository() {
+                    @Override
+                    public void deleteByScheduleKey(String scheduleKey) {
+                        throw new IllegalStateException("DB 오류");
+                    }
+                }));
+
+        // when
+        failing.handle(request(NotificationType.APPOINTMENT_CANCELED, 101L, 202L, null, KEY));
+
+        // then
+        assertEquals(NotificationType.APPOINTMENT_CANCELED, notificationRepository.findAll().getFirst().getType());
+    }
+
     private NotificationRequestedListener listener(FakeNotificationRepository notificationRepository) {
+        return listener(notificationRepository, new NotificationScheduleService(scheduledNotificationRepository));
+    }
+
+    /**
+     * 단위 테스트에서는 @Async가 동작하지 않아 같은 스레드에서 바로 처리된다.
+     */
+    private static NotificationRequestedListener listener(FakeNotificationRepository notificationRepository,
+                                                          NotificationScheduleService scheduleService) {
         return new NotificationRequestedListener(
-                new NotificationDispatchService(notificationRepository, memberId -> "하치와레러버",
-                        memberId -> List.of(), memberIds -> List.of(), pushTokens -> { }, new FakePushSender()),
-                new NotificationScheduleService(scheduledNotificationRepository));
+                new NotificationAsyncDispatcher(new NotificationDispatchService(notificationRepository,
+                        memberId -> "하치와레러버", memberId -> List.of(), memberIds -> List.of(), pushTokens -> { },
+                        new FakePushSender())),
+                scheduleService);
     }
 
     private static NotificationRequested request(NotificationType type, Long receiverId, Long senderId,
