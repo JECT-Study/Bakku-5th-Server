@@ -93,12 +93,9 @@ class PostDiscoveryControllerTest {
     }
 
     @Test
-    @DisplayName("PO-2 sort가 LATEST가 아니어도 1차는 최신순으로 처리한다")
-    void getPosts_nearestSort_ignored() throws Exception {
-        getPosts(get("/api/v1/posts").param("sort", "NEAREST"))
-                .andExpect(status().isOk());
-
-        assertEquals(new GetPostsQuery(MEMBER_ID, null, null, null, 20), queryBus.received);
+    @DisplayName("PO-2 없어진 정렬 값(NEAREST)이면 COMMON_001")
+    void getPosts_removedSort_returnsCommon001() throws Exception {
+        expectCommon001(getPosts(get("/api/v1/posts").param("sort", "NEAREST")));
     }
 
     @Test
@@ -133,24 +130,6 @@ class PostDiscoveryControllerTest {
     @DisplayName("PO-7 검색어가 없으면 COMMON_001")
     void searchPosts_withoutKeyword_returnsCommon001() throws Exception {
         expectCommon001(mockMvc.perform(get("/api/v1/posts/search")));
-    }
-
-    @Test
-    @DisplayName("PO-8 지도 숫자 핀 목록을 반환한다")
-    void getMapMarkers_returnsMarkers() throws Exception {
-        mockMvc.perform(get("/api/v1/posts/map-markers")
-                        .param("swLat", "37.54").param("swLng", "126.91")
-                        .param("neLat", "37.57").param("neLng", "126.94")
-                        .param("zoom", "15"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.markers.length()").value(2))
-                .andExpect(jsonPath("$.data.markers[0].count").value(12));
-    }
-
-    @Test
-    @DisplayName("PO-11 위도가 없으면 COMMON_001")
-    void countPosts_withoutLat_returnsCommon001() throws Exception {
-        expectCommon001(mockMvc.perform(get("/api/v1/posts/count").param("lng", "126.9")));
     }
 
     private ResultActions getPosts() throws Exception {

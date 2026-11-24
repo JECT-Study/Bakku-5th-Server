@@ -9,7 +9,6 @@ import com.ject.post.api.controller.api.PostApi;
 import com.ject.post.api.dto.request.CreatePostRequest;
 import com.ject.post.api.dto.request.UpdatePostRequest;
 import com.ject.post.api.dto.response.PostResponse;
-import com.ject.post.api.dto.response.RelatedChatResponse;
 import com.ject.post.application.dto.PostResult;
 import com.ject.post.application.dto.command.DeletePostCommand;
 import com.ject.post.application.dto.command.IncreaseViewCountCommand;
@@ -53,11 +52,6 @@ public class PostController implements PostApi {
     public ApiResponse<Void> deletePost(Long memberId, Long postId) {
         commandBus.send(new DeletePostCommand(postId, memberId));
         return ApiResponse.success(null);
-    }
-
-    @Override
-    public ApiResponse<RelatedChatResponse> getRelatedChats(Long postId) {
-        return ApiResponse.success(new RelatedChatResponse(true));
     }
 
     @Override

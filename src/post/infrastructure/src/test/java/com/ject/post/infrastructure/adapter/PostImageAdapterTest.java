@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class PostImageAdapterTest {
 
     @Test
-    @DisplayName("교환글 용도 · 작성자 · 글 ID로 이미지 모듈에 확정을 요청하고 정식 key를 돌려준다")
+    @DisplayName("게시글 용도 · 작성자 · 글 ID로 이미지 모듈에 확정을 요청하고 정식 key를 돌려준다")
     void attachToPost_returnsFinalKeys() {
         // given
         RecordingImageAttachment attachment = new RecordingImageAttachment(null);

@@ -11,12 +11,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
 import java.util.List;
 
-@Schema(description = "교환글. 작성(PO-1) · 수정(PO-4) 응답에는 canRequest가 없음 (내 글)")
+@Schema(description = "게시글. 작성(PO-1) · 수정(PO-4) 응답에는 canRequest가 없음 (내 글)")
 public record PostResponse(
-        @Schema(description = "교환글 ID", example = "10")
+        @Schema(description = "게시글 ID", example = "10")
         Long id,
 
-        @Schema(description = "교환글 상태. 상세에서는 AVAILABLE, RESERVED, COMPLETED", example = "AVAILABLE")
+        @Schema(description = "게시글 상태. 상세에서는 AVAILABLE, RESERVED, COMPLETED", example = "AVAILABLE")
         PostStatus status,
 
         @Schema(description = "사진 목록. 첫 장이 대표")
@@ -37,7 +37,7 @@ public record PostResponse(
         @Schema(description = "자세한 설명. 없으면 null", example = "치이카와 가챠 3탄에서 뽑았어요.")
         String description,
 
-        @Schema(description = "원하는 아이템. null이면 '아무거나 상관없어요'", example = "치이카와 가챠 키링 (하치와레, 모몽가 제외)")
+        @Schema(description = "원하는 제품. null이면 '아무거나 상관없어요'", example = "치이카와 가챠 키링 (하치와레, 모몽가 제외)")
         String wantedItem,
 
         @Schema(description = "희망 장소")

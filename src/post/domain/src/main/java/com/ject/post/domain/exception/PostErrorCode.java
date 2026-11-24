@@ -4,7 +4,7 @@ import com.ject.common.core.exception.ErrorCode;
 
 public enum PostErrorCode implements ErrorCode {
 
-    POST_NOT_FOUND("POST_001", 404, "삭제됐거나 볼 수 없는 교환글입니다."),
+    POST_NOT_FOUND("POST_001", 404, "삭제됐거나 볼 수 없는 게시글입니다."),
     NOT_POST_AUTHOR("POST_002", 403, "작성자만 할 수 있습니다."),
     POST_RESERVED("POST_003", 409, "약속이 잡힌 글은 수정할 수 없습니다."),
     POST_COMPLETED("POST_004", 409, "교환이 완료된 글입니다."),

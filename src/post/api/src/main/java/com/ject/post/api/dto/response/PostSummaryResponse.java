@@ -7,9 +7,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.OffsetDateTime;
 
-@Schema(description = "교환글 목록 항목")
+@Schema(description = "게시글 목록 항목")
 public record PostSummaryResponse(
-        @Schema(description = "교환글 ID", example = "10")
+        @Schema(description = "게시글 ID", example = "10")
         Long id,
 
         @Schema(description = "대표 사진 URL", example = "https://{api}/api/v1/images/post/10/8f14e45f.jpg")
@@ -21,7 +21,7 @@ public record PostSummaryResponse(
         @Schema(description = "저장한 원본 (시/도 + 구 + 동)", example = "서울특별시 마포구 동교동")
         String regionName,
 
-        @Schema(description = "교환글 상태. 홈 목록은 AVAILABLE만", example = "AVAILABLE")
+        @Schema(description = "게시글 상태. 홈 목록은 AVAILABLE만", example = "AVAILABLE")
         PostStatus status,
 
         @Schema(description = "교환 가능이고 종료 시각 전이면 true", example = "true")
@@ -30,7 +30,7 @@ public record PostSummaryResponse(
         @Schema(description = "지금 교환 종료 시각. 일반 교환이면 null", example = "2026-11-02T15:30:00+09:00")
         OffsetDateTime nowExchangeEndsAt,
 
-        @Schema(description = "원하는 아이템. null이면 '아무거나 상관없어요'", example = "치이카와 가챠 키링 (하치와레, 모몽가 제외)")
+        @Schema(description = "원하는 제품. null이면 '아무거나 상관없어요'", example = "치이카와 가챠 키링 (하치와레, 모몽가 제외)")
         String wantedItem,
 
         @Schema(description = "내 글 여부", example = "false")
