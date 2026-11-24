@@ -11,4 +11,7 @@ dependencies {
 
     // 예약 알림 문구용 값 저장 (JSON)
     implementation 'tools.jackson.core:jackson-databind'
+
+    // 푸시 발송 (FCM). Firestore · Storage 의존성을 빼면 SDK가 쓰는 JSON 라이브러리까지 빠져 기동이 실패해 그대로 둔다
+    implementation 'com.google.firebase:firebase-admin:9.4.3'
 }
