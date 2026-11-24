@@ -5,7 +5,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class HubTest {
 
@@ -32,6 +35,22 @@ class HubTest {
     })
     void of_outside(String name, double lat, double lng) {
         assertEquals(Hub.UNCLASSIFIED, Hub.of(lat, lng));
+    }
+
+    @Test
+    @DisplayName("고를 수 있는 거점은 5곳이고 미분류는 빠진다")
+    void selectable_fiveHubs() {
+        assertEquals(List.of(Hub.HONGDAE, Hub.YONGSAN, Hub.SEONGSU, Hub.SINDORIM, Hub.GUKJEON), Hub.selectable());
+    }
+
+    @Test
+    @DisplayName("거점 중심 좌표는 자기 다각형 안에 있다")
+    void center_insideOwnPolygon() {
+        for (Hub hub : Hub.selectable()) {
+            Hub.Coordinate center = hub.getCenter();
+            assertEquals(hub, Hub.of(center.lat(), center.lng()), hub.name());
+            assertFalse(hub.getPolygon().isEmpty());
+        }
     }
 
     @Test
