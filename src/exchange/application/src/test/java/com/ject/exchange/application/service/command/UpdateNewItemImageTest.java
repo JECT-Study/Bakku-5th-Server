@@ -54,7 +54,9 @@ class UpdateNewItemImageTest {
     void setUp() {
         exchangeRepository = new FakeExchangeRepository();
         imagePort = new FakeImagePort();
-        handler = new UpdateNewItemHandler(exchangeRepository, imagePort);
+        FakeAppointmentRepository appointmentRepository = new FakeAppointmentRepository(exchangeRepository, NOW);
+        handler = new UpdateNewItemHandler(exchangeRepository, appointmentRepository,
+                new FakePostLockRepository(appointmentRepository), imagePort);
     }
 
     // ---- AC-5 ----

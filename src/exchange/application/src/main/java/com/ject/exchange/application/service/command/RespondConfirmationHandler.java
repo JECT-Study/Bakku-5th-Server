@@ -41,7 +41,7 @@ public class RespondConfirmationHandler implements CommandHandler<RespondConfirm
         postLockRepository.lockAll(postIds);
         Appointment appointment = appointmentRepository.findByIdForUpdate(command.appointmentId())
                 .orElseThrow(() -> new ExchangeException(ExchangeErrorCode.APPOINTMENT_NOT_FOUND));
-        // Todo: E-3(UpdateNewItemHandler)도 교환을 잠그게 되면 여기서도 findByIdForUpdate로 읽는다 (지금은 E-3이 잠금 없이 통째로 저장해 이쪽만 잠가도 덮어쓰기를 막지 못한다)
+        // E-3도 같은 글 잠금을 먼저 잡고 교환을 잠금 뒤에 처음 읽으므로, 교환을 통째로 저장해도 서로 덮어쓰지 않는다 (#120)
         Exchange exchange = exchangeRepository.findById(appointment.getExchangeId())
                 .orElseThrow(() -> new ExchangeException(ExchangeErrorCode.EXCHANGE_NOT_FOUND));
         if (!exchange.isParticipant(command.memberId())) {
