@@ -107,7 +107,7 @@ class AppointmentControllerTest {
                 .andExpect(jsonPath("$.data.myReminderOffsetMinutes").value(30))
                 .andExpect(jsonPath("$.data.otherActiveProposalsOnPost").value(false))
                 .andExpect(jsonPath("$.data.pendingChange").doesNotExist())
-                .andExpect(jsonPath("$.data.pendingCancellation").doesNotExist())
+                .andExpect(jsonPath("$.data.canceledByUserId").doesNotExist())
                 .andExpect(jsonPath("$.data.confirmation").doesNotExist())
                 .andExpect(jsonPath("$.data.confirmedAt").doesNotExist())
                 .andExpect(jsonPath("$.data.createdAt").value("2026-10-26T14:00:00+09:00"));

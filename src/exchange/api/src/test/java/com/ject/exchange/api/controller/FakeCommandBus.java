@@ -3,6 +3,7 @@ package com.ject.exchange.api.controller;
 import com.ject.common.core.cqrs.command.Command;
 import com.ject.common.core.cqrs.command.CommandBus;
 import com.ject.exchange.application.dto.command.AcceptAppointmentCommand;
+import com.ject.exchange.application.dto.command.CancelAppointmentCommand;
 import com.ject.exchange.application.dto.command.CreateExchangeCommand;
 import com.ject.exchange.application.dto.command.ProposeAppointmentCommand;
 import com.ject.exchange.application.dto.command.RejectAppointmentCommand;
@@ -32,6 +33,7 @@ class FakeCommandBus implements CommandBus {
     private Function<WithdrawAppointmentCommand, Long> withdrawAppointmentResponder;
     private Function<UpdateReminderCommand, Long> updateReminderResponder;
     private Function<RespondConfirmationCommand, Long> respondConfirmationResponder;
+    private Function<CancelAppointmentCommand, Long> cancelAppointmentResponder;
 
     FakeCommandBus(UpdateNewItemHandler updateNewItemHandler, CreateExchangeHandler createExchangeHandler) {
         this.updateNewItemHandler = updateNewItemHandler;
@@ -75,6 +77,11 @@ class FakeCommandBus implements CommandBus {
         this.respondConfirmationResponder = responder;
     }
 
+    /** A-8 커맨드 응답(약속 id 또는 예외)을 정한다. */
+    void onCancelAppointment(Function<CancelAppointmentCommand, Long> responder) {
+        this.cancelAppointmentResponder = responder;
+    }
+
     @Override
     @SuppressWarnings("unchecked")
     public <R> R send(Command<R> command) {
@@ -108,6 +115,10 @@ class FakeCommandBus implements CommandBus {
         if (command instanceof RespondConfirmationCommand respondConfirmationCommand
                 && respondConfirmationResponder != null) {
             return (R) respondConfirmationResponder.apply(respondConfirmationCommand);
+        }
+        if (command instanceof CancelAppointmentCommand cancelAppointmentCommand
+                && cancelAppointmentResponder != null) {
+            return (R) cancelAppointmentResponder.apply(cancelAppointmentCommand);
         }
         throw new IllegalStateException("이 테스트가 다루지 않는 커맨드: " + command);
     }

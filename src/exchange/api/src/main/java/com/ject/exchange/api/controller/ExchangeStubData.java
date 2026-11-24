@@ -20,7 +20,6 @@ final class ExchangeStubData {
     static final Long EXCHANGE_ID = 1L;
     static final Long APPOINTMENT_ID = 3L;
     static final Long CHAT_ROOM_ID = 5L;
-    static final Long CANCELLATION_ID = 7L;
     static final Long CHANGE_ID = 9L;
     static final Long POST_ID = 10L;
     static final Long REQUESTER_ID = 101L;
