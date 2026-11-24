@@ -5,6 +5,7 @@ import com.ject.common.web.image.ImageUrlResolver;
 import com.ject.common.web.response.ApiResponse;
 import com.ject.post.api.controller.api.PostDiscoveryApi;
 import com.ject.post.api.dto.enums.PostCategory;
+import com.ject.post.api.dto.enums.PostHub;
 import com.ject.post.api.dto.enums.PostSort;
 import com.ject.post.api.dto.enums.PostStatus;
 import com.ject.post.api.dto.response.CursorPageResponse;
@@ -28,11 +29,12 @@ public class PostDiscoveryController implements PostDiscoveryApi {
     private final ImageUrlResolver imageUrlResolver;
 
     @Override
-    public ApiResponse<CursorPageResponse<PostSummaryResponse>> getPosts(Long memberId, Boolean nowExchange,
-                                                                         PostCategory category, PostSort sort,
-                                                                         String cursor, Integer size) {
+    public ApiResponse<CursorPageResponse<PostSummaryResponse>> getPosts(Long memberId, PostHub hub,
+                                                                         Boolean nowExchange, PostCategory category,
+                                                                         PostSort sort, String cursor, Integer size) {
         GetPostsQuery query = new GetPostsQuery(memberId, nowExchange,
-                category == null ? null : category.name(), PostCursor.decode(cursor), size);
+                category == null ? null : category.name(), hub == null ? null : hub.name(),
+                PostCursor.decode(cursor), size);
         PostPageResult result = queryBus.send(query);
         List<PostSummaryResponse> content = result.content().stream()
                 .map(summary -> PostSummaryResponse.from(summary, imageUrlResolver))

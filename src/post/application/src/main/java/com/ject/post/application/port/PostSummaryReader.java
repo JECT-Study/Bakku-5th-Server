@@ -1,5 +1,6 @@
 package com.ject.post.application.port;
 
+import com.ject.post.domain.domain.Hub;
 import com.ject.post.domain.domain.PostCategory;
 import com.ject.post.domain.domain.PostStatus;
 
@@ -15,7 +16,7 @@ public interface PostSummaryReader {
     record Brief(Long id, Long authorId, PostStatus status, String title, String thumbnailKey) {
     }
 
-    record Condition(Boolean nowExchange, PostCategory category, Instant now) {
+    record Condition(Boolean nowExchange, PostCategory category, Hub hub, Instant now) {
     }
 
     record Row(

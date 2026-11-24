@@ -12,6 +12,8 @@ import com.ject.post.application.dto.query.GetPostsQuery;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -82,14 +84,22 @@ class PostDiscoveryControllerTest {
     @DisplayName("PO-2 필터 · 커서 · 보는 사람을 Query로 넘기고, size 기본값은 20이다")
     void getPosts_sendsQuery() throws Exception {
         getPosts().andExpect(status().isOk());
-        assertEquals(new GetPostsQuery(MEMBER_ID, null, null, null, 20), queryBus.received);
+        assertEquals(new GetPostsQuery(MEMBER_ID, null, null, null, null, 20), queryBus.received);
 
         getPosts(get("/api/v1/posts")
                 .param("nowExchange", "true")
                 .param("category", "IDOL")
+                .param("hub", "HONGDAE")
                 .param("cursor", CURSOR_ID_10)
                 .param("size", "5"));
-        assertEquals(new GetPostsQuery(MEMBER_ID, true, "IDOL", 10L, 5), queryBus.received);
+        assertEquals(new GetPostsQuery(MEMBER_ID, true, "IDOL", "HONGDAE", 10L, 5), queryBus.received);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"UNCLASSIFIED", "GANGNAM"})
+    @DisplayName("PO-2 미분류나 없는 거점이면 COMMON_001")
+    void getPosts_invalidHub_returnsCommon001(String hub) throws Exception {
+        expectCommon001(getPosts(get("/api/v1/posts").param("hub", hub)));
     }
 
     @Test
