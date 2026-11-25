@@ -43,6 +43,12 @@ class FakeExchangeRepository implements ExchangeRepository {
         return findById(id);
     }
 
+    /** 교환이 요청한 글 ID만 돌려준다. 교환이 없으면 빈 값이다. */
+    @Override
+    public Optional<Long> findPostIdOf(Long id) {
+        return Optional.ofNullable(store.get(id)).map(Exchange::getPostId);
+    }
+
     boolean isEmpty() {
         return store.isEmpty();
     }

@@ -42,7 +42,9 @@ class UpdateNewItemHandlerTest {
     @BeforeEach
     void setUp() {
         exchangeRepository = new FakeExchangeRepository();
-        handler = new UpdateNewItemHandler(exchangeRepository, new FakeImagePort());
+        FakeAppointmentRepository appointmentRepository = new FakeAppointmentRepository(exchangeRepository, NOW);
+        handler = new UpdateNewItemHandler(exchangeRepository, appointmentRepository,
+                new FakePostLockRepository(appointmentRepository), new FakeImagePort());
     }
 
     @Test

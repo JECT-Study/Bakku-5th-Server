@@ -72,4 +72,9 @@ public class JpaExchangeRepository implements ExchangeRepository {
     public Optional<Exchange> findByIdForUpdate(Long id) {
         return exchangeEntityRepository.findWithLockById(id).map(this::toDomain);
     }
+
+    @Override
+    public Optional<Long> findPostIdOf(Long id) {
+        return exchangeEntityRepository.findPostIdById(id);
+    }
 }

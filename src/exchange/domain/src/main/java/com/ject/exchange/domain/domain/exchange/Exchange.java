@@ -148,7 +148,7 @@ public class Exchange {
         if (this.status != ExchangeStatus.ACTIVE) {
             throw new ExchangeException(ExchangeErrorCode.EXCHANGE_CLOSED);
         }
-        // Todo: 확정 약속이 있으면 NEW_ITEM_LOCKED
+        // 확정 약속이 있으면 NEW_ITEM_LOCKED: 교환은 약속을 모르므로 UpdateNewItemHandler가 판단한다 (#120)
         OfferedItem item = newItem();
         OfferedItem updatedItem = item.updateNew(name, opened, description);
         return new Exchange(id, postId, requestUserId, ownerId, offerType,

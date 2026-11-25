@@ -18,15 +18,24 @@ public record ExchangeResult(
         OfferType offerType,
         List<OfferedItemResult> offeredItems,
         Long chatRoomId,                        // Todo: 채팅방 생성 전까지 null
-        AppointmentButton appointmentButton,    // Todo: 약속 구현 전까지 PROPOSE
+        AppointmentButton appointmentButton,
         Instant createdAt
 ) {
 
     /**
+     * 조회자 기준 교환 결과. 새로 작성한 제품은 요청자 본인이고 교환이 진행 중이며 확정 약속이 없을 때만 수정할 수 있다 (C-07-2)
      * @param reservedHerePostIds 이 교환의 확정 약속이 고른 첨부 글 ID. 예약중이면 RESERVED_HERE로 보여 준다
+     * @param viewerId 조회하는 회원 ID
+     * @param appointmentButton {@link AppointmentButton#of}로 고른 약속 버튼
+     * @param newItemLocked 이 교환에 확정 약속이 있는지
      */
     public static ExchangeResult of(Exchange exchange, Map<Long, PostInfo> posts, Map<Long, UserInfo> users,
-                                    Set<Long> reservedHerePostIds) {
+                                    Set<Long> reservedHerePostIds, Long viewerId,
+                                    AppointmentButton appointmentButton, boolean newItemLocked) {
+        boolean newItemEditable = exchange.getOfferType() == OfferType.NEW
+                && exchange.getRequestUserId().equals(viewerId)
+                && exchange.getStatus() == ExchangeStatus.ACTIVE
+                && !newItemLocked;
         PostInfo postInfo = posts.get(exchange.getPostId());
         PostSummary postSummary = toPostSummary(exchange.getPostId(), postInfo);
         Participant requester = toParticipant(exchange.getRequestUserId(), users.get(exchange.getRequestUserId()));
@@ -52,7 +61,7 @@ public record ExchangeResult(
                             item.getId(),
                             exchange.getOfferType(),
                             availability,
-                            false, // Todo: 교환글 요청자만 수정 가능하도록 구현
+                            newItemEditable,
                             itemPostSummary,
                             item.getName() == null ? null : item.getName().value(),
                             item.getOpened(),
@@ -71,9 +80,17 @@ public record ExchangeResult(
                 exchange.getOfferType(),
                 offeredItems,
                 null, // Todo: 채팅방 생성 전까지 null
-                AppointmentButton.PROPOSE, // Todo: 약속 구현 전까지 PROPOSE
+                appointmentButton,
                 exchange.getCreatedAt()
         );
+    }
+
+    /**
+     * 조회자를 모르는 결과 (약속 버튼 PROPOSE, 수정 불가). 기존 테스트 호환용
+     */
+    public static ExchangeResult of(Exchange exchange, Map<Long, PostInfo> posts, Map<Long, UserInfo> users,
+                                    Set<Long> reservedHerePostIds) {
+        return of(exchange, posts, users, reservedHerePostIds, null, AppointmentButton.PROPOSE, false);
     }
 
     private static Participant toParticipant(Long userId, UserInfo user) {

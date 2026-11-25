@@ -28,7 +28,7 @@ public interface ExchangeApi {
     ApiResponse<ExchangeResponse> createExchange(@Parameter(hidden = true) @LoginMember Long memberId,
                                                  @Valid @RequestBody CreateExchangeRequest request);
 
-    @Operation(summary = "E-2 교환 상세", description = "채팅방 상단 고정 카드, 첫 메시지 아이템 카드, 아이템 상세, 입력창 위 버튼 상태에 사용합니다.")
+    @Operation(summary = "E-2 교환 상세", description = "채팅방 상단 고정 카드, 첫 메시지 아이템 카드, 아이템 상세, 입력칸 + 메뉴의 약속 잡기 · 취소 상태에 사용합니다.")
     @GetMapping("/{exchangeId}")
     ApiResponse<ExchangeResponse> getExchange(@Parameter(hidden = true) @LoginMember Long memberId,
                                               @PathVariable("exchangeId") Long exchangeId);

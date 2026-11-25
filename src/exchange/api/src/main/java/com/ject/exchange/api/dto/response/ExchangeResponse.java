@@ -38,7 +38,7 @@ public record ExchangeResponse(
         @Schema(description = "이 교환의 채팅방 ID", example = "5")
         Long chatRoomId,
 
-        @Schema(description = "입력창 위 버튼 상태", example = "PROPOSE")
+        @Schema(description = "입력칸 + 메뉴의 약속 잡기 · 취소. PROPOSE 약속 잡기 / PROPOSE_DISABLED 보이지만 누를 수 없음(같은 게시글이 다른 곳에 묶임 · 삭제) / CANCEL 약속 취소(확정 약속, 교환 확인 전) / NONE 둘 다 없음(교환 확인 질문 뒤 · 끝난 교환)", example = "PROPOSE")
         AppointmentButton appointmentButton,
 
         @Schema(description = "요청 시각", example = "2026-10-26T14:30:00+09:00")
