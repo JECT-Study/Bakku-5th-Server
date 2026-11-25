@@ -1,6 +1,7 @@
 package com.ject.user.api.dto.response;
 
 import com.ject.user.api.dto.enums.Gender;
+import com.ject.user.api.dto.enums.SocialProvider;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDate;
@@ -13,6 +14,9 @@ public record MyInfoResponse(
 
         @Schema(description = "닉네임", example = "쿠로미덕후")
         String nickname,
+
+        @Schema(description = "가입에 쓴 소셜 계정. 탈퇴 때 FE가 이 값으로 카카오 · 네이버 연결을 끊는다 (결정 C17)", example = "KAKAO")
+        SocialProvider provider,
 
         @Schema(description = "생년월일 (본인만, 읽기 전용)", example = "2001-03-15")
         LocalDate birthDate,

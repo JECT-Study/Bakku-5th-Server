@@ -6,6 +6,7 @@ import com.ject.user.api.controller.api.MemberApi;
 import com.ject.user.api.dto.enums.Gender;
 import com.ject.user.api.dto.enums.NicknameUnavailableReason;
 import com.ject.user.api.dto.enums.NoShowStatus;
+import com.ject.user.api.dto.enums.SocialProvider;
 import com.ject.user.api.dto.request.MarketingConsentRequest;
 import com.ject.user.api.dto.request.NicknameUpdateRequest;
 import com.ject.user.api.dto.request.WithdrawalRequest;
@@ -63,7 +64,8 @@ public class MemberController implements MemberApi {
         MyInfo info = memberService.getMyInfo(memberId);
         Gender gender = info.gender() == null ? null : Gender.valueOf(info.gender());
         // 매너 지표 · 노쇼 · 경고 · 이용 제한은 구현 전, 받은 후기는 출시 후
-        return ApiResponse.success(new MyInfoResponse(info.userId(), info.nickname(), info.birthDate(), gender,
+        return ApiResponse.success(new MyInfoResponse(info.userId(), info.nickname(),
+                SocialProvider.valueOf(info.provider()), info.birthDate(), gender,
                 info.completedCount(), serviceTime.toOffset(info.nicknameChangeableAt()), info.marketingAgreed(),
                 serviceTime.toOffset(info.createdAt()), null, null, null, null, null));
     }
