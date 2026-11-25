@@ -47,6 +47,11 @@ public interface AppointmentRepository {
     List<Appointment> findPendingProposalsInvolving(Collection<Long> postIds, Long excludedExchangeId);
 
     /**
+     * 회원이 제안자(proposerUserId) 또는 받는 사람(receiverUserId)으로 참여한 현재 CONFIRMED 약속 수
+     */
+    int countConfirmedByMemberId(Long memberId);
+
+    /**
      * 회원이 제안자 또는 받는 사람으로 참여하고 상태가 주어진 목록에 속하는 약속 ID를 오름차순으로 반환한다.
      * 엔티티를 미리 영속성 컨텍스트에 올리지 않아 이후 findByIdForUpdate가 최신 상태를 읽게 한다
      */

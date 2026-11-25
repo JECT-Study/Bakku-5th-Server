@@ -139,6 +139,13 @@ public class JpaAppointmentRepository implements AppointmentRepository {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public int countConfirmedByMemberId(Long memberId) {
+        return Math.toIntExact(
+                appointmentEntityRepository.countByParticipantAndStatus(memberId, AppointmentStatus.CONFIRMED));
+    }
+
+    @Override
     public List<Long> findIdsByMemberIdAndStatuses(Long memberId, Collection<AppointmentStatus> statuses) {
         // 빈 상태 목록은 JPA의 빈 IN 처리 차이를 피하기 위해 쿼리 없이 바로 빈 목록을 반환한다
         if (statuses.isEmpty()) {

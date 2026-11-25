@@ -104,6 +104,14 @@ public interface AppointmentEntityRepository extends JpaRepository<AppointmentEn
                                                   @Param("status") AppointmentStatus status);
 
     @Query("""
+            select count(a)
+            from AppointmentEntity a
+            where (a.proposerUserId = :memberId or a.receiverUserId = :memberId)
+              and a.status = :status
+            """)
+    long countByParticipantAndStatus(@Param("memberId") Long memberId, @Param("status") AppointmentStatus status);
+
+    @Query("""
             select a.id
             from AppointmentEntity a
             where (a.proposerUserId = :memberId or a.receiverUserId = :memberId)

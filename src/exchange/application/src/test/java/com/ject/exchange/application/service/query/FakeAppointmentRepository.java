@@ -109,6 +109,15 @@ class FakeAppointmentRepository implements AppointmentRepository {
     }
 
     @Override
+    public int countConfirmedByMemberId(Long memberId) {
+        return Math.toIntExact(store.values().stream()
+                .filter(appointment -> appointment.getStatus() == AppointmentStatus.CONFIRMED)
+                .filter(appointment -> appointment.getProposerUserId().equals(memberId)
+                        || appointment.getReceiverUserId().equals(memberId))
+                .count());
+    }
+
+    @Override
     public List<Long> findIdsByMemberIdAndStatuses(Long memberId, Collection<AppointmentStatus> statuses) {
         return store.values().stream()
                 .filter(appointment -> appointment.getProposerUserId().equals(memberId)
