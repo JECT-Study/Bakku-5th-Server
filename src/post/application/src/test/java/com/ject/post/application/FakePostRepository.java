@@ -15,6 +15,7 @@ public class FakePostRepository implements PostRepository {
     private final Map<Long, Post> posts = new HashMap<>();
     private final Instant createdAt;
     private long sequence;
+    public int saveCalls;
     public int deleteCalls;
     public int updateStatusesCalls;
     public RuntimeException updateStatusesFailure;
@@ -25,6 +26,7 @@ public class FakePostRepository implements PostRepository {
 
     @Override
     public Post save(Post post) {
+        saveCalls++;
         Long id = post.getId() == null ? ++sequence : post.getId();
         Post saved = copy(post, id, post.getViewCount(),
                 post.getCreatedAt() == null ? createdAt : post.getCreatedAt());

@@ -10,14 +10,18 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PostUpdateTest {
 
     private static final Long AUTHOR_ID = 3L;
     private static final Instant ENDS_AT = Instant.parse("2026-11-02T06:30:00Z");
     private static final Place NEW_PLACE = new Place(37.5444, 127.0557, "성수역 4번 출구", "서울특별시 성동구 성수동2가", null);
+    private static final Place PLACE = new Place(37.5563, 126.9236, "스타벅스 홍대동교점", "서울특별시 마포구 동교동", "AK플라자 주변");
+    private static final List<String> IMAGES = List.of("post/10/a.jpg");
 
     @Test
     @DisplayName("작성자가 교환 가능 글을 수정하면 내용 전체가 바뀌고, 지금 교환 종료 시각은 그대로다")
@@ -40,6 +44,39 @@ class PostUpdateTest {
         assertEquals(NEW_PLACE, post.getPlace());
         assertEquals(ENDS_AT, post.getNowExchangeEndsAt());
         assertEquals(PostStatus.AVAILABLE, post.getStatus());
+    }
+
+    @Test
+    @DisplayName("사진 외 내용이 그대로면 false (태그는 정규화한 뒤 비교, 사진은 비교하지 않음)")
+    void update_sameContent_returnsFalse() {
+        Post post = post(PostStatus.AVAILABLE);
+
+        boolean changed = post.update(AUTHOR_ID, List.of("post/tmp/3/new.jpg"), "치이카와 하치와레 가챠 키링",
+                PostCategory.CHARACTER, false, List.of(" 하치와레 ", "모몽가"), "설명", "치이카와 가챠 키링", PLACE);
+
+        assertFalse(changed);
+    }
+
+    @Test
+    @DisplayName("제품명 · 카테고리 · 개봉 · 태그 · 설명 · 원하는 제품 · 장소 중 하나라도 바뀌면 true")
+    void update_anyFieldChanged_returnsTrue() {
+        List<String> tags = List.of("하치와레", "모몽가");
+        Place otherMemo = new Place(37.5563, 126.9236, "스타벅스 홍대동교점", "서울특별시 마포구 동교동", "3번 출구");
+
+        assertTrue(post(PostStatus.AVAILABLE).update(AUTHOR_ID, IMAGES, "새 제품명",
+                PostCategory.CHARACTER, false, tags, "설명", "치이카와 가챠 키링", PLACE));
+        assertTrue(post(PostStatus.AVAILABLE).update(AUTHOR_ID, IMAGES, "치이카와 하치와레 가챠 키링",
+                PostCategory.IDOL, false, tags, "설명", "치이카와 가챠 키링", PLACE));
+        assertTrue(post(PostStatus.AVAILABLE).update(AUTHOR_ID, IMAGES, "치이카와 하치와레 가챠 키링",
+                PostCategory.CHARACTER, true, tags, "설명", "치이카와 가챠 키링", PLACE));
+        assertTrue(post(PostStatus.AVAILABLE).update(AUTHOR_ID, IMAGES, "치이카와 하치와레 가챠 키링",
+                PostCategory.CHARACTER, false, List.of("모몽가", "하치와레"), "설명", "치이카와 가챠 키링", PLACE));
+        assertTrue(post(PostStatus.AVAILABLE).update(AUTHOR_ID, IMAGES, "치이카와 하치와레 가챠 키링",
+                PostCategory.CHARACTER, false, tags, null, "치이카와 가챠 키링", PLACE));
+        assertTrue(post(PostStatus.AVAILABLE).update(AUTHOR_ID, IMAGES, "치이카와 하치와레 가챠 키링",
+                PostCategory.CHARACTER, false, tags, "설명", null, PLACE));
+        assertTrue(post(PostStatus.AVAILABLE).update(AUTHOR_ID, IMAGES, "치이카와 하치와레 가챠 키링",
+                PostCategory.CHARACTER, false, tags, "설명", "치이카와 가챠 키링", otherMemo));
     }
 
     @Test
@@ -90,14 +127,14 @@ class PostUpdateTest {
                 .id(10L)
                 .authorId(AUTHOR_ID)
                 .status(status)
-                .imageKeys(List.of("post/10/a.jpg"))
-                .tags(List.of("하치와레"))
+                .imageKeys(IMAGES)
+                .tags(List.of("하치와레", "모몽가"))
                 .title("치이카와 하치와레 가챠 키링")
                 .category(PostCategory.CHARACTER)
                 .opened(false)
                 .description("설명")
                 .wantedItem("치이카와 가챠 키링")
-                .place(new Place(37.5563, 126.9236, "스타벅스 홍대동교점", "서울특별시 마포구 동교동", "AK플라자 주변"))
+                .place(PLACE)
                 .nowExchangeEndsAt(ENDS_AT)
                 .build();
     }

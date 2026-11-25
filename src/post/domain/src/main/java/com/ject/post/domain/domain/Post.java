@@ -12,6 +12,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 @Getter
@@ -77,8 +78,9 @@ public class Post {
                 .build();
     }
 
-    public void update(Long editorId, List<String> imageKeys, String title, PostCategory category, boolean opened,
-                       List<String> tags, String description, String wantedItem, Place place) {
+    // 사진은 최종 key로 비교해야하기 때문에 반환값에 미포함
+    public boolean update(Long editorId, List<String> imageKeys, String title, PostCategory category, boolean opened,
+                          List<String> tags, String description, String wantedItem, Place place) {
         if (!isWrittenBy(editorId)) {
             throw NotPostAuthorException.onUpdate(id);
         }
@@ -88,14 +90,23 @@ public class Post {
         if (status == PostStatus.COMPLETED) {
             throw PostCompletedException.onUpdate(id);
         }
+        List<String> newTags = distinctTags(tags);
+        boolean changed = !Objects.equals(this.title, title)
+                || this.category != category
+                || this.opened != opened
+                || !this.tags.equals(newTags)
+                || !Objects.equals(this.description, description)
+                || !Objects.equals(this.wantedItem, wantedItem)
+                || !Objects.equals(this.place, place);
         this.imageKeys = List.copyOf(imageKeys);
         this.title = title;
         this.category = category;
         this.opened = opened;
-        this.tags = distinctTags(tags);
+        this.tags = newTags;
         this.description = description;
         this.wantedItem = wantedItem;
         this.place = place;
+        return changed;
     }
 
     public boolean delete(Long requesterId, Instant now) {
