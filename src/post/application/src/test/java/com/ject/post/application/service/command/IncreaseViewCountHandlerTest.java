@@ -1,6 +1,7 @@
 package com.ject.post.application.service.command;
 
 import com.ject.common.core.time.ServiceTime;
+import com.ject.post.application.FakeBlockRelationPort;
 import com.ject.post.application.FakePostRepository;
 import com.ject.post.application.FakePostViewLog;
 import com.ject.post.application.dto.command.IncreaseViewCountCommand;
@@ -30,11 +31,26 @@ class IncreaseViewCountHandlerTest {
 
     private FakePostRepository postRepository;
     private FakePostViewLog postViewLog;
+    private FakeBlockRelationPort blockRelationPort;
 
     @BeforeEach
     void setUp() {
         postRepository = new FakePostRepository(NOW);
         postViewLog = new FakePostViewLog();
+        blockRelationPort = new FakeBlockRelationPort();
+    }
+
+    @Test
+    @DisplayName("차단 관계면 POST_001이고 조회 수는 오르지 않는다")
+    void handle_blocked_throwsAndDoesNotIncrease() {
+        // given
+        Long postId = save(PostStatus.AVAILABLE);
+        blockRelationPort.block(VIEWER_ID, AUTHOR_ID);
+
+        // when · then
+        assertThrows(PostNotFoundException.class,
+                () -> handlerAt(NOW).handle(new IncreaseViewCountCommand(postId, VIEWER_ID)));
+        assertEquals(0, viewCount(postId));
     }
 
     @Test
@@ -137,7 +153,8 @@ class IncreaseViewCountHandlerTest {
     }
 
     private IncreaseViewCountHandler handlerAt(Instant now) {
-        return new IncreaseViewCountHandler(postRepository, postViewLog, new ServiceTime(Clock.fixed(now, SEOUL)));
+        return new IncreaseViewCountHandler(postRepository, postViewLog, blockRelationPort,
+                new ServiceTime(Clock.fixed(now, SEOUL)));
     }
 
     private int viewCount(Long postId) {

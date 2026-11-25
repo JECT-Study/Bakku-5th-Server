@@ -40,6 +40,7 @@ public class JpaPostSummaryReader implements PostSummaryReader {
                         exchangeType(condition.nowExchange(), condition.now()),
                         categoryEq(condition.category()),
                         hubEq(condition.hub()),
+                        authorNotIn(condition.excludedAuthorIds()),
                         idBefore(cursorId))
                 .orderBy(postEntity.id.desc())
                 .limit(limit)
@@ -89,6 +90,10 @@ public class JpaPostSummaryReader implements PostSummaryReader {
 
     private static BooleanExpression hubEq(Hub hub) {
         return hub == null ? null : postEntity.hub.eq(hub);
+    }
+
+    private static BooleanExpression authorNotIn(List<Long> authorIds) {
+        return authorIds == null || authorIds.isEmpty() ? null : postEntity.authorId.notIn(authorIds);
     }
 
     private static BooleanExpression idBefore(Long cursorId) {

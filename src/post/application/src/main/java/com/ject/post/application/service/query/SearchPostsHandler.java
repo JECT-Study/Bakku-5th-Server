@@ -5,6 +5,7 @@ import com.ject.common.core.time.ServiceTime;
 import com.ject.post.application.dto.PostSearchPageResult;
 import com.ject.post.application.dto.PostSummaryResult;
 import com.ject.post.application.dto.query.SearchPostsQuery;
+import com.ject.post.application.port.BlockRelationPort;
 import com.ject.post.application.port.PostSearchReader;
 import com.ject.post.domain.domain.Hub;
 import com.ject.post.domain.domain.PostCategory;
@@ -21,6 +22,7 @@ import java.util.List;
 public class SearchPostsHandler implements QueryHandler<SearchPostsQuery, PostSearchPageResult> {
 
     private final PostSearchReader postSearchReader;
+    private final BlockRelationPort blockRelationPort;
     private final ServiceTime serviceTime;
 
     @Override
@@ -35,7 +37,8 @@ public class SearchPostsHandler implements QueryHandler<SearchPostsQuery, PostSe
                 : new PostSearchReader.Cursor(query.cursorRank(), query.cursorId());
 
         List<PostSearchReader.Hit> hits = postSearchReader.search(
-                new PostSearchReader.Condition(keyword.value(), category, hub, query.nowExchange(), now),
+                new PostSearchReader.Condition(keyword.value(), category, hub, query.nowExchange(), now,
+                        blockRelationPort.blockRelatedMemberIds(query.viewerId())),
                 cursor, query.size() + 1);
         boolean hasNext = hits.size() > query.size();
         List<PostSearchReader.Hit> page = hasNext ? hits.subList(0, query.size()) : hits;

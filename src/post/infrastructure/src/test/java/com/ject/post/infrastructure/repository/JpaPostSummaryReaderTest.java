@@ -68,6 +68,20 @@ class JpaPostSummaryReaderTest extends PostgresTest {
     }
 
     @Test
+    @DisplayName("홈 목록: 제외할 작성자의 글은 빠지고, 목록이 비면 거르지 않는다")
+    void findHomePage_excludesAuthors() {
+        Long mine = insert(PostStatus.AVAILABLE, Hub.HONGDAE, PostCategory.ETC, null);
+        Long blocked = insert(PostStatus.AVAILABLE, Hub.HONGDAE, PostCategory.ETC, null);
+        Long other = insert(PostStatus.AVAILABLE, Hub.HONGDAE, PostCategory.ETC, null);
+        setAuthor(blocked, 7L);
+        setAuthor(other, 8L);
+
+        assertEquals(List.of(other, mine), ids(reader.findHomePage(
+                new PostSummaryReader.Condition(null, null, null, NOW, List.of(7L)), null, 10)));
+        assertEquals(List.of(other, blocked, mine), ids(reader.findHomePage(condition(null, null, null), null, 10)));
+    }
+
+    @Test
     @DisplayName("요약 일괄 조회: 삭제 글도 포함하고 대표 사진 key를 붙인다")
     void findBriefs_includesDeleted() {
         Long available = insert(PostStatus.AVAILABLE, Hub.HONGDAE, PostCategory.ETC, null);
@@ -82,7 +96,14 @@ class JpaPostSummaryReaderTest extends PostgresTest {
     }
 
     private static PostSummaryReader.Condition condition(Boolean nowExchange, PostCategory category, Hub hub) {
-        return new PostSummaryReader.Condition(nowExchange, category, hub, NOW);
+        return new PostSummaryReader.Condition(nowExchange, category, hub, NOW, List.of());
+    }
+
+    private void setAuthor(Long postId, Long authorId) {
+        entityManager.createNativeQuery("UPDATE post SET author_id = :authorId WHERE id = :id")
+                .setParameter("authorId", authorId)
+                .setParameter("id", postId)
+                .executeUpdate();
     }
 
     private static List<Long> ids(List<?> rows) {

@@ -166,13 +166,34 @@ class JpaPostSearchReaderTest extends PostgresTest {
         assertEquals(List.of(normal, ended), ids(reader.search(condition("치이카와", null, null, false), null, 10)));
     }
 
+    @Test
+    @DisplayName("제외할 작성자의 글은 제목 · 태그 어느 쪽으로 걸려도 빠지고, 목록이 비면 거르지 않는다")
+    void search_excludesAuthors() {
+        Long mine = insert("치이카와 키링", PostStatus.AVAILABLE, PostCategory.CHARACTER);
+        Long blockedTitle = insert("치이카와 인형", PostStatus.AVAILABLE, PostCategory.CHARACTER);
+        Long blockedTag = insert("쿠션", PostStatus.AVAILABLE, PostCategory.CHARACTER, "치이카와");
+        setAuthor(blockedTitle, 7L);
+        setAuthor(blockedTag, 9L);
+
+        assertEquals(List.of(mine), ids(reader.search(
+                new PostSearchReader.Condition("치이카와", null, null, null, NOW, List.of(7L, 9L)), null, 10)));
+        assertEquals(List.of(blockedTag, blockedTitle, mine), ids(reader.search(condition("치이카와", null), null, 10)));
+    }
+
     private static PostSearchReader.Condition condition(String keyword, PostCategory category) {
         return condition(keyword, category, null, null);
     }
 
     private static PostSearchReader.Condition condition(String keyword, PostCategory category, Hub hub,
                                                         Boolean nowExchange) {
-        return new PostSearchReader.Condition(keyword, category, hub, nowExchange, NOW);
+        return new PostSearchReader.Condition(keyword, category, hub, nowExchange, NOW, List.of());
+    }
+
+    private void setAuthor(Long postId, Long authorId) {
+        entityManager.createNativeQuery("UPDATE post SET author_id = :authorId WHERE id = :id")
+                .setParameter("authorId", authorId)
+                .setParameter("id", postId)
+                .executeUpdate();
     }
 
     private Long insertAt(String title, Hub hub, Instant nowExchangeEndsAt, String... tags) {

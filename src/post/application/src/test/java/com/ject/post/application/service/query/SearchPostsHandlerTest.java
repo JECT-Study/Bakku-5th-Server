@@ -1,6 +1,7 @@
 package com.ject.post.application.service.query;
 
 import com.ject.common.core.time.ServiceTime;
+import com.ject.post.application.FakeBlockRelationPort;
 import com.ject.post.application.dto.PostSearchPageResult;
 import com.ject.post.application.dto.PostSummaryResult;
 import com.ject.post.application.dto.query.SearchPostsQuery;
@@ -36,10 +37,22 @@ class SearchPostsHandlerTest {
 
         handler(reader).handle(new SearchPostsQuery(VIEWER_ID, "# 치이 카와", "IDOL", "SINDORIM", true, 2, 57L, 20));
 
-        assertEquals(new PostSearchReader.Condition("치이카와", PostCategory.IDOL, Hub.SINDORIM, true, NOW),
+        assertEquals(new PostSearchReader.Condition("치이카와", PostCategory.IDOL, Hub.SINDORIM, true, NOW, List.of()),
                 reader.receivedCondition);
         assertEquals(new PostSearchReader.Cursor(2, 57L), reader.receivedCursor);
         assertEquals(21, reader.receivedLimit);
+    }
+
+    @Test
+    @DisplayName("내가 차단했거나 나를 차단한 회원을 제외할 작성자로 넘긴다")
+    void handle_passesBlockRelatedAuthors() {
+        FakePostSearchReader reader = new FakePostSearchReader(List.of());
+        FakeBlockRelationPort blockRelationPort = new FakeBlockRelationPort().block(VIEWER_ID, 7L).block(9L, VIEWER_ID);
+
+        handler(reader, blockRelationPort).handle(
+                new SearchPostsQuery(VIEWER_ID, "치이카와", null, null, null, null, null, 20));
+
+        assertEquals(List.of(7L, 9L), reader.receivedCondition.excludedAuthorIds());
     }
 
     @Test
@@ -93,7 +106,12 @@ class SearchPostsHandlerTest {
     }
 
     private static SearchPostsHandler handler(FakePostSearchReader reader) {
-        return new SearchPostsHandler(reader, new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul"))));
+        return handler(reader, new FakeBlockRelationPort());
+    }
+
+    private static SearchPostsHandler handler(FakePostSearchReader reader, FakeBlockRelationPort blockRelationPort) {
+        return new SearchPostsHandler(reader, blockRelationPort,
+                new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul"))));
     }
 
     private static PostSearchReader.Hit hit(int rank, Long id) {

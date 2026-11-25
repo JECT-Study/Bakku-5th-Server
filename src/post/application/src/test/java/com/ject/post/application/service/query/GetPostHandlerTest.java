@@ -1,6 +1,7 @@
 package com.ject.post.application.service.query;
 
 import com.ject.common.core.time.ServiceTime;
+import com.ject.post.application.FakeBlockRelationPort;
 import com.ject.post.application.FakePostRepository;
 import com.ject.post.application.dto.AuthorInfo;
 import com.ject.post.application.dto.PostResult;
@@ -35,13 +36,41 @@ class GetPostHandlerTest {
     private static final AuthorInfo AUTHOR = new AuthorInfo(AUTHOR_ID, "하치와레러버", 12);
 
     private FakePostRepository postRepository;
+    private FakeBlockRelationPort blockRelationPort;
     private GetPostHandler handler;
 
     @BeforeEach
     void setUp() {
         postRepository = new FakePostRepository(NOW);
+        blockRelationPort = new FakeBlockRelationPort();
         ServiceTime serviceTime = new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul")));
-        handler = new GetPostHandler(postRepository, ids -> Map.of(AUTHOR_ID, AUTHOR), serviceTime);
+        handler = new GetPostHandler(postRepository, ids -> Map.of(AUTHOR_ID, AUTHOR), blockRelationPort, serviceTime);
+    }
+
+    @Test
+    @DisplayName("차단 관계면 내가 차단했든 나를 차단했든 POST_001")
+    void handle_blocked_throws() {
+        // given
+        Long postId = save(PostStatus.AVAILABLE, null).getId();
+        blockRelationPort.block(AUTHOR_ID, 99L).block(100L, AUTHOR_ID);
+
+        // when · then
+        assertThrows(PostNotFoundException.class, () -> handler.handle(new GetPostQuery(postId, 99L)));
+        assertThrows(PostNotFoundException.class, () -> handler.handle(new GetPostQuery(postId, 100L)));
+    }
+
+    @Test
+    @DisplayName("차단 관계가 아니면 볼 수 있다")
+    void handle_notBlocked_returnsResult() {
+        // given
+        Long postId = save(PostStatus.AVAILABLE, null).getId();
+        blockRelationPort.block(AUTHOR_ID, 99L);
+
+        // when
+        PostResult result = handler.handle(new GetPostQuery(postId, 101L));
+
+        // then
+        assertEquals(postId, result.id());
     }
 
     @Test
