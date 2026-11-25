@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface PostTagLinkEntityRepository extends JpaRepository<PostTagLinkEntity, Long> {
@@ -21,6 +22,9 @@ public interface PostTagLinkEntityRepository extends JpaRepository<PostTagLinkEn
 
     @Query("select l.tagId from PostTagLinkEntity l where l.postId = :postId")
     List<Long> findTagIdsByPostId(@Param("postId") Long postId);
+
+    @Query("select l.tagId from PostTagLinkEntity l where l.postId in :postIds")
+    List<Long> findTagIdsByPostIdIn(@Param("postIds") Collection<Long> postIds);
 
     @Modifying(flushAutomatically = true)
     @Query("delete from PostTagLinkEntity l where l.postId = :postId")
