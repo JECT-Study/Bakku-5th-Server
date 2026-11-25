@@ -1,0 +1,1 @@
+ALTER TABLE post ALTER COLUMN place_memo TYPE VARCHAR(50);
