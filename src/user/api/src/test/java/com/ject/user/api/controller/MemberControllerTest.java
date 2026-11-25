@@ -12,6 +12,7 @@ import com.ject.user.application.dto.NicknameChange;
 import com.ject.user.application.dto.NicknameAvailability;
 import com.ject.user.application.service.MemberService;
 import com.ject.user.application.service.NicknameService;
+import com.ject.user.application.service.WithdrawalNoticeService;
 import com.ject.user.application.service.WithdrawalService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -55,6 +56,7 @@ class MemberControllerTest {
         withdrawalService = new StubWithdrawalService();
         mockMvc = MockMvcBuilders.standaloneSetup(
                         new MemberController(new StubNicknameService(), new StubMemberService(), withdrawalService,
+                                new WithdrawalNoticeService(memberId -> memberId == 7L ? 2 : 0),
                                 serviceTime))
                 .setControllerAdvice(new UserExceptionHandler())
                 .setCustomArgumentResolvers(new LoginMemberArgumentResolver())
@@ -141,10 +143,11 @@ class MemberControllerTest {
     }
 
     @Test
-    @DisplayName("MB-5 진행 중인 교환 수를 반환한다")
+    @DisplayName("MB-5 로그인한 회원의 진행 중인 교환 수를 반환한다")
     void getWithdrawalNotice() throws Exception {
-        mockMvc.perform(get("/api/v1/members/me/withdrawal-notice"))
-                .andExpect(jsonPath("$.data.inProgressExchangeCount").value(1));
+        mockMvc.perform(get("/api/v1/members/me/withdrawal-notice").requestAttr(LoginMember.ATTRIBUTE, 7L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.inProgressExchangeCount").value(2));
     }
 
     @Test
