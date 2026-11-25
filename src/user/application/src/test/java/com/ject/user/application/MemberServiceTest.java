@@ -58,6 +58,7 @@ class MemberServiceTest {
         // then
         assertEquals(memberId, info.userId());
         assertEquals("쿠로미덕후", info.nickname());
+        assertEquals("KAKAO", info.provider());
         assertEquals(LocalDate.of(2001, 3, 15), info.birthDate());
         assertEquals("FEMALE", info.gender());
         assertEquals(12, info.completedCount());

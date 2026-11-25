@@ -130,6 +130,7 @@ class MemberControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.userId").value(7))
                 .andExpect(jsonPath("$.data.nickname").value("쿠로미덕후"))
+                .andExpect(jsonPath("$.data.provider").value("KAKAO"))
                 .andExpect(jsonPath("$.data.gender").value("FEMALE"))
                 .andExpect(jsonPath("$.data.completedCount").value(12))
                 .andExpect(jsonPath("$.data.birthDate").value("2001-03-15"))
@@ -261,7 +262,7 @@ class MemberControllerTest {
 
         @Override
         public MyInfo getMyInfo(Long memberId) {
-            return new MyInfo(memberId, "쿠로미덕후", LocalDate.of(2001, 3, 15), "FEMALE", 12, null, false,
+            return new MyInfo(memberId, "쿠로미덕후", "KAKAO", LocalDate.of(2001, 3, 15), "FEMALE", 12, null, false,
                     Instant.parse("2026-11-01T03:00:00Z"));
         }
 
