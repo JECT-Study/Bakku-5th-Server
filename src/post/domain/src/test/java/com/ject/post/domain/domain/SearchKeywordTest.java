@@ -28,15 +28,15 @@ class SearchKeywordTest {
     }
 
     @Test
-    @DisplayName("정규화한 뒤 2자와 30자는 된다")
+    @DisplayName("정규화한 뒤 1자와 30자는 된다")
     void of_boundary() {
-        assertEquals(2, SearchKeyword.of("# 가 나").value().length());
+        assertEquals(1, SearchKeyword.of("# 가").value().length());
         assertEquals(30, SearchKeyword.of("가".repeat(30)).value().length());
     }
 
     @ParameterizedTest(name = "\"{0}\"")
-    @DisplayName("정규화한 뒤 2~30자가 아니면 POST_009")
-    @ValueSource(strings = {"# 가", "##", "   ", "가나다라마바사아자차카타파하가나다라마바사아자차카타파하가나다"})
+    @DisplayName("정규화한 뒤 1~30자가 아니면 POST_009")
+    @ValueSource(strings = {"#", "##", "   ", "# ", "가나다라마바사아자차카타파하가나다라마바사아자차카타파하가나다"})
     void of_invalidLength_throws(String raw) {
         InvalidSearchKeywordException e = assertThrows(InvalidSearchKeywordException.class, () -> SearchKeyword.of(raw));
 

@@ -140,13 +140,15 @@ class PostDiscoveryControllerTest {
     }
 
     @Test
-    @DisplayName("PO-7 검색어 · 카테고리 · 커서(순위, id)를 Query로 넘기고, 다음 커서를 순위 · id로 만든다")
+    @DisplayName("PO-7 검색어 · 카테고리 · 거점 · 교환 방식 · 커서(순위, id)를 Query로 넘기고, 다음 커서를 순위 · id로 만든다")
     void searchPosts_sendsQueryAndCursor() throws Exception {
         queryBus.searchResult = new PostSearchPageResult(List.of(summary(57L)), 3, 28L, true);
 
         getPosts(get("/api/v1/posts/search")
                 .param("keyword", "# 치이 카와")
                 .param("category", "IDOL")
+                .param("hub", "SINDORIM")
+                .param("nowExchange", "true")
                 .param("cursor", SEARCH_CURSOR_RANK2_ID57)
                 .param("size", "5"))
                 .andExpect(status().isOk())
@@ -154,7 +156,17 @@ class PostDiscoveryControllerTest {
                 .andExpect(jsonPath("$.data.nextCursor").value("eyJyYW5rIjozLCJpZCI6Mjh9"))
                 .andExpect(jsonPath("$.data.hasNext").value(true));
 
-        assertEquals(new SearchPostsQuery(MEMBER_ID, "# 치이 카와", "IDOL", 2, 57L, 5), queryBus.received);
+        assertEquals(new SearchPostsQuery(MEMBER_ID, "# 치이 카와", "IDOL", "SINDORIM", true, 2, 57L, 5),
+                queryBus.received);
+    }
+
+    @Test
+    @DisplayName("PO-7 1글자 검색어를 받고, 거점 · 교환 방식을 생략하면 null로 넘긴다")
+    void searchPosts_oneCharacter_withoutFilters() throws Exception {
+        getPosts(get("/api/v1/posts/search").param("keyword", "치"))
+                .andExpect(status().isOk());
+
+        assertEquals(new SearchPostsQuery(MEMBER_ID, "치", null, null, null, null, null, 20), queryBus.received);
     }
 
     @Test

@@ -4,7 +4,7 @@ import com.ject.post.domain.exception.InvalidSearchKeywordException;
 
 public record SearchKeyword(String value) {
 
-    private static final int MIN_LENGTH = 2;
+    private static final int MIN_LENGTH = 1;
     private static final int MAX_LENGTH = 30;
 
     public static SearchKeyword of(String raw) {

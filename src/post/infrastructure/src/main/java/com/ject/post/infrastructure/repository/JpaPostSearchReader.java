@@ -76,6 +76,15 @@ public class JpaPostSearchReader implements PostSearchReader {
         if (condition.category() != null) {
             filters.add("p.category = :category");
         }
+        if (condition.hub() != null) {
+            filters.add("p.hub = :hub");
+        }
+        if (Boolean.TRUE.equals(condition.nowExchange())) {
+            filters.add("p.now_exchange_ends_at > :now");
+        }
+        if (Boolean.FALSE.equals(condition.nowExchange())) {
+            filters.add("(p.now_exchange_ends_at IS NULL OR p.now_exchange_ends_at <= :now)");
+        }
         if (cursor != null) {
             filters.add("(c.rank > :cursorRank OR (c.rank = :cursorRank AND c.id < :cursorId))");
         }
@@ -92,6 +101,12 @@ public class JpaPostSearchReader implements PostSearchReader {
                 .setParameter("limit", limit);
         if (condition.category() != null) {
             query.setParameter("category", condition.category().name());
+        }
+        if (condition.hub() != null) {
+            query.setParameter("hub", condition.hub().name());
+        }
+        if (condition.nowExchange() != null) {
+            query.setParameter("now", condition.now());
         }
         if (cursor != null) {
             query.setParameter("cursorRank", cursor.rank());

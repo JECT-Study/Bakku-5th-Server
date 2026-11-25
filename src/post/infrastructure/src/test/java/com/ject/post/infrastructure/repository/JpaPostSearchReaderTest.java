@@ -1,6 +1,7 @@
 package com.ject.post.infrastructure.repository;
 
 import com.ject.post.application.port.PostSearchReader;
+import com.ject.post.domain.domain.Hub;
 import com.ject.post.domain.domain.PostCategory;
 import com.ject.post.domain.domain.PostStatus;
 import com.ject.post.infrastructure.PostgresTest;
@@ -10,6 +11,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -19,6 +22,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Import(JpaPostSearchReader.class)
 class JpaPostSearchReaderTest extends PostgresTest {
+
+    private static final Instant NOW = Instant.now().truncatedTo(ChronoUnit.SECONDS);
 
     @Autowired
     private JpaPostSearchReader reader;
@@ -127,8 +132,62 @@ class JpaPostSearchReaderTest extends PostgresTest {
         assertTrue(hit.row().title().startsWith("치이카와"));
     }
 
+    @Test
+    @DisplayName("1글자 검색어도 제품명 · 태그에서 찾는다")
+    void search_oneCharacter() {
+        Long title = insert("치이카와 키링", PostStatus.AVAILABLE, PostCategory.CHARACTER);
+        Long tag = insert("인형", PostStatus.AVAILABLE, PostCategory.CHARACTER, "치즈");
+        insert("모몽가 키링", PostStatus.AVAILABLE, PostCategory.CHARACTER, "모몽가");
+
+        assertEquals(List.of(title, tag), ids(reader.search(condition("치", null), null, 10)));
+    }
+
+    @Test
+    @DisplayName("거점을 주면 그 거점 글만 (태그로만 걸린 글 포함), 생략하면 모든 지역")
+    void search_hubFilter() {
+        Long hongdae = insertAt("치이카와 키링", Hub.HONGDAE, null);
+        Long sindorimTitle = insertAt("치이카와 인형", Hub.SINDORIM, null);
+        Long sindorimTag = insertAt("쿠션", Hub.SINDORIM, null, "치이카와");
+
+        assertEquals(List.of(sindorimTag, sindorimTitle),
+                ids(reader.search(condition("치이카와", null, Hub.SINDORIM, null), null, 10)));
+        assertEquals(List.of(sindorimTag, sindorimTitle, hongdae),
+                ids(reader.search(condition("치이카와", null, null, null), null, 10)));
+    }
+
+    @Test
+    @DisplayName("지금 교환은 남은 시간이 있는 글만, 일반 교환은 그 외 (시간이 끝난 지금 교환 글 포함)")
+    void search_nowExchangeFilter() {
+        Long now = insertAt("치이카와 키링", Hub.HONGDAE, NOW.plusSeconds(3600));
+        Long ended = insertAt("치이카와 인형", Hub.HONGDAE, NOW.minusSeconds(3600));
+        Long normal = insertAt("치이카와 쿠션", Hub.HONGDAE, null);
+
+        assertEquals(List.of(now), ids(reader.search(condition("치이카와", null, null, true), null, 10)));
+        assertEquals(List.of(normal, ended), ids(reader.search(condition("치이카와", null, null, false), null, 10)));
+    }
+
     private static PostSearchReader.Condition condition(String keyword, PostCategory category) {
-        return new PostSearchReader.Condition(keyword, category);
+        return condition(keyword, category, null, null);
+    }
+
+    private static PostSearchReader.Condition condition(String keyword, PostCategory category, Hub hub,
+                                                        Boolean nowExchange) {
+        return new PostSearchReader.Condition(keyword, category, hub, nowExchange, NOW);
+    }
+
+    private Long insertAt(String title, Hub hub, Instant nowExchangeEndsAt, String... tags) {
+        Long id = insert(title, PostStatus.AVAILABLE, PostCategory.CHARACTER, tags);
+        entityManager.createNativeQuery("UPDATE post SET hub = :hub WHERE id = :id")
+                .setParameter("hub", hub.name())
+                .setParameter("id", id)
+                .executeUpdate();
+        if (nowExchangeEndsAt != null) {
+            entityManager.createNativeQuery("UPDATE post SET now_exchange_ends_at = :endsAt WHERE id = :id")
+                    .setParameter("endsAt", nowExchangeEndsAt)
+                    .setParameter("id", id)
+                    .executeUpdate();
+        }
+        return id;
     }
 
     private static List<Long> ids(List<PostSearchReader.Hit> hits) {

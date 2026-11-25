@@ -7,6 +7,8 @@ public record SearchPostsQuery(
         Long viewerId,
         String keyword,
         String category,
+        String hub,
+        Boolean nowExchange,
         Integer cursorRank,
         Long cursorId,
         int size
