@@ -20,6 +20,7 @@ import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -27,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Repository
@@ -91,6 +93,33 @@ public class JpaPostRepository implements PostRepository {
                 throw PostConflictException.onStatusChange(post.getId());
             }
         }
+    }
+
+    @Override
+    @Transactional
+    @SuppressWarnings("unchecked")
+    public int deleteAvailableByAuthor(Long authorId, Instant deletedAt) {
+        List<Long> deletedIds = ((List<Number>) entityManager.createNativeQuery("""
+                        UPDATE post
+                        SET status = 'DELETED', deleted_at = :deletedAt, updated_at = :deletedAt, version = version + 1
+                        WHERE author_id = :authorId AND status = 'AVAILABLE'
+                        RETURNING id
+                        """)
+                .setParameter("deletedAt", deletedAt)
+                .setParameter("authorId", authorId)
+                .getResultList()).stream()
+                .map(Number::longValue)
+                .toList();
+        if (deletedIds.isEmpty()) {
+            return 0;
+        }
+        Map<Long, Long> removedPerTag = postTagLinkEntityRepository.findTagIdsByPostIdIn(deletedIds).stream()
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+        removedPerTag.entrySet().stream()
+                .collect(Collectors.groupingBy(Map.Entry::getValue,
+                        Collectors.mapping(Map.Entry::getKey, Collectors.toList())))
+                .forEach((removed, tagIds) -> addPostCount(tagIds, -removed.intValue()));
+        return deletedIds.size();
     }
 
     private PostEntity update(Post post) {
