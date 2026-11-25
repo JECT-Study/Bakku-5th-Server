@@ -20,7 +20,8 @@ class PostErrorCodeTest {
                 () -> assertCode(PostErrorCode.RESTRICTED_MEMBER, "POST_006", 403),
                 () -> assertCode(PostErrorCode.CONFLICT, "POST_007", 409),
                 () -> assertCode(PostErrorCode.INVALID_STATUS, "POST_008", 409),
-                () -> assertCode(PostErrorCode.INVALID_KEYWORD, "POST_009", 400));
+                () -> assertCode(PostErrorCode.INVALID_KEYWORD, "POST_009", 400),
+                () -> assertCode(PostErrorCode.INVALID_TAG_KEYWORD, "POST_010", 400));
     }
 
     private static void assertCode(PostErrorCode errorCode, String code, int status) {

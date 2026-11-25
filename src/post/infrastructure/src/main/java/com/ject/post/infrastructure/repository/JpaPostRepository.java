@@ -21,9 +21,12 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Repository
@@ -72,6 +75,7 @@ public class JpaPostRepository implements PostRepository {
         } catch (ObjectOptimisticLockingFailureException e) {
             throw PostConflictException.onDelete(post.getId());
         }
+        addPostCount(postTagLinkEntityRepository.findTagIdsByPostId(post.getId()), -1);
     }
 
     @Override
@@ -116,23 +120,38 @@ public class JpaPostRepository implements PostRepository {
     }
 
     private void replaceTags(Long postId, List<String> tagNames) {
+        Set<Long> oldTagIds = new HashSet<>(postTagLinkEntityRepository.findTagIdsByPostId(postId));
         postTagLinkEntityRepository.deleteByPostId(postId);
-        if (tagNames.isEmpty()) {
-            return;
-        }
-        tagNames.forEach(postTagEntityRepository::insertIfAbsent);
-        Map<String, Long> tagIds = postTagEntityRepository.findByNameIn(tagNames).stream()
-                .collect(Collectors.toMap(PostTagEntity::getName, PostTagEntity::getId));
+        Set<Long> newTagIds = new HashSet<>();
+        if (!tagNames.isEmpty()) {
+            tagNames.forEach(postTagEntityRepository::insertIfAbsent);
+            Map<String, Long> tagIds = postTagEntityRepository.findByNameIn(tagNames).stream()
+                    .collect(Collectors.toMap(PostTagEntity::getName, PostTagEntity::getId));
 
-        List<PostTagLinkEntity> links = new ArrayList<>();
-        for (int i = 0; i < tagNames.size(); i++) {
-            links.add(PostTagLinkEntity.builder()
-                    .postId(postId)
-                    .tagId(tagIds.get(tagNames.get(i)))
-                    .sortOrder(i + 1)
-                    .build());
+            List<PostTagLinkEntity> links = new ArrayList<>();
+            for (int i = 0; i < tagNames.size(); i++) {
+                links.add(PostTagLinkEntity.builder()
+                        .postId(postId)
+                        .tagId(tagIds.get(tagNames.get(i)))
+                        .sortOrder(i + 1)
+                        .build());
+            }
+            postTagLinkEntityRepository.saveAll(links);
+            newTagIds.addAll(tagIds.values());
         }
-        postTagLinkEntityRepository.saveAll(links);
+
+        Set<Long> removed = new HashSet<>(oldTagIds);
+        removed.removeAll(newTagIds);
+        Set<Long> added = new HashSet<>(newTagIds);
+        added.removeAll(oldTagIds);
+        addPostCount(removed, -1);
+        addPostCount(added, 1);
+    }
+
+    private void addPostCount(Collection<Long> tagIds, int delta) {
+        if (!tagIds.isEmpty()) {
+            postTagEntityRepository.addPostCount(tagIds, delta);
+        }
     }
 
     private List<String> findImageKeys(Long postId) {

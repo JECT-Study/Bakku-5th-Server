@@ -19,6 +19,9 @@ public interface PostTagLinkEntityRepository extends JpaRepository<PostTagLinkEn
             """)
     List<String> findTagNamesByPostId(@Param("postId") Long postId);
 
+    @Query("select l.tagId from PostTagLinkEntity l where l.postId = :postId")
+    List<Long> findTagIdsByPostId(@Param("postId") Long postId);
+
     @Modifying(flushAutomatically = true)
     @Query("delete from PostTagLinkEntity l where l.postId = :postId")
     void deleteByPostId(@Param("postId") Long postId);

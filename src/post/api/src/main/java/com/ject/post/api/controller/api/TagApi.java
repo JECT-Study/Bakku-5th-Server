@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequestMapping("/api/v1/tags")
 public interface TagApi {
 
-    @Operation(summary = "PO-9 태그 자동완성 (stub)", description = "입력 글자가 들어간 태그를 게시글 수 많은 순으로 보여줍니다. 게시글 작성 · 수정의 태그 입력에서만 씁니다.")
+    @Operation(summary = "PO-9 태그 자동완성", description = "입력 글자가 들어간 태그를 게시글 수 많은 순(같으면 가나다순)으로 보여줍니다. 삭제된 게시글은 세지 않고, 게시글이 없는 태그는 빠집니다. 게시글 작성 · 수정의 태그 입력에서만 씁니다.")
     @GetMapping
     ApiResponse<TagSuggestionResponse> suggestTags(
             @Parameter(description = "입력 중인 글자. 띄어쓰기와 앞의 #을 뺀 길이로 1~20자")
