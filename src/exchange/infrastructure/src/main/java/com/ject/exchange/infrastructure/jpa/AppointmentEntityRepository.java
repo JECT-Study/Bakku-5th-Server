@@ -102,4 +102,12 @@ public interface AppointmentEntityRepository extends JpaRepository<AppointmentEn
     List<Long> findIdsByChosenSourcePostAndStatus(@Param("postIds") Collection<Long> postIds,
                                                   @Param("excludedExchangeId") Long excludedExchangeId,
                                                   @Param("status") AppointmentStatus status);
+
+    @Query("""
+            select count(a)
+            from AppointmentEntity a
+            where (a.proposerUserId = :memberId or a.receiverUserId = :memberId)
+              and a.status = :status
+            """)
+    long countByParticipantAndStatus(@Param("memberId") Long memberId, @Param("status") AppointmentStatus status);
 }

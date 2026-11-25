@@ -108,6 +108,15 @@ class FakeAppointmentRepository implements AppointmentRepository {
                 .toList();
     }
 
+    @Override
+    public int countConfirmedByMemberId(Long memberId) {
+        return Math.toIntExact(store.values().stream()
+                .filter(appointment -> appointment.getStatus() == AppointmentStatus.CONFIRMED)
+                .filter(appointment -> appointment.getProposerUserId().equals(memberId)
+                        || appointment.getReceiverUserId().equals(memberId))
+                .count());
+    }
+
     /** 교환의 글 + 약속이 고른 아이템의 원본 글. 교환 상태는 보지 않는다. */
     private static List<Long> postIdsInvolvedIn(Exchange exchange, Appointment appointment) {
         List<Long> postIds = new ArrayList<>();

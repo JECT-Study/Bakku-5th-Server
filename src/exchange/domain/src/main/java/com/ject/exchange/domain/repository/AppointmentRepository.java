@@ -45,4 +45,9 @@ public interface AppointmentRepository {
      * "걸림" = 그 교환의 글이 주어진 글이거나, 그 제안이 고른 첨부 글이 주어진 글. 교환 상태는 보지 않는다
      */
     List<Appointment> findPendingProposalsInvolving(Collection<Long> postIds, Long excludedExchangeId);
+
+    /**
+     * 회원이 제안자(proposerUserId) 또는 받는 사람(receiverUserId)으로 참여한 현재 CONFIRMED 약속 수
+     */
+    int countConfirmedByMemberId(Long memberId);
 }

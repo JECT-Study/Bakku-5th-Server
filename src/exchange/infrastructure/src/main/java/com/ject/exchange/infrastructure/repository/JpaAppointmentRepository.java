@@ -138,6 +138,13 @@ public class JpaAppointmentRepository implements AppointmentRepository {
                 .toList();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public int countConfirmedByMemberId(Long memberId) {
+        return Math.toIntExact(
+                appointmentEntityRepository.countByParticipantAndStatus(memberId, AppointmentStatus.CONFIRMED));
+    }
+
     private Appointment toDomain(AppointmentEntity entity) {
         return AppointmentMapper.toDomain(entity,
                 appointmentItemEntityRepository.findByAppointmentIdOrderBySortOrder(entity.getId()),
