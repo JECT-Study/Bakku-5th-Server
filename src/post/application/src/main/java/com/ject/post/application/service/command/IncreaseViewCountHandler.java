@@ -3,8 +3,10 @@ package com.ject.post.application.service.command;
 import com.ject.common.core.cqrs.command.CommandHandler;
 import com.ject.common.core.time.ServiceTime;
 import com.ject.post.application.dto.command.IncreaseViewCountCommand;
+import com.ject.post.application.port.BlockRelationPort;
 import com.ject.post.application.port.PostViewLog;
 import com.ject.post.domain.domain.Post;
+import com.ject.post.domain.exception.PostNotFoundException;
 import com.ject.post.domain.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,14 +18,20 @@ public class IncreaseViewCountHandler implements CommandHandler<IncreaseViewCoun
 
     private final PostRepository postRepository;
     private final PostViewLog postViewLog;
+    private final BlockRelationPort blockRelationPort;
     private final ServiceTime serviceTime;
 
     @Override
     @Transactional
     public Void handle(IncreaseViewCountCommand command) {
         Post post = postRepository.getVisible(command.postId());
-        if (!post.isWrittenBy(command.viewerId())
-                && postViewLog.markViewed(command.postId(), command.viewerId(), serviceTime.today())) {
+        if (post.isWrittenBy(command.viewerId())) {
+            return null;
+        }
+        if (blockRelationPort.isBlocked(command.viewerId(), post.getAuthorId())) {
+            throw new PostNotFoundException(post.getId());
+        }
+        if (postViewLog.markViewed(command.postId(), command.viewerId(), serviceTime.today())) {
             postRepository.increaseViewCount(command.postId());
         }
         return null;

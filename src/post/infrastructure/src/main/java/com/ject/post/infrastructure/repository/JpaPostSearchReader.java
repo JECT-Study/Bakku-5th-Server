@@ -86,6 +86,10 @@ public class JpaPostSearchReader implements PostSearchReader {
         if (Boolean.FALSE.equals(condition.nowExchange())) {
             postFilters.add("(p.now_exchange_ends_at IS NULL OR p.now_exchange_ends_at <= :now)");
         }
+        boolean excludesAuthors = condition.excludedAuthorIds() != null && !condition.excludedAuthorIds().isEmpty();
+        if (excludesAuthors) {
+            postFilters.add("p.author_id NOT IN (:excludedAuthorIds)");
+        }
 
         StringBuilder sql = new StringBuilder(RANKED_HITS.formatted(String.join(" AND ", postFilters)));
         if (cursor != null) {
@@ -105,6 +109,9 @@ public class JpaPostSearchReader implements PostSearchReader {
         }
         if (condition.nowExchange() != null) {
             query.setParameter("now", condition.now());
+        }
+        if (excludesAuthors) {
+            query.setParameter("excludedAuthorIds", condition.excludedAuthorIds());
         }
         if (cursor != null) {
             query.setParameter("cursorRank", cursor.rank());

@@ -16,7 +16,7 @@ public interface PostSummaryReader {
     record Brief(Long id, Long authorId, PostStatus status, String title, String thumbnailKey) {
     }
 
-    record Condition(Boolean nowExchange, PostCategory category, Hub hub, Instant now) {
+    record Condition(Boolean nowExchange, PostCategory category, Hub hub, Instant now, List<Long> excludedAuthorIds) {
     }
 
     record Row(

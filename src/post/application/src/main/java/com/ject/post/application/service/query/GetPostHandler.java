@@ -6,8 +6,10 @@ import com.ject.post.application.dto.AuthorInfo;
 import com.ject.post.application.dto.PostResult;
 import com.ject.post.application.dto.query.GetPostQuery;
 import com.ject.post.application.port.AuthorPort;
+import com.ject.post.application.port.BlockRelationPort;
 import com.ject.post.domain.domain.Place;
 import com.ject.post.domain.domain.Post;
+import com.ject.post.domain.exception.PostNotFoundException;
 import com.ject.post.domain.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,12 +23,16 @@ public class GetPostHandler implements QueryHandler<GetPostQuery, PostResult> {
 
     private final PostRepository postRepository;
     private final AuthorPort authorPort;
+    private final BlockRelationPort blockRelationPort;
     private final ServiceTime serviceTime;
 
     @Override
     @Transactional(readOnly = true)
     public PostResult handle(GetPostQuery query) {
         Post post = postRepository.getVisible(query.postId());
+        if (!post.isWrittenBy(query.viewerId()) && blockRelationPort.isBlocked(query.viewerId(), post.getAuthorId())) {
+            throw new PostNotFoundException(post.getId());
+        }
         AuthorInfo author = authorPort.findAuthors(List.of(post.getAuthorId())).get(post.getAuthorId());
         return toResult(post, author, query.viewerId());
     }

@@ -1,6 +1,7 @@
 package com.ject.post.application.service.query;
 
 import com.ject.common.core.time.ServiceTime;
+import com.ject.post.application.FakeBlockRelationPort;
 import com.ject.post.application.FakePostSummaryReader;
 import com.ject.post.application.dto.PostPageResult;
 import com.ject.post.application.dto.PostSummaryResult;
@@ -72,7 +73,22 @@ class GetPostsHandlerTest {
         handler(reader).handle(new GetPostsQuery(VIEWER_ID, true, "IDOL", "SINDORIM", null, 20));
 
         // then
-        assertEquals(new PostSummaryReader.Condition(true, PostCategory.IDOL, Hub.SINDORIM, NOW), reader.receivedCondition);
+        assertEquals(new PostSummaryReader.Condition(true, PostCategory.IDOL, Hub.SINDORIM, NOW, List.of()),
+                reader.receivedCondition);
+    }
+
+    @Test
+    @DisplayName("내가 차단했거나 나를 차단한 회원을 제외할 작성자로 넘긴다")
+    void handle_passesBlockRelatedAuthors() {
+        // given
+        FakePostSummaryReader reader = new FakePostSummaryReader(List.of());
+        FakeBlockRelationPort blockRelationPort = new FakeBlockRelationPort().block(VIEWER_ID, 7L).block(9L, VIEWER_ID);
+
+        // when
+        handler(reader, blockRelationPort).handle(new GetPostsQuery(VIEWER_ID, null, null, null, null, 20));
+
+        // then
+        assertEquals(List.of(7L, 9L), reader.receivedCondition.excludedAuthorIds());
     }
 
     @Test
@@ -103,7 +119,11 @@ class GetPostsHandlerTest {
     }
 
     private static GetPostsHandler handler(FakePostSummaryReader reader) {
-        return new GetPostsHandler(reader, new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul"))));
+        return handler(reader, new FakeBlockRelationPort());
+    }
+
+    private static GetPostsHandler handler(FakePostSummaryReader reader, FakeBlockRelationPort blockRelationPort) {
+        return new GetPostsHandler(reader, blockRelationPort, new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul"))));
     }
 
     private static List<PostSummaryReader.Row> rows(long... ids) {

@@ -5,6 +5,7 @@ import com.ject.common.core.time.ServiceTime;
 import com.ject.post.application.dto.PostPageResult;
 import com.ject.post.application.dto.PostSummaryResult;
 import com.ject.post.application.dto.query.GetPostsQuery;
+import com.ject.post.application.port.BlockRelationPort;
 import com.ject.post.application.port.PostSummaryReader;
 import com.ject.post.domain.domain.Hub;
 import com.ject.post.domain.domain.PostCategory;
@@ -20,6 +21,7 @@ import java.util.List;
 public class GetPostsHandler implements QueryHandler<GetPostsQuery, PostPageResult> {
 
     private final PostSummaryReader postSummaryReader;
+    private final BlockRelationPort blockRelationPort;
     private final ServiceTime serviceTime;
 
     @Override
@@ -28,7 +30,8 @@ public class GetPostsHandler implements QueryHandler<GetPostsQuery, PostPageResu
         Instant now = serviceTime.now();
         PostCategory category = query.category() == null ? null : PostCategory.valueOf(query.category());
         Hub hub = query.hub() == null ? null : Hub.valueOf(query.hub());
-        PostSummaryReader.Condition condition = new PostSummaryReader.Condition(query.nowExchange(), category, hub, now);
+        PostSummaryReader.Condition condition = new PostSummaryReader.Condition(query.nowExchange(), category, hub, now,
+                blockRelationPort.blockRelatedMemberIds(query.viewerId()));
 
         List<PostSummaryReader.Row> rows = postSummaryReader.findHomePage(condition, query.cursorId(), query.size() + 1);
         boolean hasNext = rows.size() > query.size();
