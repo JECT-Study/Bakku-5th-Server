@@ -70,11 +70,13 @@ public interface MemberApi {
     ApiResponse<MarketingConsentResponse> updateMarketingConsent(@LoginMember Long memberId,
                                                                  @Valid @RequestBody MarketingConsentRequest request);
 
-    @Operation(summary = "MB-3 닉네임 수정 (stub)",
+    @Operation(summary = "MB-3 닉네임 수정",
             description = "닉네임은 30일에 한 번 바꿀 수 있습니다. 가입 때 정한 닉네임은 횟수에 넣지 않아 가입 직후 1회 바꿀 수 있습니다. "
+                    + "영문 대소문자만 바꾸는 것도 변경으로 보고, 내 닉네임이라 중복이 아닙니다. "
                     + "에러: MEMBER_101 형식 오류 · MEMBER_102 중복 · MEMBER_103 30일 안에 다시 변경 · MEMBER_104 지금 닉네임과 같음")
     @PatchMapping("/me/nickname")
-    ApiResponse<NicknameUpdateResponse> updateNickname(@Valid @RequestBody NicknameUpdateRequest request);
+    ApiResponse<NicknameUpdateResponse> updateNickname(@LoginMember Long memberId,
+                                                       @Valid @RequestBody NicknameUpdateRequest request);
 
     @Operation(summary = "MB-4 다른 회원 프로필 (stub)",
             description = "게시자 프로필에 씁니다. 닉네임과 교환 완료 횟수만 공개하고 생년월일 · 성별 · 노쇼 · 후기는 공개하지 않습니다. "

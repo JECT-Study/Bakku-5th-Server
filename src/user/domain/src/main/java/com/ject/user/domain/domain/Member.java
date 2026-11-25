@@ -1,6 +1,8 @@
 package com.ject.user.domain.domain;
 
 import com.ject.user.domain.exception.MemberAlreadyWithdrawnException;
+import com.ject.user.domain.exception.NicknameChangeTooSoonException;
+import com.ject.user.domain.exception.SameNicknameException;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -14,7 +16,8 @@ import java.util.Objects;
 public class Member {
 
     private static final Duration REJOIN_WAITING_PERIOD = Duration.ofDays(7);
-    private static final Duration NICKNAME_CHANGE_INTERVAL = Duration.ofDays(30);
+    /** 닉네임은 이 간격에 한 번 바꿀 수 있다 (G-03-2) */
+    public static final Duration NICKNAME_CHANGE_INTERVAL = Duration.ofDays(30);
 
     private final Long id;
     private final SocialProvider provider;
@@ -27,7 +30,7 @@ public class Member {
     private int completedCount;
     private boolean marketingAgreed;
     private Instant marketingChangedAt;
-    private final Instant nicknameChangedAt;
+    private Instant nicknameChangedAt;
     private final Long previousMemberId;
     private final Instant createdAt;
     private Instant withdrawnAt;
@@ -138,6 +141,24 @@ public class Member {
         }
         Instant changeableAt = nicknameChangedAt.plus(NICKNAME_CHANGE_INTERVAL);
         return now.isBefore(changeableAt) ? changeableAt : null;
+    }
+
+    /**
+     * 닉네임 수정 (MB-3). 영문 대소문자만 바꾸는 것도 변경으로 본다.
+     *
+     * @throws SameNicknameException          지금 닉네임과 똑같을 때 (MEMBER_104)
+     * @throws NicknameChangeTooSoonException  마지막 변경 뒤 30일이 안 됐을 때 (MEMBER_103)
+     */
+    public void changeNickname(Nickname newNickname, Instant now) {
+        if (newNickname.equals(nickname)) {
+            throw new SameNicknameException();
+        }
+        Instant changeableAt = nicknameChangeableAt(now);
+        if (changeableAt != null) {
+            throw new NicknameChangeTooSoonException(changeableAt);
+        }
+        this.nickname = newNickname;
+        this.nicknameChangedAt = now;
     }
 
     public boolean canRejoin(Instant now) {

@@ -14,6 +14,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
 
 import java.time.Clock;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -99,5 +100,20 @@ public class MemberRepositoryAdapter implements MemberRepository {
     @Override
     public void increaseCompletedCount(Collection<Long> ids) {
         memberJpaRepository.increaseCompletedCount(ids, clock.instant());
+    }
+
+    /**
+     * 확인 뒤 다른 회원이 같은 닉네임을 먼저 쓰면 lower(nickname) 고유 인덱스에서 걸린다 (결정 C8).
+     */
+    @Override
+    public boolean changeNickname(Long id, Nickname nickname, Instant changedAt, Instant changedBefore) {
+        try {
+            return memberJpaRepository.changeNicknameIfChangeable(id, nickname.value(), changedAt, changedBefore) > 0;
+        } catch (DataIntegrityViolationException e) {
+            if (String.valueOf(e.getMostSpecificCause().getMessage()).contains(NICKNAME_UNIQUE_INDEX)) {
+                throw new DuplicateNicknameException();
+            }
+            throw e;
+        }
     }
 }

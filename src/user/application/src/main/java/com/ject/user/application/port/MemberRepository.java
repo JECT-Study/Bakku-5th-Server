@@ -4,6 +4,7 @@ import com.ject.user.domain.domain.Member;
 import com.ject.user.domain.domain.Nickname;
 import com.ject.user.domain.domain.SocialProvider;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -41,4 +42,12 @@ public interface MemberRepository {
      * 교환 완료 횟수를 1씩 올린다. 동시에 끝난 교환이 서로 덮어쓰지 않도록 DB에서 직접 더한다 (결정 C8).
      */
     void increaseCompletedCount(Collection<Long> ids);
+
+    /**
+     * 마지막 닉네임 변경이 changedBefore 이전(또는 없음)일 때만 바꾼다. 동시에 바꿔도 한 번만 반영된다 (결정 C8).
+     *
+     * @return 바꿨으면 true, 그사이 다른 요청이 먼저 바꿔 조건이 안 맞으면 false
+     * @throws com.ject.user.domain.exception.DuplicateNicknameException 그사이 다른 회원이 같은 닉네임을 쓴 경우 (MEMBER_102)
+     */
+    boolean changeNickname(Long id, Nickname nickname, Instant changedAt, Instant changedBefore);
 }
