@@ -19,7 +19,7 @@ public record PlaceRequest(
         @NotNull @DecimalMin("-180") @DecimalMax("180")
         Double lng,
 
-        @Schema(description = "1~100자. 장소 검색이면 장소 이름, 핀이면 구+동+번지", example = "스타벅스 홍대동교점")
+        @Schema(description = "1~100자. 장소 검색으로 고른 장소 이름", example = "스타벅스 홍대동교점")
         @NotBlank @Size(max = 100)
         String name,
 
@@ -30,8 +30,8 @@ public record PlaceRequest(
         @Pattern(regexp = REGION_NAME, message = "시/도로 시작하는 지역만 넣을 수 있습니다.")
         String regionName,
 
-        @Schema(description = "만날 곳 이름 2~30자. 선택", example = "AK플라자 주변")
-        @Size(min = 2, max = 30)
+        @Schema(description = "상세 주소 0~50자. 선택. 비었거나 공백뿐이면 없음(null)으로 저장", example = "AK플라자 주변")
+        @Size(max = 50)
         String memo
 ) {
 

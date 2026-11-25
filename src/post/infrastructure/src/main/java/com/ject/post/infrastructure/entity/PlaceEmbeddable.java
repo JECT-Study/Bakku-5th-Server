@@ -24,7 +24,7 @@ public class PlaceEmbeddable {
     @Column(name = "place_region_name", nullable = false, length = 100)
     private String regionName;
 
-    @Column(name = "place_memo", length = 30)
+    @Column(name = "place_memo", length = 50)
     private String memo;
 
     @Builder

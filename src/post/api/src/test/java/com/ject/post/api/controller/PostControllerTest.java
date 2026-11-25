@@ -202,6 +202,20 @@ class PostControllerTest {
                 .andExpect(status().isCreated());
     }
 
+    @ParameterizedTest
+    @ValueSource(ints = {0, 1, 50})
+    @DisplayName("PO-1 상세 주소는 0~50자면 받는다")
+    void createPost_memoUpTo50_returns201(int length) throws Exception {
+        createPost(CREATE_BODY.replace("AK플라자 주변", "가".repeat(length)))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    @DisplayName("PO-1 상세 주소가 50자를 넘으면 COMMON_001")
+    void createPost_memoOver50_returnsCommon001() throws Exception {
+        expectCommon001(createPost(CREATE_BODY.replace("AK플라자 주변", "가".repeat(51))));
+    }
+
     @Test
     @DisplayName("PO-1 지금 교환 시간이 15·30·60·120·180분이 아니면 COMMON_001")
     void createPost_nowExchange45_returnsCommon001() throws Exception {

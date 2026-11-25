@@ -8,6 +8,12 @@ public record Place(
         String memo
 ) {
 
+    public Place {
+        if (memo != null && memo.isBlank()) {
+            memo = null;
+        }
+    }
+
     public Hub hub() {
         return Hub.of(lat, lng);
     }
