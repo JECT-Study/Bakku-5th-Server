@@ -210,6 +210,29 @@ class MemberTest {
                 gender, true, null, NOW, TODAY);
     }
 
+    @Test
+    @DisplayName("이용 제한은 해제 일시 전까지만 제한 중이고, 해제 일시가 되면 상태를 안 바꿔도 풀린다")
+    void restrictedUntilReleaseTime() {
+        // given
+        Instant until = NOW.plusSeconds(3600);
+        Member restricted = Member.restore(1L, SocialProvider.NAVER, "hash", new Nickname("바꾸"),
+                new BirthDate(LocalDate.of(2000, 1, 1)), null, MemberStatus.RESTRICTED, until, 3, false, NOW, null,
+                null, NOW, null);
+
+        // when & then
+        assertTrue(restricted.isRestrictedAt(NOW));
+        assertTrue(restricted.isRestrictedAt(until.minusSeconds(1)));
+        assertFalse(restricted.isRestrictedAt(until));
+    }
+
+    @Test
+    @DisplayName("이용 중 · 정지 · 탈퇴 회원은 이용 제한이 아니다")
+    void notRestrictedStatuses() {
+        assertFalse(restoreWithStatus(MemberStatus.ACTIVE).isRestrictedAt(NOW));
+        assertFalse(restoreWithStatus(MemberStatus.BANNED).isRestrictedAt(NOW));
+        assertFalse(restoreWithStatus(MemberStatus.WITHDRAWN).isRestrictedAt(NOW));
+    }
+
     private static Member restoreWithStatus(MemberStatus status) {
         return Member.restore(1L, SocialProvider.NAVER, "hash", new Nickname("바꾸"),
                 new BirthDate(LocalDate.of(2000, 1, 1)), null, status, null, 3, false, NOW, null, null, NOW, null);

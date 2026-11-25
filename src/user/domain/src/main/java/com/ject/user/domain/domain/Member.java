@@ -155,6 +155,14 @@ public class Member {
     /**
      * 상대 화면에 탈퇴한 회원으로 보이는지. 영구 정지 회원도 탈퇴와 같게 보인다 (명세 MemberStatus.BANNED).
      */
+    /**
+     * 기간 이용 제한 중인지. 해제 일시가 지나면 상태를 따로 바꾸지 않아도 제한이 아닌 것으로 본다 (P-05-01).
+     * 기간 제한은 항상 해제 일시가 있고(7일 · 30일, 영구는 BANNED), 해제 일시가 비어 있으면 제한이 아닌 것으로 본다.
+     */
+    public boolean isRestrictedAt(Instant now) {
+        return status == MemberStatus.RESTRICTED && restrictedUntil != null && now.isBefore(restrictedUntil);
+    }
+
     public boolean appearsWithdrawn() {
         return isWithdrawn() || isBanned();
     }
