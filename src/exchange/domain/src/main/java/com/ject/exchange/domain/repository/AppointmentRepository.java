@@ -45,4 +45,10 @@ public interface AppointmentRepository {
      * "걸림" = 그 교환의 글이 주어진 글이거나, 그 제안이 고른 첨부 글이 주어진 글. 교환 상태는 보지 않는다
      */
     List<Appointment> findPendingProposalsInvolving(Collection<Long> postIds, Long excludedExchangeId);
+
+    /**
+     * 회원이 제안자 또는 받는 사람으로 참여하고 상태가 주어진 목록에 속하는 약속 ID를 오름차순으로 반환한다.
+     * 엔티티를 미리 영속성 컨텍스트에 올리지 않아 이후 findByIdForUpdate가 최신 상태를 읽게 한다
+     */
+    List<Long> findIdsByMemberIdAndStatuses(Long memberId, Collection<AppointmentStatus> statuses);
 }
