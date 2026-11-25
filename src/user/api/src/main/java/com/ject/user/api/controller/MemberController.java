@@ -19,6 +19,7 @@ import com.ject.user.api.dto.response.NoShowResponse;
 import com.ject.user.api.dto.response.WithdrawalNoticeResponse;
 import com.ject.user.application.dto.MarketingConsent;
 import com.ject.user.application.dto.MyInfo;
+import com.ject.user.application.dto.NicknameChange;
 import com.ject.user.application.dto.NicknameAvailability;
 import com.ject.user.application.service.MemberService;
 import com.ject.user.application.service.NicknameService;
@@ -88,8 +89,10 @@ public class MemberController implements MemberApi {
     }
 
     @Override
-    public ApiResponse<NicknameUpdateResponse> updateNickname(NicknameUpdateRequest request) {
-        return ApiResponse.success(new NicknameUpdateResponse(request.nickname(), NOW.plusDays(30)));
+    public ApiResponse<NicknameUpdateResponse> updateNickname(Long memberId, NicknameUpdateRequest request) {
+        NicknameChange change = memberService.changeNickname(memberId, request.nickname());
+        return ApiResponse.success(new NicknameUpdateResponse(change.nickname(),
+                serviceTime.toOffset(change.nicknameChangeableAt())));
     }
 
     @Override

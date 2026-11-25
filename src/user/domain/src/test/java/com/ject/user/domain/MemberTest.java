@@ -7,6 +7,8 @@ import com.ject.user.domain.domain.MemberStatus;
 import com.ject.user.domain.domain.Nickname;
 import com.ject.user.domain.domain.SocialProvider;
 import com.ject.user.domain.exception.MemberAlreadyWithdrawnException;
+import com.ject.user.domain.exception.NicknameChangeTooSoonException;
+import com.ject.user.domain.exception.SameNicknameException;
 import com.ject.user.domain.exception.UnderAgeException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -231,6 +233,38 @@ class MemberTest {
         assertFalse(restoreWithStatus(MemberStatus.ACTIVE).isRestrictedAt(NOW));
         assertFalse(restoreWithStatus(MemberStatus.BANNED).isRestrictedAt(NOW));
         assertFalse(restoreWithStatus(MemberStatus.WITHDRAWN).isRestrictedAt(NOW));
+    }
+
+    @Test
+    @DisplayName("닉네임을 바꾸면 변경 시각이 남고, 30일 동안은 다시 바꿀 수 없다")
+    void changeNickname() {
+        // given
+        Member member = restoreWithStatus(MemberStatus.ACTIVE);
+
+        // when
+        member.changeNickname(new Nickname("하치와레러버"), NOW);
+
+        // then
+        assertEquals("하치와레러버", member.getNickname().value());
+        assertEquals(NOW, member.getNicknameChangedAt());
+        assertEquals(NOW.plus(Member.NICKNAME_CHANGE_INTERVAL), member.nicknameChangeableAt(NOW));
+        assertThrows(NicknameChangeTooSoonException.class,
+                () -> member.changeNickname(new Nickname("쿠로미덕후"), NOW.plusSeconds(60)));
+    }
+
+    @Test
+    @DisplayName("지금 닉네임과 똑같으면 바꿀 수 없고, 영문 대소문자만 다르면 바꿀 수 있다")
+    void changeNicknameSame() {
+        // given
+        Member member = restoreWithStatus(MemberStatus.ACTIVE);
+
+        // when & then
+        assertThrows(SameNicknameException.class, () -> member.changeNickname(new Nickname("바꾸"), NOW));
+        Member english = Member.restore(1L, SocialProvider.NAVER, "hash", new Nickname("Bakku"),
+                new BirthDate(LocalDate.of(2000, 1, 1)), null, MemberStatus.ACTIVE, null, 3, false, NOW, null, null,
+                NOW, null);
+        english.changeNickname(new Nickname("bakku"), NOW);
+        assertEquals("bakku", english.getNickname().value());
     }
 
     private static Member restoreWithStatus(MemberStatus status) {

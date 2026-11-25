@@ -8,6 +8,7 @@ import com.ject.user.api.ratelimit.IpRateLimiter;
 import com.ject.user.api.ratelimit.RateLimitInterceptor;
 import com.ject.user.application.dto.MarketingConsent;
 import com.ject.user.application.dto.MyInfo;
+import com.ject.user.application.dto.NicknameChange;
 import com.ject.user.application.dto.NicknameAvailability;
 import com.ject.user.application.service.MemberService;
 import com.ject.user.application.service.NicknameService;
@@ -203,9 +204,9 @@ class MemberControllerTest {
     }
 
     @Test
-    @DisplayName("MB-3 닉네임을 바꾸면 다음 변경 가능 시각은 30일 뒤다")
+    @DisplayName("MB-3 로그인한 회원의 닉네임을 바꾸고 다음 변경 가능 시각을 반환한다")
     void updateNickname() throws Exception {
-        mockMvc.perform(patch("/api/v1/members/me/nickname")
+        mockMvc.perform(patch("/api/v1/members/me/nickname").requestAttr(LoginMember.ATTRIBUTE, 7L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"nickname\": \"하치와레러버\"}"))
                 .andExpect(status().isOk())
@@ -267,6 +268,14 @@ class MemberControllerTest {
         @Override
         public MarketingConsent updateMarketingConsent(Long memberId, boolean agreed) {
             return new MarketingConsent(agreed, Instant.parse("2026-11-27T05:30:00Z"));
+        }
+
+        @Override
+        public NicknameChange changeNickname(Long memberId, String value) {
+            if (memberId != 7L) {
+                throw new IllegalStateException("로그인한 회원 id가 넘어와야 한다");
+            }
+            return new NicknameChange(value, Instant.parse("2026-12-27T05:30:00Z"));
         }
     }
 

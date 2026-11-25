@@ -3,11 +3,17 @@ package com.ject.user.application.service;
 import com.ject.common.core.time.ServiceTime;
 import com.ject.user.application.dto.MarketingConsent;
 import com.ject.user.application.dto.MyInfo;
+import com.ject.user.application.dto.NicknameChange;
 import com.ject.user.application.port.MemberRepository;
 import com.ject.user.domain.domain.Member;
+import com.ject.user.domain.domain.Nickname;
+import com.ject.user.domain.exception.DuplicateNicknameException;
 import com.ject.user.domain.exception.MemberNotFoundException;
+import com.ject.user.domain.exception.NicknameChangeTooSoonException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
 
 /**
  * 로그인한 회원 본인의 정보 조회 · 변경.
@@ -43,6 +49,34 @@ public class MemberService {
         Member member = getActiveMember(memberId);
         member.changeMarketingConsent(agreed, serviceTime.now());
         return MarketingConsent.from(memberRepository.save(member));
+    }
+
+    /**
+     * 닉네임 수정 (MB-3). 30일에 한 번 바꿀 수 있고, 가입 때 정한 닉네임은 횟수에 넣지 않는다 (G-03-2, 결정 D2).
+     * 영문 대소문자만 바꾸는 것은 내 닉네임이라 중복으로 보지 않는다.
+     *
+     * @throws com.ject.user.domain.exception.InvalidNicknameException       형식 오류 (MEMBER_101)
+     * @throws DuplicateNicknameException                                    다른 회원이 쓰는 닉네임 (MEMBER_102)
+     * @throws com.ject.user.domain.exception.NicknameChangeTooSoonException 30일 안에 다시 변경 (MEMBER_103)
+     * @throws com.ject.user.domain.exception.SameNicknameException          지금 닉네임과 같음 (MEMBER_104)
+     * @throws MemberNotFoundException                                       없는 회원 · 탈퇴한 회원 (MEMBER_201)
+     */
+    @Transactional
+    public NicknameChange changeNickname(Long memberId, String value) {
+        Member member = getActiveMember(memberId);
+        Nickname nickname = new Nickname(value);
+        memberRepository.findByNickname(nickname)
+                .filter(owner -> !owner.getId().equals(memberId))
+                .ifPresent(owner -> {
+                    throw new DuplicateNicknameException();
+                });
+        Instant now = serviceTime.now();
+        member.changeNickname(nickname, now);
+        // 확인과 저장 사이에 다른 요청이 먼저 바꿨으면 조건에 걸려 반영되지 않는다 (결정 C8)
+        if (!memberRepository.changeNickname(memberId, nickname, now, now.minus(Member.NICKNAME_CHANGE_INTERVAL))) {
+            throw new NicknameChangeTooSoonException(now.plus(Member.NICKNAME_CHANGE_INTERVAL));
+        }
+        return new NicknameChange(nickname.value(), now.plus(Member.NICKNAME_CHANGE_INTERVAL));
     }
 
     /**

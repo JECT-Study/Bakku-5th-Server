@@ -6,12 +6,15 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+/**
+ * 교환글 모듈에도 BlockRelationAdapter가 있어 빈 이름이 겹치지 않게 앞에 Notification을 붙인다.
+ */
 @Component
-public class BlockRelationAdapter implements BlockRelationPort {
+public class NotificationBlockRelationAdapter implements BlockRelationPort {
 
     private final BlockRelationQuery blockRelationQuery;
 
-    public BlockRelationAdapter(BlockRelationQuery blockRelationQuery) {
+    public NotificationBlockRelationAdapter(BlockRelationQuery blockRelationQuery) {
         this.blockRelationQuery = blockRelationQuery;
     }
 

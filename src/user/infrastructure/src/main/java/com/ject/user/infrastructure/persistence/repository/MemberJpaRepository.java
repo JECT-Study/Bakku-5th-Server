@@ -30,4 +30,15 @@ public interface MemberJpaRepository extends JpaRepository<MemberJpaEntity, Long
     @Query("update MemberJpaEntity m set m.completedCount = m.completedCount + 1, m.updatedAt = :now"
             + " where m.id in :ids")
     int increaseCompletedCount(@Param("ids") Collection<Long> ids, @Param("now") Instant now);
+
+    /**
+     * 마지막 닉네임 변경이 changedBefore 이전(또는 없음)일 때만 바꾼다 (결정 C8).
+     */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update MemberJpaEntity m set m.nickname = :nickname, m.nicknameChangedAt = :changedAt,"
+            + " m.updatedAt = :changedAt"
+            + " where m.id = :id and (m.nicknameChangedAt is null or m.nicknameChangedAt <= :changedBefore)")
+    int changeNicknameIfChangeable(@Param("id") Long id, @Param("nickname") String nickname,
+                                   @Param("changedAt") Instant changedAt,
+                                   @Param("changedBefore") Instant changedBefore);
 }
