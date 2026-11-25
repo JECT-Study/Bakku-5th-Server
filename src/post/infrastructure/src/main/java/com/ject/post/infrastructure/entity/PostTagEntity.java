@@ -23,4 +23,7 @@ public class PostTagEntity extends BaseEntity {
 
     @Column(name = "name", nullable = false, length = 20)
     private String name;
+
+    @Column(name = "post_count", insertable = false, updatable = false)
+    private int postCount;
 }

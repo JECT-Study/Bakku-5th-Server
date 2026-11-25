@@ -93,6 +93,11 @@ class JpaTagSuggestionReaderTest extends PostgresTest {
                     .setParameter("sortOrder", i + 1)
                     .setParameter("name", tags[i])
                     .executeUpdate();
+            if (status != PostStatus.DELETED) {
+                entityManager.createNativeQuery("UPDATE post_tag SET post_count = post_count + 1 WHERE name = :name")
+                        .setParameter("name", tags[i])
+                        .executeUpdate();
+            }
         }
     }
 
