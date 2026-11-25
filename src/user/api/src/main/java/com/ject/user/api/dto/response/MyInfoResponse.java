@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 
-@Schema(description = "내 정보. 1차는 마이페이지 요약(닉네임 · 교환 완료 횟수)에 사용, 2차 필드는 1차에 항상 null")
+@Schema(description = "내 정보. 마이페이지 요약 · 내 프로필에 사용. 구현 전 · 출시 후 필드는 지금 null")
 public record MyInfoResponse(
         @Schema(description = "회원 ID", example = "101")
         Long userId,
@@ -32,19 +32,19 @@ public record MyInfoResponse(
         @Schema(description = "가입 시각", example = "2026-11-27T10:00:00+09:00")
         OffsetDateTime createdAt,
 
-        @Schema(description = "매너 지표. 2차, 1차는 항상 null. 교환 0회면 null", nullable = true)
+        @Schema(description = "매너 지표. 구현 전이라 지금은 null", nullable = true)
         Double mannerScore,
 
-        @Schema(description = "받은 후기 단계별 개수. 2차, 1차는 null", nullable = true)
+        @Schema(description = "받은 후기 단계별 개수. 출시 후라 지금은 null", nullable = true)
         ReceivedReviewsResponse receivedReviews,
 
-        @Schema(description = "노쇼 기록 요약. 2차, 1차는 null", nullable = true)
+        @Schema(description = "노쇼 기록 요약. 구현 전이라 지금은 null", nullable = true)
         NoShowSummaryResponse noShow,
 
-        @Schema(description = "위반 경고 횟수. 2차, 1차는 null", nullable = true)
+        @Schema(description = "위반 경고 횟수. 구현 전이라 지금은 null", nullable = true)
         Integer warningCount,
 
-        @Schema(description = "이용 제한 해제 일시. 제한 중이 아니면 null. 2차", nullable = true)
+        @Schema(description = "이용 제한 해제 일시. 제한 중이 아니면 null. 구현 전이라 지금은 null", nullable = true)
         OffsetDateTime restrictedUntil
 ) {
 }

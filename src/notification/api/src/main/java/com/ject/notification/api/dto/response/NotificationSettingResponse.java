@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.OffsetDateTime;
 
-@Schema(description = "알림 설정 항목 (2차)")
+@Schema(description = "알림 설정 항목")
 public record NotificationSettingResponse(
         @Schema(description = "알림 설정 항목", example = "CHAT")
         NotificationSettingType type,

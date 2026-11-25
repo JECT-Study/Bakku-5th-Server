@@ -53,7 +53,7 @@ public class MemberController implements MemberApi {
         NicknameUnavailableReason reason = result.unavailableReason() == null
                 ? null
                 : NicknameUnavailableReason.valueOf(result.unavailableReason());
-        // 금지어 경고는 2차 (A-05-2)
+        // 금지어 경고는 출시 후 (A-05-2 · P-02-06)
         return ApiResponse.success(new NicknameAvailabilityResponse(result.available(), reason, false));
     }
 
@@ -61,7 +61,7 @@ public class MemberController implements MemberApi {
     public ApiResponse<MyInfoResponse> getMe(Long memberId) {
         MyInfo info = memberService.getMyInfo(memberId);
         Gender gender = info.gender() == null ? null : Gender.valueOf(info.gender());
-        // 매너 지표 · 후기 · 노쇼 · 경고 · 이용 제한은 2차 (MVP v0.9)
+        // 매너 지표 · 노쇼 · 경고 · 이용 제한은 구현 전, 받은 후기는 출시 후
         return ApiResponse.success(new MyInfoResponse(info.userId(), info.nickname(), info.birthDate(), gender,
                 info.completedCount(), serviceTime.toOffset(info.nicknameChangeableAt()), info.marketingAgreed(),
                 serviceTime.toOffset(info.createdAt()), null, null, null, null, null));
