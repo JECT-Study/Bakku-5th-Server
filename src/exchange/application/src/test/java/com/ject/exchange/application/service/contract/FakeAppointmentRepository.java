@@ -73,4 +73,9 @@ class FakeAppointmentRepository implements AppointmentRepository {
     public List<Appointment> findPendingProposalsInvolving(Collection<Long> postIds, Long excludedExchangeId) {
         throw new UnsupportedOperationException("조회 계약은 진행 중 제안을 조회하지 않는다");
     }
+
+    @Override
+    public List<Long> findIdsByMemberIdAndStatuses(Long memberId, Collection<AppointmentStatus> statuses) {
+        throw new UnsupportedOperationException("조회 계약은 탈퇴 회원의 약속 ID를 조회하지 않는다");
+    }
 }

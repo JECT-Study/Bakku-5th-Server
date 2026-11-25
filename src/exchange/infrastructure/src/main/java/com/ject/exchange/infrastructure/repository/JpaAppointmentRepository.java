@@ -145,6 +145,15 @@ public class JpaAppointmentRepository implements AppointmentRepository {
                 appointmentEntityRepository.countByParticipantAndStatus(memberId, AppointmentStatus.CONFIRMED));
     }
 
+    @Override
+    public List<Long> findIdsByMemberIdAndStatuses(Long memberId, Collection<AppointmentStatus> statuses) {
+        // 빈 상태 목록은 JPA의 빈 IN 처리 차이를 피하기 위해 쿼리 없이 바로 빈 목록을 반환한다
+        if (statuses.isEmpty()) {
+            return List.of();
+        }
+        return appointmentEntityRepository.findIdsByMemberIdAndStatuses(memberId, statuses);
+    }
+
     private Appointment toDomain(AppointmentEntity entity) {
         return AppointmentMapper.toDomain(entity,
                 appointmentItemEntityRepository.findByAppointmentIdOrderBySortOrder(entity.getId()),

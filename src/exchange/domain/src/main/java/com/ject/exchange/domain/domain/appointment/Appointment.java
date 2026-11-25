@@ -249,6 +249,23 @@ public class Appointment {
     }
 
     /**
+     * 회원 탈퇴로 인한 약속 취소. 일반 취소(cancel)와 달리 교환 확인 질문이 열린 뒤에도 취소하고, 임박 취소로 기록하지 않는다 (#139)
+     * @param withdrawnMemberId 탈퇴한 회원 id (제안자 또는 받는 사람)
+     * @param withdrawnAt 회원 탈퇴가 확정된 시각. 취소 해결 시각(resolvedAt)으로 기록한다
+     */
+    public Appointment cancelByMemberWithdrawal(Long withdrawnMemberId, Instant withdrawnAt) {
+        if (!proposerUserId.equals(withdrawnMemberId) && !receiverUserId.equals(withdrawnMemberId)) {
+            throw new ExchangeException(ExchangeErrorCode.NOT_EXCHANGE_PARTICIPANT);
+        }
+        if (status != AppointmentStatus.PROPOSED && status != AppointmentStatus.CONFIRMED) {
+            throw new ExchangeException(ExchangeErrorCode.INVALID_APPOINTMENT_STATUS);
+        }
+        return new Appointment(id, exchangeId, proposerUserId, receiverUserId, AppointmentStatus.CANCELED,
+                time, place, itemIds, expiresAt, proposerReminderOffsetMinutes, receiverReminderOffsetMinutes,
+                confirmedAt, withdrawnAt, confirmationReplies, createdAt, updatedAt, withdrawnMemberId, false);
+    }
+
+    /**
      * 임박 취소인지. 지금 바로 약속은 확정 순간부터, 시간을 정한 약속은 약속 시각 1시간 전부터 임박이다 (P-07-01)
      */
     private boolean isImminentAt(Instant now) {
@@ -384,8 +401,12 @@ public class Appointment {
     }
 
     private boolean wasConfirmed() {
+        // 회원 탈퇴로 PROPOSED가 CANCELED가 될 수 있어(#139), 확정 이력 없이 취소된 약속과 구분한다
+        if (status == AppointmentStatus.CANCELED) {
+            return confirmedAt != null;
+        }
         return status == AppointmentStatus.CONFIRMED || status == AppointmentStatus.COMPLETED
-                || status == AppointmentStatus.NOT_MET || status == AppointmentStatus.CANCELED;
+                || status == AppointmentStatus.NOT_MET;
     }
 
     /**
