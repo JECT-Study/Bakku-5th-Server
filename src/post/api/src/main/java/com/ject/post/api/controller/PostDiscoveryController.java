@@ -42,10 +42,12 @@ public class PostDiscoveryController implements PostDiscoveryApi {
 
     @Override
     public ApiResponse<CursorPageResponse<PostSummaryResponse>> searchPosts(Long memberId, String keyword,
-                                                                            PostCategory category, PostSort sort,
+                                                                            PostCategory category, PostHub hub,
+                                                                            Boolean nowExchange, PostSort sort,
                                                                             String cursor, Integer size) {
         PostSearchCursor position = PostSearchCursor.decode(cursor);
         SearchPostsQuery query = new SearchPostsQuery(memberId, keyword, category == null ? null : category.name(),
+                hub == null ? null : hub.name(), nowExchange,
                 position == null ? null : position.rank(), position == null ? null : position.id(), size);
         PostSearchPageResult result = queryBus.send(query);
         List<PostSummaryResponse> content = result.content().stream()

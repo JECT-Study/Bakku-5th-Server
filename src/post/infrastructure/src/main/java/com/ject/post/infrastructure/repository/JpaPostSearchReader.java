@@ -31,15 +31,15 @@ public class JpaPostSearchReader implements PostSearchReader {
             FROM (SELECT hit.id, min(hit.rank) AS rank
                   FROM (SELECT p.id, 2 AS rank
                         FROM post p
-                        WHERE p.status = '%s' AND p.title_normalized LIKE :pattern ESCAPE '!'
+                        WHERE p.title_normalized LIKE :pattern ESCAPE '!' AND %1$s
                         UNION ALL
                         SELECT l.post_id, CASE WHEN t.name = :keyword THEN 1 ELSE 3 END
                         FROM post_tag t
                         JOIN post_tag_link l ON l.tag_id = t.id
+                        JOIN post p ON p.id = l.post_id AND %1$s
                         WHERE t.name LIKE :pattern ESCAPE '!') hit
                   GROUP BY hit.id) c
-            JOIN post p ON p.id = c.id AND p.status = '%s'
-            """.formatted(AVAILABLE, AVAILABLE);
+            """;
 
     private final EntityManager entityManager;
     private final JPAQueryFactory queryFactory;
@@ -72,17 +72,24 @@ public class JpaPostSearchReader implements PostSearchReader {
 
     @SuppressWarnings("unchecked")
     private List<Object[]> rankedIds(Condition condition, Cursor cursor, int limit) {
-        List<String> filters = new ArrayList<>();
+        List<String> postFilters = new ArrayList<>();
+        postFilters.add("p.status = '" + AVAILABLE + "'");
         if (condition.category() != null) {
-            filters.add("p.category = :category");
+            postFilters.add("p.category = :category");
         }
-        if (cursor != null) {
-            filters.add("(c.rank > :cursorRank OR (c.rank = :cursorRank AND c.id < :cursorId))");
+        if (condition.hub() != null) {
+            postFilters.add("p.hub = :hub");
+        }
+        if (Boolean.TRUE.equals(condition.nowExchange())) {
+            postFilters.add("p.now_exchange_ends_at > :now");
+        }
+        if (Boolean.FALSE.equals(condition.nowExchange())) {
+            postFilters.add("(p.now_exchange_ends_at IS NULL OR p.now_exchange_ends_at <= :now)");
         }
 
-        StringBuilder sql = new StringBuilder(RANKED_HITS);
-        if (!filters.isEmpty()) {
-            sql.append("WHERE ").append(String.join(" AND ", filters)).append('\n');
+        StringBuilder sql = new StringBuilder(RANKED_HITS.formatted(String.join(" AND ", postFilters)));
+        if (cursor != null) {
+            sql.append("WHERE c.rank > :cursorRank OR (c.rank = :cursorRank AND c.id < :cursorId)\n");
         }
         sql.append("ORDER BY c.rank, c.id DESC\nLIMIT :limit");
 
@@ -92,6 +99,12 @@ public class JpaPostSearchReader implements PostSearchReader {
                 .setParameter("limit", limit);
         if (condition.category() != null) {
             query.setParameter("category", condition.category().name());
+        }
+        if (condition.hub() != null) {
+            query.setParameter("hub", condition.hub().name());
+        }
+        if (condition.nowExchange() != null) {
+            query.setParameter("now", condition.now());
         }
         if (cursor != null) {
             query.setParameter("cursorRank", cursor.rank());

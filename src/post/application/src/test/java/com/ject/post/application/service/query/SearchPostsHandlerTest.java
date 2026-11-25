@@ -6,6 +6,7 @@ import com.ject.post.application.dto.PostSummaryResult;
 import com.ject.post.application.dto.query.SearchPostsQuery;
 import com.ject.post.application.port.PostSearchReader;
 import com.ject.post.application.port.PostSummaryReader;
+import com.ject.post.domain.domain.Hub;
 import com.ject.post.domain.domain.PostCategory;
 import com.ject.post.domain.domain.PostStatus;
 import com.ject.post.domain.exception.InvalidSearchKeywordException;
@@ -29,13 +30,14 @@ class SearchPostsHandlerTest {
     private static final Long VIEWER_ID = 3L;
 
     @Test
-    @DisplayName("정규화한 검색어 · 카테고리 · 커서로 size + 1개를 요청한다")
+    @DisplayName("정규화한 검색어 · 카테고리 · 거점 · 교환 방식 · 지금 시각 · 커서로 size + 1개를 요청한다")
     void handle_passesConditionAndCursor() {
         FakePostSearchReader reader = new FakePostSearchReader(List.of());
 
-        handler(reader).handle(new SearchPostsQuery(VIEWER_ID, "# 치이 카와", "IDOL", 2, 57L, 20));
+        handler(reader).handle(new SearchPostsQuery(VIEWER_ID, "# 치이 카와", "IDOL", "SINDORIM", true, 2, 57L, 20));
 
-        assertEquals(new PostSearchReader.Condition("치이카와", PostCategory.IDOL), reader.receivedCondition);
+        assertEquals(new PostSearchReader.Condition("치이카와", PostCategory.IDOL, Hub.SINDORIM, true, NOW),
+                reader.receivedCondition);
         assertEquals(new PostSearchReader.Cursor(2, 57L), reader.receivedCursor);
         assertEquals(21, reader.receivedLimit);
     }
@@ -45,10 +47,12 @@ class SearchPostsHandlerTest {
     void handle_firstPage_noCursor() {
         FakePostSearchReader reader = new FakePostSearchReader(List.of());
 
-        handler(reader).handle(new SearchPostsQuery(VIEWER_ID, "치이카와", null, null, null, 20));
+        handler(reader).handle(new SearchPostsQuery(VIEWER_ID, "치이카와", null, null, null, null, null, 20));
 
         assertNull(reader.receivedCursor);
         assertNull(reader.receivedCondition.category());
+        assertNull(reader.receivedCondition.hub());
+        assertNull(reader.receivedCondition.nowExchange());
     }
 
     @Test
@@ -56,7 +60,8 @@ class SearchPostsHandlerTest {
     void handle_hasNext() {
         FakePostSearchReader reader = new FakePostSearchReader(List.of(hit(1, 30L), hit(2, 29L), hit(3, 28L)));
 
-        PostSearchPageResult result = handler(reader).handle(new SearchPostsQuery(VIEWER_ID, "치이카와", null, null, null, 2));
+        PostSearchPageResult result = handler(reader).handle(
+                new SearchPostsQuery(VIEWER_ID, "치이카와", null, null, null, null, null, 2));
 
         assertEquals(List.of(30L, 29L), result.content().stream().map(PostSummaryResult::id).toList());
         assertTrue(result.hasNext());
@@ -69,7 +74,8 @@ class SearchPostsHandlerTest {
     void handle_lastPage() {
         FakePostSearchReader reader = new FakePostSearchReader(List.of(hit(1, 30L)));
 
-        PostSearchPageResult result = handler(reader).handle(new SearchPostsQuery(VIEWER_ID, "치이카와", null, null, null, 2));
+        PostSearchPageResult result = handler(reader).handle(
+                new SearchPostsQuery(VIEWER_ID, "치이카와", null, null, null, null, null, 2));
 
         assertFalse(result.hasNext());
         assertNull(result.nextCursorRank());
@@ -77,12 +83,12 @@ class SearchPostsHandlerTest {
     }
 
     @Test
-    @DisplayName("정규화한 뒤 2자 미만이면 POST_009, 조회하지 않는다")
+    @DisplayName("정규화한 뒤 비어 있으면 POST_009, 조회하지 않는다")
     void handle_invalidKeyword_throws() {
         FakePostSearchReader reader = new FakePostSearchReader(List.of());
 
         assertThrows(InvalidSearchKeywordException.class,
-                () -> handler(reader).handle(new SearchPostsQuery(VIEWER_ID, "# 가", null, null, null, 20)));
+                () -> handler(reader).handle(new SearchPostsQuery(VIEWER_ID, "# ", null, null, null, null, null, 20)));
         assertNull(reader.receivedCondition);
     }
 
