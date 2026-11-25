@@ -4,7 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.OffsetDateTime;
 
-@Schema(description = "닉네임 수정 결과 (2차)")
+@Schema(description = "닉네임 수정 결과")
 public record NicknameUpdateResponse(
         @Schema(description = "바뀐 닉네임", example = "하치와레러버")
         String nickname,

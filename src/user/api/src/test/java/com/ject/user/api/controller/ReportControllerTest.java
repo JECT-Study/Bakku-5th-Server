@@ -48,7 +48,7 @@ class ReportControllerTest {
     }
 
     @Test
-    @DisplayName("RP-1 채팅 메시지 신고는 2차라 COMMON_001")
+    @DisplayName("RP-1 채팅 메시지 신고는 지원하지 않아 COMMON_001")
     void report_chatMessage_returnsCommon001() throws Exception {
         report("{\"targetType\": \"CHAT_MESSAGE\", \"targetId\": 5, \"reason\": \"EXTERNAL_TRADE\"}")
                 .andExpect(status().isBadRequest())

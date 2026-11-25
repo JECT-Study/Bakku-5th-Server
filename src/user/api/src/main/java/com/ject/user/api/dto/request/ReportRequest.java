@@ -9,7 +9,7 @@ import jakarta.validation.constraints.Size;
 
 @Schema(description = "신고")
 public record ReportRequest(
-        @Schema(description = "신고 대상 종류. CHAT_MESSAGE는 2차", example = "CHAT_ROOM")
+        @Schema(description = "신고 대상 종류. CHAT_MESSAGE는 지원하지 않음", example = "CHAT_ROOM")
         @NotNull
         ReportTargetType targetType,
 
@@ -32,7 +32,7 @@ public record ReportRequest(
         return reason != ReportReason.OTHER || (detail != null && !detail.isBlank());
     }
 
-    @AssertTrue(message = "채팅 메시지 신고는 2차입니다.")
+    @AssertTrue(message = "채팅 메시지 신고는 지원하지 않습니다.")
     @Schema(hidden = true)
     public boolean isSupportedTargetType() {
         return targetType != ReportTargetType.CHAT_MESSAGE;

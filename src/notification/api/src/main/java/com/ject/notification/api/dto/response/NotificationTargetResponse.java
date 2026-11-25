@@ -11,7 +11,7 @@ public record NotificationTargetResponse(
         @Schema(description = "대상 ID. SEARCH면 null", example = "5", nullable = true)
         Long id,
 
-        @Schema(description = "SEARCH일 때 검색어 (2차 키워드 묶음 알림)", nullable = true)
+        @Schema(description = "SEARCH일 때 검색어 (출시 후 키워드 알림)", nullable = true)
         String keyword
 ) {
 }

@@ -4,7 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.List;
 
-@Schema(description = "위시리스트 키워드 목록 (2차)")
+@Schema(description = "위시리스트 키워드 목록 (출시 후)")
 public record WishlistKeywordListResponse(
         @Schema(description = "등록 순서")
         List<WishlistKeywordResponse> keywords,

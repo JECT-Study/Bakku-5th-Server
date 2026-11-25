@@ -2,7 +2,7 @@ package com.ject.user.api.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
-@Schema(description = "받은 후기 단계별 개수 (2차)")
+@Schema(description = "받은 후기 단계별 개수 (출시 후)")
 public record ReceivedReviewsResponse(
         @Schema(description = "최고예요", example = "3")
         int best,

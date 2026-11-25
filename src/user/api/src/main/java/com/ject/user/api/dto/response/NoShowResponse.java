@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.OffsetDateTime;
 
-@Schema(description = "노쇼 기록 (2차)")
+@Schema(description = "노쇼 기록")
 public record NoShowResponse(
         @Schema(description = "노쇼 기록 ID", example = "7")
         Long noShowId,

@@ -123,7 +123,7 @@ class MemberControllerTest {
     }
 
     @Test
-    @DisplayName("MB-2 로그인한 회원의 내 정보를 주고 2차 필드는 null이다")
+    @DisplayName("MB-2 로그인한 회원의 내 정보를 주고 구현 전 · 출시 후 필드는 null이다")
     void getMe_returnsFirstReleaseFields() throws Exception {
         mockMvc.perform(get("/api/v1/members/me").requestAttr(LoginMember.ATTRIBUTE, 7L))
                 .andExpect(status().isOk())
