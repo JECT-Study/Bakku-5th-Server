@@ -5,10 +5,12 @@ import com.ject.common.core.time.ServiceTime;
 import com.ject.common.event.post.PostUpdated;
 import com.ject.post.application.dto.command.CreatePostCommand;
 import com.ject.post.application.dto.command.UpdatePostCommand;
+import com.ject.post.application.port.MemberRestrictionPort;
 import com.ject.post.application.port.PostImagePort;
 import com.ject.post.domain.domain.Place;
 import com.ject.post.domain.domain.Post;
 import com.ject.post.domain.domain.PostCategory;
+import com.ject.post.domain.exception.RestrictedMemberException;
 import com.ject.post.domain.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -23,12 +25,16 @@ public class UpdatePostHandler implements CommandHandler<UpdatePostCommand, Void
 
     private final PostRepository postRepository;
     private final PostImagePort postImagePort;
+    private final MemberRestrictionPort memberRestrictionPort;
     private final ApplicationEventPublisher eventPublisher;
     private final ServiceTime serviceTime;
 
     @Override
     @Transactional
     public Void handle(UpdatePostCommand command) {
+        if (memberRestrictionPort.isRestricted(command.editorId())) {
+            throw new RestrictedMemberException(command.editorId());
+        }
         Post post = postRepository.getVisible(command.postId());
         List<String> imageKeysBefore = post.getImageKeys();
 

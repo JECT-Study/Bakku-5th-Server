@@ -2,6 +2,7 @@ package com.ject.post.application.service.command;
 
 import com.ject.common.core.time.ServiceTime;
 import com.ject.common.event.post.PostUpdated;
+import com.ject.post.application.FakeMemberRestrictionPort;
 import com.ject.post.application.FakePostImagePort;
 import com.ject.post.application.FakePostRepository;
 import com.ject.post.application.dto.command.CreatePostCommand;
@@ -14,6 +15,7 @@ import com.ject.post.domain.exception.InvalidImageKeyException;
 import com.ject.post.domain.exception.NotPostAuthorException;
 import com.ject.post.domain.exception.PostNotFoundException;
 import com.ject.post.domain.exception.PostReservedException;
+import com.ject.post.domain.exception.RestrictedMemberException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,15 +37,31 @@ class UpdatePostHandlerTest {
     private static final Long AUTHOR_ID = 3L;
 
     private FakePostRepository postRepository;
+    private FakeMemberRestrictionPort memberRestrictionPort;
     private List<Object> events;
     private UpdatePostHandler handler;
 
     @BeforeEach
     void setUp() {
         postRepository = new FakePostRepository(NOW);
+        memberRestrictionPort = new FakeMemberRestrictionPort();
         events = new ArrayList<>();
-        handler = new UpdatePostHandler(postRepository, new FakePostImagePort(), events::add,
+        handler = new UpdatePostHandler(postRepository, new FakePostImagePort(), memberRestrictionPort, events::add,
                 new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul"))));
+    }
+
+    @Test
+    @DisplayName("이용 제한 회원이면 글 상태와 상관없이 먼저 POST_006이고, 바꾸거나 발행하지 않는다")
+    void handle_restrictedMember_throws() {
+        Long postId = save(PostStatus.AVAILABLE);
+        memberRestrictionPort.restrict(AUTHOR_ID).restrict(99L);
+
+        assertThrows(RestrictedMemberException.class,
+                () -> handler.handle(command(postId, AUTHOR_ID, List.of("post/1/old.jpg"))));
+        assertThrows(RestrictedMemberException.class,
+                () -> handler.handle(command(404L, 99L, List.of("post/1/old.jpg"))));
+        assertEquals("치이카와 하치와레 가챠 키링", postRepository.findById(postId).orElseThrow().getTitle());
+        assertTrue(events.isEmpty());
     }
 
     @Test
