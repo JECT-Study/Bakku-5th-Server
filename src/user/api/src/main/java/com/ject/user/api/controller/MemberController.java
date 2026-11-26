@@ -24,6 +24,7 @@ import com.ject.user.application.dto.NicknameChange;
 import com.ject.user.application.dto.NicknameAvailability;
 import com.ject.user.application.service.MemberService;
 import com.ject.user.application.service.NicknameService;
+import com.ject.user.application.service.WithdrawalNoticeService;
 import com.ject.user.application.service.WithdrawalService;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -39,13 +40,16 @@ public class MemberController implements MemberApi {
     private final NicknameService nicknameService;
     private final MemberService memberService;
     private final WithdrawalService withdrawalService;
+    private final WithdrawalNoticeService withdrawalNoticeService;
     private final ServiceTime serviceTime;
 
     public MemberController(NicknameService nicknameService, MemberService memberService,
-                            WithdrawalService withdrawalService, ServiceTime serviceTime) {
+                            WithdrawalService withdrawalService, WithdrawalNoticeService withdrawalNoticeService,
+                            ServiceTime serviceTime) {
         this.nicknameService = nicknameService;
         this.memberService = memberService;
         this.withdrawalService = withdrawalService;
+        this.withdrawalNoticeService = withdrawalNoticeService;
         this.serviceTime = serviceTime;
     }
 
@@ -71,8 +75,9 @@ public class MemberController implements MemberApi {
     }
 
     @Override
-    public ApiResponse<WithdrawalNoticeResponse> getWithdrawalNotice() {
-        return ApiResponse.success(new WithdrawalNoticeResponse(1));
+    public ApiResponse<WithdrawalNoticeResponse> getWithdrawalNotice(Long memberId) {
+        int count = withdrawalNoticeService.countInProgressExchanges(memberId);
+        return ApiResponse.success(new WithdrawalNoticeResponse(count));
     }
 
     @Override

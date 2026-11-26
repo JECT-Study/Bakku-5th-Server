@@ -44,16 +44,19 @@ public interface MemberApi {
             @RequestParam("nickname") String nickname);
 
     @Operation(summary = "MB-2 내 정보",
-            description = "마이페이지 요약 · 내 프로필에 씁니다. 매너 지표 · 노쇼 · 경고 · 이용 제한 필드(mannerScore · noShow · warningCount · restrictedUntil)는 아직 구현 전이라 null입니다. "
+            description = "마이페이지 요약 · 내 프로필에 씁니다. "
+                    + "매너 지표 · 노쇼 · 경고 · 이용 제한(mannerScore · noShow · warningCount · restrictedUntil)은 "
+                    + "아직 구현 전이라 null입니다. "
                     + "받은 후기(receivedReviews)는 출시 후라 null입니다. "
                     + "에러: MEMBER_201 회원 없음 → 기기 로그인 정보 삭제 후 로그인 화면")
     @GetMapping("/me")
     ApiResponse<MyInfoResponse> getMe(@LoginMember Long memberId);
 
-    @Operation(summary = "MB-5 탈퇴 전 안내 정보 (stub)",
-            description = "탈퇴 화면에 들어올 때 부릅니다. 진행 중인 교환이 있으면 FE가 안내 문구를 보여줍니다. 탈퇴는 막지 않습니다.")
+    @Operation(summary = "MB-5 탈퇴 전 안내 정보",
+            description = "탈퇴 화면에 들어올 때 부릅니다. 진행 중인 교환(확정 약속)이 있으면 "
+                    + "FE가 \"진행 중인 교환이 n건 있어요\" 안내를 보여줍니다. 탈퇴는 막지 않습니다 (G-09-2).")
     @GetMapping("/me/withdrawal-notice")
-    ApiResponse<WithdrawalNoticeResponse> getWithdrawalNotice();
+    ApiResponse<WithdrawalNoticeResponse> getWithdrawalNotice(@LoginMember Long memberId);
 
     @Operation(summary = "MB-6 회원 탈퇴",
             description = "진행 중인 교환이 있어도 탈퇴할 수 있습니다. 확정 약속 자동 취소 → 교환 가능 글 삭제 → 모든 채팅방 나감 순서로 처리하고, "
