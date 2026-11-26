@@ -51,6 +51,9 @@ app:
     kakao:
       # 카카오 디벨로퍼스 앱 ID(숫자, 공개 값). 다른 앱에서 발급된 토큰을 막는다. 비우면 확인하지 않는다
       app-id: ${KAKAO_APP_ID:1624939}
+    apple:
+      # Apple identity token의 대상(aud). 네이티브 앱이라 iOS 번들 ID(공개 값)다
+      client-id: ${APPLE_CLIENT_ID:com.ject.bakku}
     # 로그인 없이 부르는 /api/ 경로 (Ant 패턴). 그 밖의 /api/ 경로는 Authorization: Bearer 토큰이 필요하다
     public-paths:
       - /api/v1/auth/*/login
