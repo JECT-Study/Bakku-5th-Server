@@ -25,16 +25,19 @@ public class SocialLoginService {
     private final MemberRepository memberRepository;
     private final SignupTokenProvider signupTokenProvider;
     private final LoginTokenIssuer loginTokenIssuer;
+    private final AppleTokenService appleTokenService;
     private final ServiceTime serviceTime;
 
     public SocialLoginService(SocialUserClient socialUserClient, SocialIdHasher socialIdHasher,
                               MemberRepository memberRepository, SignupTokenProvider signupTokenProvider,
-                              LoginTokenIssuer loginTokenIssuer, ServiceTime serviceTime) {
+                              LoginTokenIssuer loginTokenIssuer, AppleTokenService appleTokenService,
+                              ServiceTime serviceTime) {
         this.socialUserClient = socialUserClient;
         this.socialIdHasher = socialIdHasher;
         this.memberRepository = memberRepository;
         this.signupTokenProvider = signupTokenProvider;
         this.loginTokenIssuer = loginTokenIssuer;
+        this.appleTokenService = appleTokenService;
         this.serviceTime = serviceTime;
     }
 
@@ -48,7 +51,23 @@ public class SocialLoginService {
     public SocialLoginResult login(String provider, String socialAccessToken, String deviceId) {
         SocialUser user = socialUserClient.fetch(SocialProvider.valueOf(provider.toUpperCase(Locale.ROOT)),
                 socialAccessToken);
+        return loginOrSignup(user, socialIdHasher.hash(user.socialId()), deviceId);
+    }
+
+    /**
+     * Apple 로그인. 로그인 · 가입 확인이 끝나면 authorization code를 Apple 리프레시 토큰으로 바꿔 둔다.
+     * 가입 전이어도 받아 둔다 (authorization code는 한 번만 쓸 수 있고 금방 만료돼서 가입 완료 때는 쓸 수 없음).
+     * 토큰을 받지 못해도 로그인은 그대로 진행한다.
+     */
+    public SocialLoginResult loginWithApple(String identityToken, String authorizationCode, String deviceId) {
+        SocialUser user = socialUserClient.fetch(SocialProvider.APPLE, identityToken);
         String socialIdHash = socialIdHasher.hash(user.socialId());
+        SocialLoginResult result = loginOrSignup(user, socialIdHash, deviceId);
+        appleTokenService.keep(socialIdHash, authorizationCode);
+        return result;
+    }
+
+    private SocialLoginResult loginOrSignup(SocialUser user, String socialIdHash, String deviceId) {
         Optional<Member> member = memberRepository.findActiveBySocialIdHash(user.provider(), socialIdHash);
         if (member.isPresent()) {
             if (member.get().isBanned()) {

@@ -54,8 +54,10 @@ public class AuthController implements AuthApi {
             return ApiResponse.error(errorCode, errorCode.getMessage(), errors);
         }
 
-        String token = "apple".equals(provider) ? request.identityToken() : request.socialAccessToken();
-        SocialLoginResult result = socialLoginService.login(provider, token, request.deviceId());
+        SocialLoginResult result = "apple".equals(provider)
+                ? socialLoginService.loginWithApple(request.identityToken(), request.authorizationCode(),
+                        request.deviceId())
+                : socialLoginService.login(provider, request.socialAccessToken(), request.deviceId());
         if (result.signupRequired()) {
             SignupPrefillResponse prefill = new SignupPrefillResponse(result.prefillBirthDate(),
                     result.prefillGender() == null ? null : Gender.valueOf(result.prefillGender()));
