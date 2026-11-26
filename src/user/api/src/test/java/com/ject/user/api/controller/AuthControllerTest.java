@@ -115,6 +115,16 @@ class AuthControllerTest {
     }
 
     @Test
+    @DisplayName("AU-1 Apple은 identityToken · authorizationCode로 Apple 로그인을 한다")
+    void login_apple() throws Exception {
+        login("apple", ("{\"identityToken\": \"apple-identity\", \"authorizationCode\": \"apple-code\","
+                + " \"deviceId\": \"%s\"}").formatted(DEVICE_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.result").value("LOGIN"))
+                .andExpect(jsonPath("$.data.member.nickname").value("애플회원"));
+    }
+
+    @Test
     @DisplayName("AU-1 Apple인데 authorizationCode가 없으면 COMMON_001")
     void login_appleWithoutAuthorizationCode_returnsCommon001() throws Exception {
         login("apple", "{\"identityToken\": \"eyJraWQiOiJBSURPUEsxIn0.apple\", \"deviceId\": \"%s\"}".formatted(DEVICE_ID))
@@ -215,7 +225,7 @@ class AuthControllerTest {
     private static class StubSocialLoginService extends SocialLoginService {
 
         StubSocialLoginService() {
-            super(null, null, null, null, null, null);
+            super(null, null, null, null, null, null, null);
         }
 
         @Override
@@ -229,6 +239,18 @@ class AuthControllerTest {
             }
             return SocialLoginResult.login(new LoginTokens(new AccessToken("access-token", NOW.plusSeconds(3600)),
                     "refresh-token", 101L, "쿠로미덕후"));
+        }
+
+        /**
+         * identityToken · authorizationCode가 그대로 넘어와야 애플 회원으로 로그인한다.
+         */
+        @Override
+        public SocialLoginResult loginWithApple(String identityToken, String authorizationCode, String deviceId) {
+            if (!"apple-identity".equals(identityToken) || !"apple-code".equals(authorizationCode)) {
+                throw new IllegalStateException("Apple 토큰 값이 그대로 넘어와야 한다");
+            }
+            return SocialLoginResult.login(new LoginTokens(new AccessToken("access-token", NOW.plusSeconds(3600)),
+                    "refresh-token", 202L, "애플회원"));
         }
     }
 

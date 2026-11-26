@@ -5,6 +5,7 @@ import com.ject.user.application.dto.SocialLoginResult;
 import com.ject.user.application.dto.SocialUser;
 import com.ject.user.application.exception.InvalidSocialTokenException;
 import com.ject.user.application.exception.RejoinNotAvailableException;
+import com.ject.user.application.service.AppleTokenService;
 import com.ject.user.application.service.LoginTokenIssuer;
 import com.ject.user.application.service.SocialLoginService;
 import com.ject.user.domain.domain.BirthDate;
@@ -24,6 +25,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -38,6 +40,8 @@ class SocialLoginServiceTest {
 
     private FakeMemberRepository memberRepository;
     private FakeRefreshTokenRepository refreshTokenRepository;
+    private FakeAppleTokenClient appleTokenClient;
+    private FakeAppleTokenRepository appleTokenRepository;
     private SocialLoginService socialLoginService;
     private int memberSequence;
 
@@ -45,6 +49,8 @@ class SocialLoginServiceTest {
     void setUp() {
         memberRepository = new FakeMemberRepository();
         refreshTokenRepository = new FakeRefreshTokenRepository();
+        appleTokenClient = new FakeAppleTokenClient();
+        appleTokenRepository = new FakeAppleTokenRepository();
         ServiceTime serviceTime = new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul")));
         LoginTokenIssuer issuer = new LoginTokenIssuer(new FakeAccessTokenProvider(), refreshTokenRepository,
                 new FakePushDeviceRepository(), serviceTime);
@@ -60,7 +66,8 @@ class SocialLoginServiceTest {
                             : new SocialUser(provider, socialId, null, null);
                 },
                 socialId -> "hash-" + socialId,
-                memberRepository, new FakeSignupTokenProvider(), issuer, serviceTime);
+                memberRepository, new FakeSignupTokenProvider(), issuer,
+                new AppleTokenService(appleTokenClient, appleTokenRepository), serviceTime);
     }
 
     @Test
@@ -159,6 +166,58 @@ class SocialLoginServiceTest {
         // then
         assertEquals(1, refreshTokenRepository.count());
         assertEquals(second.getId(), refreshTokenRepository.findByDeviceId(DEVICE_ID).orElseThrow().getMemberId());
+    }
+
+    @Test
+    @DisplayName("Apple로 처음 로그인하면 가입 토큰을 주고, 가입 전이어도 Apple 리프레시 토큰을 받아 둔다")
+    void loginWithApple_signupRequired() {
+        // when
+        SocialLoginResult result = socialLoginService.loginWithApple("apple-77", "code-77", DEVICE_ID);
+
+        // then
+        assertTrue(result.signupRequired());
+        assertEquals(Optional.of("refresh-77"), appleTokenRepository.find("hash-77"));
+    }
+
+    @Test
+    @DisplayName("Apple로 가입한 회원이 로그인하면 토큰을 발급하고 Apple 리프레시 토큰을 새로 바꿔 둔다")
+    void loginWithApple_existingMember() {
+        // given
+        save(SocialProvider.APPLE, "hash-77", MemberStatus.ACTIVE);
+        appleTokenRepository.save("hash-77", "refresh-old");
+
+        // when
+        SocialLoginResult result = socialLoginService.loginWithApple("apple-77", "code-77", DEVICE_ID);
+
+        // then
+        assertFalse(result.signupRequired());
+        assertEquals(Optional.of("refresh-77"), appleTokenRepository.find("hash-77"));
+    }
+
+    @Test
+    @DisplayName("Apple 토큰 교환이 실패해도 로그인은 된다")
+    void loginWithApple_exchangeFailure() {
+        // given
+        save(SocialProvider.APPLE, "hash-77", MemberStatus.ACTIVE);
+
+        // when
+        SocialLoginResult result = socialLoginService.loginWithApple("apple-77", "code-fail", DEVICE_ID);
+
+        // then
+        assertFalse(result.signupRequired());
+        assertTrue(appleTokenRepository.find("hash-77").isEmpty());
+    }
+
+    @Test
+    @DisplayName("정지된 Apple 회원이면 MEMBER_003이고 Apple 토큰도 받지 않는다")
+    void loginWithApple_banned() {
+        // given
+        save(SocialProvider.APPLE, "hash-77", MemberStatus.BANNED);
+
+        // when & then
+        assertThrows(MemberBannedException.class,
+                () -> socialLoginService.loginWithApple("apple-77", "code-77", DEVICE_ID));
+        assertTrue(appleTokenRepository.find("hash-77").isEmpty());
     }
 
     private Member save(SocialProvider provider, String socialIdHash, MemberStatus status) {

@@ -4,6 +4,9 @@ app:
       # 로컬 · dev 전용 기본 키. 공개되어 있으므로 staging · 운영에서는 쓰지 않는다
       secret: ${JWT_SECRET:bakku-local-dev-only-jwt-secret-key-0001}
     social-id-hash-secret: ${SOCIAL_ID_HASH_SECRET:bakku-local-dev-only-social-id-hash-key-01}
+    apple:
+      # 로컬 · dev 전용 Apple 토큰 암호화 키 ("bakku-local-dev-only-apple-key01"의 Base64). staging · 운영은 환경변수로 넣는다
+      token-encryption-key: ${APPLE_TOKEN_ENCRYPTION_KEY:YmFra3UtbG9jYWwtZGV2LW9ubHktYXBwbGUta2V5MDE=}
 
 logging:
   structured:
