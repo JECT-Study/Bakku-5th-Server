@@ -51,6 +51,10 @@ public class MemberJpaEntity extends BaseEntity {
     @Column(name = "completed_count", nullable = false)
     private int completedCount;
 
+    // 교환 완료 · 노쇼 이벤트에서 DB가 직접 더한다 (결정 C8). 회원을 저장할 때 덮어쓰지 않게 수정 대상에서 뺀다
+    @Column(name = "manner_score", nullable = false, updatable = false)
+    private int mannerScore;
+
     @Column(name = "marketing_agreed", nullable = false)
     private boolean marketingAgreed;
 
@@ -71,10 +75,11 @@ public class MemberJpaEntity extends BaseEntity {
 
     public MemberJpaEntity(SocialProvider provider, String socialIdHash, String nickname, LocalDate birthDate,
                            Gender gender, MemberStatus status, Instant restrictedUntil, int completedCount,
-                           boolean marketingAgreed, Instant marketingChangedAt, Instant nicknameChangedAt,
-                           Long previousMemberId, Instant withdrawnAt) {
+                           int mannerScore, boolean marketingAgreed, Instant marketingChangedAt,
+                           Instant nicknameChangedAt, Long previousMemberId, Instant withdrawnAt) {
         this.provider = provider;
         this.previousMemberId = previousMemberId;
+        this.mannerScore = mannerScore;
         update(socialIdHash, nickname, birthDate, gender, status, restrictedUntil, completedCount, marketingAgreed,
                 marketingChangedAt, nicknameChangedAt, withdrawnAt);
     }
@@ -132,6 +137,10 @@ public class MemberJpaEntity extends BaseEntity {
 
     public int getCompletedCount() {
         return completedCount;
+    }
+
+    public int getMannerScore() {
+        return mannerScore;
     }
 
     public boolean isMarketingAgreed() {
