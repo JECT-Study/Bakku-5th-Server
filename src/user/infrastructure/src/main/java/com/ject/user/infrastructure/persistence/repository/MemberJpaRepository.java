@@ -27,9 +27,11 @@ public interface MemberJpaRepository extends JpaRepository<MemberJpaEntity, Long
             SocialProvider provider, String socialIdHash, MemberStatus status);
 
     @Modifying(clearAutomatically = true)
-    @Query("update MemberJpaEntity m set m.completedCount = m.completedCount + 1, m.updatedAt = :now"
+    @Query("update MemberJpaEntity m set m.completedCount = m.completedCount + 1,"
+            + " m.mannerScore = m.mannerScore + :mannerPoints, m.updatedAt = :now"
             + " where m.id in :ids")
-    int increaseCompletedCount(@Param("ids") Collection<Long> ids, @Param("now") Instant now);
+    int increaseCompletedCount(@Param("ids") Collection<Long> ids, @Param("mannerPoints") int mannerPoints,
+                               @Param("now") Instant now);
 
     /**
      * 마지막 닉네임 변경이 changedBefore 이전(또는 없음)일 때만 바꾼다 (결정 C8).

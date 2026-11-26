@@ -98,8 +98,8 @@ public class MemberRepositoryAdapter implements MemberRepository {
     }
 
     @Override
-    public void increaseCompletedCount(Collection<Long> ids) {
-        memberJpaRepository.increaseCompletedCount(ids, clock.instant());
+    public void increaseCompletedCount(Collection<Long> ids, int mannerPoints) {
+        memberJpaRepository.increaseCompletedCount(ids, mannerPoints, clock.instant());
     }
 
     /**

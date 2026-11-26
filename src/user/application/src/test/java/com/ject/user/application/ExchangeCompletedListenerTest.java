@@ -4,6 +4,7 @@ import com.ject.common.event.exchange.ExchangeCompleted;
 import com.ject.user.application.event.ExchangeCompletedListener;
 import com.ject.user.application.service.CompletedCountService;
 import com.ject.user.domain.domain.BirthDate;
+import com.ject.user.domain.domain.MannerScore;
 import com.ject.user.domain.domain.Member;
 import com.ject.user.domain.domain.MemberStatus;
 import com.ject.user.domain.domain.Nickname;
@@ -41,12 +42,45 @@ class ExchangeCompletedListenerTest {
     }
 
     @Test
+    @DisplayName("[교환했어요] 답으로 완료되면 두 회원의 매너 지표가 2씩 오른다")
+    void answeredRaisesMannerScore() {
+        // given
+        FakeMemberRepository memberRepository = new FakeMemberRepository();
+        Long requesterId = save(memberRepository, "요청자", 0);
+        Long ownerId = save(memberRepository, "게시자", 0);
+
+        // when
+        listener(memberRepository).handle(new ExchangeCompleted(1L, List.of(requesterId, ownerId), false));
+
+        // then
+        assertEquals(52, memberRepository.findById(requesterId).orElseThrow().getMannerScore().value());
+        assertEquals(52, memberRepository.findById(ownerId).orElseThrow().getMannerScore().value());
+    }
+
+    @Test
+    @DisplayName("자동 완료 등 [교환했어요] 답이 아닌 완료는 완료 횟수만 오르고 매너 지표는 그대로다")
+    void autoCompletedKeepsMannerScore() {
+        // given
+        FakeMemberRepository memberRepository = new FakeMemberRepository();
+        Long requesterId = save(memberRepository, "요청자", 0);
+        Long ownerId = save(memberRepository, "게시자", 0);
+
+        // when
+        listener(memberRepository).handle(new ExchangeCompleted(1L, List.of(requesterId, ownerId), true));
+
+        // then
+        Member requester = memberRepository.findById(requesterId).orElseThrow();
+        assertEquals(1, requester.getCompletedCount());
+        assertEquals(MannerScore.START, requester.getMannerScore().value());
+    }
+
+    @Test
     @DisplayName("횟수를 올리다 실패해도 예외를 넘기지 않는다 (교환은 이미 커밋됨)")
     void failureIsNotPropagated() {
         // given
         FakeMemberRepository memberRepository = new FakeMemberRepository() {
             @Override
-            public void increaseCompletedCount(Collection<Long> ids) {
+            public void increaseCompletedCount(Collection<Long> ids, int mannerPoints) {
                 throw new IllegalStateException("DB 오류");
             }
         };

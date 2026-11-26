@@ -39,9 +39,12 @@ public interface MemberRepository {
     List<Member> findAllByIds(Collection<Long> ids);
 
     /**
-     * 교환 완료 횟수를 1씩 올린다. 동시에 끝난 교환이 서로 덮어쓰지 않도록 DB에서 직접 더한다 (결정 C8).
+     * 교환 완료 횟수를 1씩 올리고 매너 지표에 mannerPoints를 더한다 (F-06-1).
+     * 동시에 끝난 교환이 서로 덮어쓰지 않도록 DB에서 직접 더한다 (결정 C8).
+     *
+     * @param mannerPoints 매너 지표에 더할 점수, 반영하지 않으면 0
      */
-    void increaseCompletedCount(Collection<Long> ids);
+    void increaseCompletedCount(Collection<Long> ids, int mannerPoints);
 
     /**
      * 마지막 닉네임 변경이 changedBefore 이전(또는 없음)일 때만 바꾼다. 동시에 바꿔도 한 번만 반영된다 (결정 C8).

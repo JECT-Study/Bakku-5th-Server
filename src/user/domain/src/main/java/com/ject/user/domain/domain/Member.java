@@ -28,6 +28,7 @@ public class Member {
     private MemberStatus status;
     private final Instant restrictedUntil;
     private int completedCount;
+    private final MannerScore mannerScore;
     private boolean marketingAgreed;
     private Instant marketingChangedAt;
     private Instant nicknameChangedAt;
@@ -37,9 +38,10 @@ public class Member {
 
     private Member(Long id, SocialProvider provider, String socialIdHash, Nickname nickname, BirthDate birthDate,
                    Gender gender, MemberStatus status, Instant restrictedUntil, int completedCount,
-                   boolean marketingAgreed, Instant marketingChangedAt, Instant nicknameChangedAt,
-                   Long previousMemberId, Instant createdAt, Instant withdrawnAt) {
+                   MannerScore mannerScore, boolean marketingAgreed, Instant marketingChangedAt,
+                   Instant nicknameChangedAt, Long previousMemberId, Instant createdAt, Instant withdrawnAt) {
         this.id = id;
+        this.mannerScore = Objects.requireNonNull(mannerScore);
         this.provider = Objects.requireNonNull(provider);
         this.socialIdHash = Objects.requireNonNull(socialIdHash);
         this.nickname = nickname;
@@ -71,18 +73,33 @@ public class Member {
         Objects.requireNonNull(birthDate);
         birthDate.ensureSignupAge(today);
         return new Member(null, provider, socialIdHash, nickname, birthDate, gender, MemberStatus.ACTIVE, null, 0,
-                marketingAgreed, now, null, previousMemberId, now, null);
+                MannerScore.start(), marketingAgreed, now, null, previousMemberId, now, null);
     }
 
-    // 저장소에서 읽어온 데이터로 복원할 때 사용
+    /**
+     * 저장소에서 읽어온 데이터로 복원할 때 사용한다.
+     */
+    public static Member restore(Long id, SocialProvider provider, String socialIdHash, Nickname nickname,
+                                 BirthDate birthDate, Gender gender, MemberStatus status, Instant restrictedUntil,
+                                 int completedCount, MannerScore mannerScore, boolean marketingAgreed,
+                                 Instant marketingChangedAt, Instant nicknameChangedAt, Long previousMemberId,
+                                 Instant createdAt, Instant withdrawnAt) {
+        return new Member(id, provider, socialIdHash, nickname, birthDate, gender, status, restrictedUntil,
+                completedCount, mannerScore, marketingAgreed, marketingChangedAt, nicknameChangedAt,
+                previousMemberId, createdAt, withdrawnAt);
+    }
+
+    /**
+     * 매너 지표가 처음 값(50)인 회원을 복원한다. 매너 지표와 상관없는 테스트 · 호출에서 쓴다.
+     */
     public static Member restore(Long id, SocialProvider provider, String socialIdHash, Nickname nickname,
                                  BirthDate birthDate, Gender gender, MemberStatus status, Instant restrictedUntil,
                                  int completedCount, boolean marketingAgreed, Instant marketingChangedAt,
                                  Instant nicknameChangedAt, Long previousMemberId, Instant createdAt,
                                  Instant withdrawnAt) {
-        return new Member(id, provider, socialIdHash, nickname, birthDate, gender, status, restrictedUntil,
-                completedCount, marketingAgreed, marketingChangedAt, nicknameChangedAt, previousMemberId, createdAt,
-                withdrawnAt);
+        return restore(id, provider, socialIdHash, nickname, birthDate, gender, status, restrictedUntil,
+                completedCount, MannerScore.start(), marketingAgreed, marketingChangedAt, nicknameChangedAt,
+                previousMemberId, createdAt, withdrawnAt);
     }
 
     /**
@@ -225,6 +242,13 @@ public class Member {
 
     public int getCompletedCount() {
         return completedCount;
+    }
+
+    /**
+     * 점수는 교환 완료 이벤트를 받아 저장소에서 바로 더하고(결정 C8), 도메인에서는 읽기만 한다.
+     */
+    public MannerScore getMannerScore() {
+        return mannerScore;
     }
 
     public boolean isMarketingAgreed() {

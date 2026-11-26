@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
- * 교환 완료를 받아 양쪽 회원의 교환 완료 횟수를 올린다 (결정 B7).
+ * 교환 완료를 받아 양쪽 회원의 교환 완료 횟수를 올리고, [교환했어요] 답으로 완료됐으면 매너 지표도 올린다 (결정 B7, F-06-1).
  */
 @Component
 public class ExchangeCompletedListener {
@@ -28,7 +28,7 @@ public class ExchangeCompletedListener {
     @TransactionalEventListener
     public void handle(ExchangeCompleted event) {
         try {
-            completedCountService.increase(event.memberIds());
+            completedCountService.increase(event.memberIds(), !event.autoCompleted());
         } catch (RuntimeException e) {
             log.error("교환 완료 횟수 증가 실패. appointmentId={}, memberIds={}", event.appointmentId(),
                     event.memberIds(), e);

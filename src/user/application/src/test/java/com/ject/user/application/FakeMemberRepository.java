@@ -1,6 +1,7 @@
 package com.ject.user.application;
 
 import com.ject.user.application.port.MemberRepository;
+import com.ject.user.domain.domain.MannerScore;
 import com.ject.user.domain.domain.Member;
 import com.ject.user.domain.domain.Nickname;
 import com.ject.user.domain.domain.SocialProvider;
@@ -67,11 +68,12 @@ class FakeMemberRepository implements MemberRepository {
     }
 
     @Override
-    public void increaseCompletedCount(Collection<Long> ids) {
+    public void increaseCompletedCount(Collection<Long> ids, int mannerPoints) {
         ids.forEach(id -> {
             Member member = store.get(id);
             if (member != null) {
-                store.put(id, copy(member, id, member.getCompletedCount() + 1));
+                store.put(id, copy(member, id, member.getCompletedCount() + 1,
+                        new MannerScore(member.getMannerScore().value() + mannerPoints)));
             }
         });
     }
@@ -97,15 +99,20 @@ class FakeMemberRepository implements MemberRepository {
         }
         store.put(id, Member.restore(id, member.getProvider(), member.getSocialIdHash(), nickname,
                 member.getBirthDate(), member.getGender(), member.getStatus(), member.getRestrictedUntil(),
-                member.getCompletedCount(), member.isMarketingAgreed(), member.getMarketingChangedAt(), changedAt,
+                member.getCompletedCount(), member.getMannerScore(), member.isMarketingAgreed(),
+                member.getMarketingChangedAt(), changedAt,
                 member.getPreviousMemberId(), member.getCreatedAt(), member.getWithdrawnAt()));
         return true;
     }
 
     private static Member copy(Member member, Long id, int completedCount) {
+        return copy(member, id, completedCount, member.getMannerScore());
+    }
+
+    private static Member copy(Member member, Long id, int completedCount, MannerScore mannerScore) {
         return Member.restore(id, member.getProvider(), member.getSocialIdHash(), member.getNickname(),
                 member.getBirthDate(), member.getGender(), member.getStatus(), member.getRestrictedUntil(),
-                completedCount, member.isMarketingAgreed(), member.getMarketingChangedAt(),
+                completedCount, mannerScore, member.isMarketingAgreed(), member.getMarketingChangedAt(),
                 member.getNicknameChangedAt(), member.getPreviousMemberId(), member.getCreatedAt(),
                 member.getWithdrawnAt());
     }

@@ -1,6 +1,7 @@
 package com.ject.user.infrastructure.persistence.mapper;
 
 import com.ject.user.domain.domain.BirthDate;
+import com.ject.user.domain.domain.MannerScore;
 import com.ject.user.domain.domain.Member;
 import com.ject.user.domain.domain.Nickname;
 import com.ject.user.infrastructure.persistence.entity.MemberJpaEntity;
@@ -25,6 +26,7 @@ final class MemberMapper {
                 member.getStatus(),
                 member.getRestrictedUntil(),
                 member.getCompletedCount(),
+                member.getMannerScore().value(),
                 member.isMarketingAgreed(),
                 member.getMarketingChangedAt(),
                 member.getNicknameChangedAt(),
@@ -60,6 +62,7 @@ final class MemberMapper {
                 entity.getStatus(),
                 entity.getRestrictedUntil(),
                 entity.getCompletedCount(),
+                new MannerScore(entity.getMannerScore()),
                 entity.isMarketingAgreed(),
                 entity.getMarketingChangedAt(),
                 entity.getNicknameChangedAt(),
