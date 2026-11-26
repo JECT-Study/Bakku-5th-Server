@@ -21,34 +21,34 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 @RequestMapping("/api/v1")
 public interface AppointmentApi {
 
-    @Operation(summary = "A-1 약속 제안", description = "채팅방에 \"교환을 제안해요\" 카드가 생기고 상대에게 알림이 갑니다. 한 채팅방에 진행 중인 제안은 1개입니다.")
+    @Operation(summary = "✅ A-1 약속 제안", description = "채팅방에 \"교환을 제안해요\" 카드가 생기고 상대에게 알림이 갑니다. 한 채팅방에 진행 중인 제안은 1개입니다.")
     @PostMapping("/exchanges/{exchangeId}/appointments")
     @ResponseStatus(HttpStatus.CREATED)
     ApiResponse<AppointmentResponse> proposeAppointment(@Parameter(hidden = true) @LoginMember Long memberId,
                                                         @PathVariable("exchangeId") Long exchangeId,
                                                         @Valid @RequestBody ProposeAppointmentRequest request);
 
-    @Operation(summary = "A-2 약속 상세", description = "약속 · 변경 제안 · 교환 확인 카드의 버튼 상태와 약속 상세 화면에 사용합니다.")
+    @Operation(summary = "✅ A-2 약속 상세", description = "약속 · 변경 제안 · 교환 확인 카드의 버튼 상태와 약속 상세 화면에 사용합니다.")
     @GetMapping("/appointments/{appointmentId}")
     ApiResponse<AppointmentResponse> getAppointment(@Parameter(hidden = true) @LoginMember Long memberId,
                                                     @PathVariable("appointmentId") Long appointmentId);
 
-    @Operation(summary = "A-3 현재 유효한 약속", description = "PROPOSED 또는 CONFIRMED 약속을 반환합니다. 유효한 약속이 없으면 data가 null입니다 (404 아님).")
+    @Operation(summary = "✅ A-3 현재 유효한 약속", description = "PROPOSED 또는 CONFIRMED 약속을 반환합니다. 유효한 약속이 없으면 data가 null입니다 (404 아님).")
     @GetMapping("/exchanges/{exchangeId}/appointments/current")
     ApiResponse<AppointmentResponse> getCurrentAppointment(@Parameter(hidden = true) @LoginMember Long memberId,
                                                            @PathVariable("exchangeId") Long exchangeId);
 
-    @Operation(summary = "A-4 약속 수락", description = "제안받은 사람이 약속을 수락합니다. 약속이 확정됩니다. 본문은 없습니다.")
+    @Operation(summary = "✅ A-4 약속 수락", description = "제안받은 사람이 약속을 수락합니다. 약속이 확정됩니다. 본문은 없습니다.")
     @PostMapping("/appointments/{appointmentId}/accept")
     ApiResponse<AppointmentResponse> acceptAppointment(@Parameter(hidden = true) @LoginMember Long memberId,
                                                        @PathVariable("appointmentId") Long appointmentId);
 
-    @Operation(summary = "A-5 약속 제안 거절", description = "제안을 무효로 하고 제안자에게 알림을 보냅니다.")
+    @Operation(summary = "✅ A-5 약속 제안 거절", description = "제안을 무효로 하고 제안자에게 알림을 보냅니다.")
     @PostMapping("/appointments/{appointmentId}/reject")
     ApiResponse<AppointmentResponse> rejectAppointment(@Parameter(hidden = true) @LoginMember Long memberId,
                                                        @PathVariable("appointmentId") Long appointmentId);
 
-    @Operation(summary = "A-6 제안 철회", description = "제안자가 자기 제안을 취소합니다. 새로 제안하려면 진행 중인 제안을 먼저 철회해야 합니다.")
+    @Operation(summary = "✅ A-6 제안 철회", description = "제안자가 자기 제안을 취소합니다. 새로 제안하려면 진행 중인 제안을 먼저 철회해야 합니다.")
     @PostMapping("/appointments/{appointmentId}/withdraw")
     ApiResponse<AppointmentResponse> withdrawAppointment(@Parameter(hidden = true) @LoginMember Long memberId,
                                                          @PathVariable("appointmentId") Long appointmentId);
@@ -60,12 +60,12 @@ public interface AppointmentApi {
     //                                                 @PathVariable("appointmentId") Long appointmentId,
     //                                                 @Valid @RequestBody UpdateReminderRequest request);
 
-    @Operation(summary = "A-8 약속 취소", description = "확정된 약속을 상대 동의 없이 바로 취소합니다. 교환글과 고른 첨부 글은 교환 가능으로 돌아갑니다. 교환 확인이 시작된 뒤(약속 시각 30분 뒤, 지금 바로는 확정 30분 뒤)에는 취소할 수 없습니다.")
+    @Operation(summary = "✅ A-8 약속 취소", description = "확정된 약속을 상대 동의 없이 바로 취소합니다. 교환글과 고른 첨부 글은 교환 가능으로 돌아갑니다. 교환 확인이 시작된 뒤(약속 시각 30분 뒤, 지금 바로는 확정 30분 뒤)에는 취소할 수 없습니다.")
     @PostMapping("/appointments/{appointmentId}/cancel")
     ApiResponse<AppointmentResponse> cancelAppointment(@Parameter(hidden = true) @LoginMember Long memberId,
                                                        @PathVariable("appointmentId") Long appointmentId);
 
-    @Operation(summary = "F-1 교환 확인 응답", description = "한 명만 답해도 처리되고, 응답은 1인 1회이며 바꿀 수 없습니다.")
+    @Operation(summary = "✅ F-1 교환 확인 응답", description = "한 명만 답해도 처리되고, 응답은 1인 1회이며 바꿀 수 없습니다.")
     @PostMapping("/appointments/{appointmentId}/confirmation")
     ApiResponse<AppointmentResponse> respondConfirmation(@Parameter(hidden = true) @LoginMember Long memberId,
                                                          @PathVariable("appointmentId") Long appointmentId,
