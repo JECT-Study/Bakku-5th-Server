@@ -130,6 +130,15 @@ public class Post {
         return true;
     }
 
+    public boolean deleteByAuthorWithdrawal(Instant now) {
+        if (status != PostStatus.AVAILABLE && status != PostStatus.RESERVED) {
+            return false;
+        }
+        this.status = PostStatus.DELETED;
+        this.deletedAt = now;
+        return true;
+    }
+
     public void reserve() {
         changeStatus(PostStatus.AVAILABLE, PostStatus.RESERVED);
     }
