@@ -113,6 +113,33 @@ class PostDeleteTest {
         assertEquals("다른 변경이 먼저 반영되어 삭제할 수 없습니다. id=10", e.getMessage());
     }
 
+    @Test
+    @DisplayName("작성자 탈퇴: 교환 가능 · 예약중 글은 DELETED와 탈퇴 시각이 남고 true")
+    void deleteByAuthorWithdrawal_availableOrReserved_marksDeleted() {
+        Post available = post(PostStatus.AVAILABLE, null);
+        Post reserved = post(PostStatus.RESERVED, null);
+
+        assertTrue(available.deleteByAuthorWithdrawal(NOW));
+        assertTrue(reserved.deleteByAuthorWithdrawal(NOW));
+
+        assertEquals(PostStatus.DELETED, available.getStatus());
+        assertEquals(PostStatus.DELETED, reserved.getStatus());
+        assertEquals(NOW, reserved.getDeletedAt());
+    }
+
+    @Test
+    @DisplayName("작성자 탈퇴: 교환 완료 · 이미 삭제한 글은 그대로 두고 false")
+    void deleteByAuthorWithdrawal_completedOrDeleted_keeps() {
+        Post completed = post(PostStatus.COMPLETED, null);
+        Post deleted = post(PostStatus.DELETED, DELETED_AT);
+
+        assertFalse(completed.deleteByAuthorWithdrawal(NOW));
+        assertFalse(deleted.deleteByAuthorWithdrawal(NOW));
+
+        assertEquals(PostStatus.COMPLETED, completed.getStatus());
+        assertEquals(DELETED_AT, deleted.getDeletedAt());
+    }
+
     private static Post post(PostStatus status, Instant deletedAt) {
         return Post.builder()
                 .id(10L)
