@@ -1,6 +1,7 @@
 package com.ject.post.application.service.command;
 
 import com.ject.common.core.time.ServiceTime;
+import com.ject.post.application.FakeMemberRestrictionPort;
 import com.ject.post.application.FakePostImagePort;
 import com.ject.post.application.FakePostRepository;
 import com.ject.post.application.dto.command.CreatePostCommand;
@@ -8,6 +9,7 @@ import com.ject.post.domain.domain.Post;
 import com.ject.post.domain.domain.PostCategory;
 import com.ject.post.domain.domain.PostStatus;
 import com.ject.post.domain.exception.InvalidImageKeyException;
+import com.ject.post.domain.exception.RestrictedMemberException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,13 +28,27 @@ class CreatePostHandlerTest {
     private static final Instant NOW = Instant.parse("2026-11-02T05:30:00Z");
 
     private FakePostRepository postRepository;
+    private FakeMemberRestrictionPort memberRestrictionPort;
     private CreatePostHandler handler;
 
     @BeforeEach
     void setUp() {
         postRepository = new FakePostRepository(NOW);
+        memberRestrictionPort = new FakeMemberRestrictionPort();
         ServiceTime serviceTime = new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul")));
-        handler = new CreatePostHandler(postRepository, new FakePostImagePort(), serviceTime);
+        handler = new CreatePostHandler(postRepository, new FakePostImagePort(), memberRestrictionPort, serviceTime);
+    }
+
+    @Test
+    @DisplayName("이용 제한 회원이면 POST_006이고 글을 저장하지 않는다")
+    void handle_restrictedMember_throws() {
+        // given
+        memberRestrictionPort.restrict(3L);
+
+        // when · then
+        assertThrows(RestrictedMemberException.class,
+                () -> handler.handle(command(List.of("post/tmp/3/8f14e45f.jpg"), null)));
+        assertEquals(0, postRepository.saveCalls);
     }
 
     @Test
