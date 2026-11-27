@@ -81,11 +81,14 @@ public interface MemberApi {
     ApiResponse<NicknameUpdateResponse> updateNickname(@LoginMember Long memberId,
                                                        @Valid @RequestBody NicknameUpdateRequest request);
 
-    @Operation(summary = "MB-4 다른 회원 프로필 (stub)",
-            description = "게시자 프로필에 씁니다. 닉네임과 교환 완료 횟수만 공개하고 생년월일 · 성별 · 노쇼 · 후기는 공개하지 않습니다. "
-                    + "에러: MEMBER_201 회원 없음 · MEMBER_202 탈퇴한 회원 · MEMBER_203 차단 관계")
+    @Operation(summary = "MB-4 다른 회원 프로필",
+            description = "게시자 프로필(C-05-2)에 씁니다. 닉네임 · 교환 완료 횟수 · 매너 지표 구간 이름만 공개하고, "
+                    + "매너 지표 숫자 · 생년월일 · 성별 · 노쇼 · 후기는 공개하지 않습니다. 이 사람의 교환글은 교환글 API에서 부릅니다. "
+                    + "에러: MEMBER_201 회원 없음 · MEMBER_202 탈퇴 · 영구 정지 회원 · MEMBER_203 차단 관계")
     @GetMapping("/{userId}")
-    ApiResponse<MemberProfileResponse> getProfile(@Parameter(description = "회원 ID") @PathVariable("userId") Long userId);
+    ApiResponse<MemberProfileResponse> getProfile(
+            @LoginMember Long memberId,
+            @Parameter(description = "회원 ID") @PathVariable("userId") Long userId);
 
     @Operation(summary = "MB-8 내 노쇼 기록 (stub)",
             description = "본인만 보는 노쇼 기록입니다. 건마다 약속 일시 · 장소 · 상대 닉네임 · 처리 상태를 보여줍니다. 신고자가 쓴 추가 설명은 보여주지 않습니다.")

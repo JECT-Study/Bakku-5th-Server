@@ -4,6 +4,7 @@ import com.ject.common.core.time.ServiceTime;
 import com.ject.common.web.response.ApiResponse;
 import com.ject.user.api.controller.api.MemberApi;
 import com.ject.user.api.dto.enums.Gender;
+import com.ject.user.api.dto.enums.MannerTier;
 import com.ject.user.api.dto.enums.NicknameUnavailableReason;
 import com.ject.user.api.dto.enums.NoShowStatus;
 import com.ject.user.api.dto.enums.SocialProvider;
@@ -19,9 +20,11 @@ import com.ject.user.api.dto.response.NicknameUpdateResponse;
 import com.ject.user.api.dto.response.NoShowResponse;
 import com.ject.user.api.dto.response.WithdrawalNoticeResponse;
 import com.ject.user.application.dto.MarketingConsent;
+import com.ject.user.application.dto.MemberProfile;
 import com.ject.user.application.dto.MyInfo;
 import com.ject.user.application.dto.NicknameChange;
 import com.ject.user.application.dto.NicknameAvailability;
+import com.ject.user.application.service.MemberProfileService;
 import com.ject.user.application.service.MemberService;
 import com.ject.user.application.service.NicknameService;
 import com.ject.user.application.service.WithdrawalNoticeService;
@@ -30,8 +33,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-import static com.ject.user.api.controller.UserStubData.MY_ID;
-import static com.ject.user.api.controller.UserStubData.MY_NICKNAME;
 import static com.ject.user.api.controller.UserStubData.NOW;
 
 @RestController
@@ -39,15 +40,18 @@ public class MemberController implements MemberApi {
 
     private final NicknameService nicknameService;
     private final MemberService memberService;
+    private final MemberProfileService memberProfileService;
     private final WithdrawalService withdrawalService;
     private final WithdrawalNoticeService withdrawalNoticeService;
     private final ServiceTime serviceTime;
 
     public MemberController(NicknameService nicknameService, MemberService memberService,
+                            MemberProfileService memberProfileService,
                             WithdrawalService withdrawalService, WithdrawalNoticeService withdrawalNoticeService,
                             ServiceTime serviceTime) {
         this.nicknameService = nicknameService;
         this.memberService = memberService;
+        this.memberProfileService = memberProfileService;
         this.withdrawalService = withdrawalService;
         this.withdrawalNoticeService = withdrawalNoticeService;
         this.serviceTime = serviceTime;
@@ -103,11 +107,11 @@ public class MemberController implements MemberApi {
     }
 
     @Override
-    public ApiResponse<MemberProfileResponse> getProfile(Long userId) {
-        if (MY_ID.equals(userId)) {
-            return ApiResponse.success(new MemberProfileResponse(MY_ID, MY_NICKNAME, 12, true, null));
-        }
-        return ApiResponse.success(new MemberProfileResponse(userId, "하치와레러버", 5, false, null));
+    public ApiResponse<MemberProfileResponse> getProfile(Long memberId, Long userId) {
+        MemberProfile profile = memberProfileService.getProfile(memberId, userId);
+        MannerTier tier = profile.mannerTier() == null ? null : MannerTier.valueOf(profile.mannerTier());
+        return ApiResponse.success(new MemberProfileResponse(profile.userId(), profile.nickname(),
+                profile.completedCount(), profile.isMe(), tier));
     }
 
     @Override
