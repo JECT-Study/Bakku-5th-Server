@@ -2,7 +2,9 @@ package com.ject.exchange.application.service.command;
 
 import com.ject.common.core.cqrs.command.CommandHandler;
 import com.ject.exchange.application.dto.command.CreateExchangeCommand;
+import com.ject.exchange.application.dto.dto.ChatRoomInfo;
 import com.ject.exchange.application.dto.dto.PostInfo;
+import com.ject.exchange.application.port.ChatRoomPort;
 import com.ject.exchange.application.port.ExchangeImageRejectedException;
 import com.ject.exchange.application.port.ImagePort;
 import com.ject.exchange.application.port.PostPort;
@@ -29,11 +31,20 @@ public class CreateExchangeHandler implements CommandHandler<CreateExchangeComma
     private final PostPort postPort;
     private final UserPort userPort;
     private final ImagePort imagePort;
+    private final ChatRoomPort chatRoomPort;
 
     @Transactional
     public Long handle(CreateExchangeCommand command) {
         PostInfo post = requestablePostOf(command.postId());
-        // Todo: 중복 요청, 나간 채팅방 재요청 검증 (chat BC 채팅방 정보가 생기면)
+
+        ChatRoomInfo chatRoomLink = chatRoomPort.lockAndFind(command.postId(), command.requesterId());
+        if (chatRoomLink.status() == ChatRoomInfo.Status.ACTIVE) {
+            // 동일 게시글·동일 요청자의 현재 방이 이미 있으면 새로 만들지 않고 기존 교환을 돌려준다 (spec 결정 3)
+            return chatRoomLink.exchangeId();
+        }
+        if (chatRoomLink.status() == ChatRoomInfo.Status.LEFT) {
+            throw new ExchangeException(ExchangeErrorCode.LEFT_CHAT_ROOM_REQUEST);
+        }
 
         Exchange exchange =
                 switch (command.offerType()) {
@@ -62,14 +73,39 @@ public class CreateExchangeHandler implements CommandHandler<CreateExchangeComma
                         yield request;
                     }
                 };
-        // Todo: 채팅방 생성
         Exchange saved = exchangeRepository.save(exchange);
+        List<String> newItemImageKeys = null;
         if (saved.getOfferType() == OfferType.NEW) {
             // 정식 사진 경로에 교환 ID가 들어가므로 저장한 뒤 확정한다 (spec 결정 4). 거부되면 트랜잭션째 롤백된다
-            List<String> imageKeys = attachImages(command.requesterId(), saved.getId(), command.newItem().imageKeys());
-            saved = exchangeRepository.save(saved.withNewItemImages(imageKeys));
+            newItemImageKeys = attachImages(command.requesterId(), saved.getId(), command.newItem().imageKeys());
+            saved = exchangeRepository.save(saved.withNewItemImages(newItemImageKeys));
         }
+        createChatRoom(saved.getId(), command.postId(), command.requesterId(), post.ownerId(), newItemImageKeys);
         return saved.getId();
+    }
+
+    /**
+     * 채팅방 생성 실패는 삼키지 않는다. 외부 트랜잭션이 교환·사진 확정까지 함께 롤백한다 (AC-8).
+     * 다만 NEW 방식으로 이미 확정한 이미지 객체는 저장소 쪽 변경이라 DB 롤백으로 되돌아가지 않으므로 보상 삭제한다
+     */
+    private void createChatRoom(Long exchangeId, Long postId, Long requesterId, Long ownerId,
+                                List<String> newItemImageKeys) {
+        try {
+            chatRoomPort.create(exchangeId, postId, requesterId, ownerId);
+        } catch (RuntimeException failure) {
+            if (newItemImageKeys != null && !newItemImageKeys.isEmpty()) {
+                discardNewItemImages(exchangeId, newItemImageKeys, failure);
+            }
+            throw failure;
+        }
+    }
+
+    private void discardNewItemImages(Long exchangeId, List<String> imageKeys, RuntimeException originalFailure) {
+        try {
+            imagePort.discardFromExchange(exchangeId, imageKeys);
+        } catch (RuntimeException discardFailure) {
+            originalFailure.addSuppressed(discardFailure);
+        }
     }
 
     private List<String> attachImages(Long requesterId, Long exchangeId, List<String> imageKeys) {

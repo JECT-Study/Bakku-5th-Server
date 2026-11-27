@@ -162,7 +162,8 @@ class AcceptAppointmentPostConnectTest {
     void createAfterAccept_byOtherMember_throwsPostReservedElsewhere() {
         // given
         handler.handle(accept(APPOINTMENT_ID));
-        CreateExchangeHandler createHandler = new CreateExchangeHandler(exchangeRepository, postPort, userPort, new FakeImagePort());
+        CreateExchangeHandler createHandler = new CreateExchangeHandler(exchangeRepository, postPort, userPort,
+                new FakeImagePort(), new FakeChatRoomPort());
         int savesBefore = exchangeRepository.saveCount();
 
         // when

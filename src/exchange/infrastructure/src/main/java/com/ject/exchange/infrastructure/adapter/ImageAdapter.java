@@ -25,4 +25,9 @@ public class ImageAdapter implements ImagePort {
             throw new ExchangeImageRejectedException(rejected.getOrder(), rejected.getKey());
         }
     }
+
+    @Override
+    public void discardFromExchange(Long exchangeId, List<String> imageKeys) {
+        imageAttachment.discardImages(PURPOSE, exchangeId, imageKeys);
+    }
 }

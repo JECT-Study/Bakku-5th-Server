@@ -73,7 +73,7 @@ class ExchangeImageResultTest {
         FakeUserPort userPort = new FakeUserPort();
         ServiceTime serviceTime = new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul")));
         getExchangeHandler = new GetExchangeHandler(exchangeRepository, appointmentRepository, postPort, userPort,
-                serviceTime);
+                serviceTime, new FakeChatRoomPort());
         getAppointmentHandler = new GetAppointmentHandler(appointmentRepository, exchangeRepository, postPort,
                 serviceTime);
         getCurrentAppointmentHandler = new GetCurrentAppointmentHandler(appointmentRepository, exchangeRepository,

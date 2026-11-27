@@ -50,7 +50,7 @@ class CreateExchangeImageTest {
         postPort = new FakePostPort();
         userPort = new FakeUserPort();
         imagePort = new FakeImagePort();
-        handler = new CreateExchangeHandler(exchangeRepository, postPort, userPort, imagePort);
+        handler = new CreateExchangeHandler(exchangeRepository, postPort, userPort, imagePort, new FakeChatRoomPort());
 
         postPort.register(new PostInfo(POST_P, "P", "post/10/1.jpg", MEMBER_B, PostInfo.Status.AVAILABLE));
         postPort.register(new PostInfo(POST_Q1, "Q1", "post/20/1.jpg", MEMBER_A, PostInfo.Status.AVAILABLE));

@@ -151,7 +151,7 @@ class GetExchangeHandlerEditableTest {
 
     private ExchangeResult viewAt(Instant now, Long viewerId) {
         GetExchangeHandler handler = new GetExchangeHandler(exchangeRepository, appointmentRepository, postPort,
-                userPort, new ServiceTime(Clock.fixed(now, ZoneId.of("Asia/Seoul"))));
+                userPort, new ServiceTime(Clock.fixed(now, ZoneId.of("Asia/Seoul"))), new FakeChatRoomPort());
         return handler.handle(new GetExchangeQuery(EXCHANGE_ID, viewerId));
     }
 

@@ -7,6 +7,7 @@ import com.ject.exchange.application.dto.dto.ExchangeResult;
 import com.ject.exchange.application.dto.dto.PostInfo;
 import com.ject.exchange.application.dto.dto.UserInfo;
 import com.ject.exchange.application.dto.query.GetExchangeQuery;
+import com.ject.exchange.application.port.ChatRoomPort;
 import com.ject.exchange.application.port.PostPort;
 import com.ject.exchange.application.port.UserPort;
 import com.ject.exchange.domain.domain.appointment.Appointment;
@@ -38,6 +39,7 @@ public class GetExchangeHandler implements QueryHandler<GetExchangeQuery, Exchan
     private final PostPort postPort;
     private final UserPort userPort;
     private final ServiceTime serviceTime;
+    private final ChatRoomPort chatRoomPort;
 
     @Override
     @Transactional(readOnly = true)
@@ -57,8 +59,9 @@ public class GetExchangeHandler implements QueryHandler<GetExchangeQuery, Exchan
                 .findFirst();
         AppointmentButton button = AppointmentButton.of(exchange, posts.get(exchange.getPostId()), confirmed,
                 serviceTime.now());
+        Long chatRoomId = chatRoomPort.findChatRoomIdByExchangeId(exchange.getId()).orElse(null);
         return ExchangeResult.of(exchange, posts, users, reservedHerePostIdsOf(exchange), query.viewerId(), button,
-                confirmed.isPresent());
+                confirmed.isPresent(), chatRoomId);
     }
 
     /**

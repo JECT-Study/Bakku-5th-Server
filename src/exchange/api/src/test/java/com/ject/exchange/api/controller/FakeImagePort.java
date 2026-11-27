@@ -35,6 +35,11 @@ class FakeImagePort implements ImagePort {
                 .toList();
     }
 
+    @Override
+    public void discardFromExchange(Long exchangeId, List<String> imageKeys) {
+        // API 테스트는 이미지 저장소 실패 복구가 아닌 요청/응답 계약만 검증한다.
+    }
+
     /** image BC가 이 key를 쓸 수 없다고 거부하게 한다. */
     void reject(String key) {
         rejectedKeys.add(key);

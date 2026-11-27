@@ -19,7 +19,9 @@ class FakeImagePort implements ImagePort {
     private static final String TMP_PREFIX = "exchange/tmp/";
 
     private final List<Call> calls = new ArrayList<>();
+    private final List<List<String>> discardCalls = new ArrayList<>();
     private final Set<String> rejectedKeys = new HashSet<>();
+    private RuntimeException discardFailure;
 
     @Override
     public List<String> attachToExchange(Long uploaderId, Long exchangeId, List<String> imageKeys) {
@@ -42,6 +44,22 @@ class FakeImagePort implements ImagePort {
 
     List<Call> calls() {
         return calls;
+    }
+
+    @Override
+    public void discardFromExchange(Long exchangeId, List<String> imageKeys) {
+        discardCalls.add(List.copyOf(imageKeys));
+        if (discardFailure != null) {
+            throw discardFailure;
+        }
+    }
+
+    List<List<String>> discardCalls() {
+        return discardCalls;
+    }
+
+    void failDiscard(RuntimeException failure) {
+        discardFailure = failure;
     }
 
     static String toFinalKey(Long exchangeId, String key) {

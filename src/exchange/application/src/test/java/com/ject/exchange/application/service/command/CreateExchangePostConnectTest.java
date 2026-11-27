@@ -49,7 +49,7 @@ class CreateExchangePostConnectTest {
         exchangeRepository = new FakeExchangeRepository();
         postPort = new FakePostPort();
         userPort = new FakeUserPort();
-        handler = new CreateExchangeHandler(exchangeRepository, postPort, userPort, new FakeImagePort());
+        handler = new CreateExchangeHandler(exchangeRepository, postPort, userPort, new FakeImagePort(), new FakeChatRoomPort());
 
         postPort.register(post(POST_P, "P", "post/10/1.jpg", MEMBER_B, PostInfo.Status.AVAILABLE));
         postPort.register(post(POST_Q1, "Q1", "post/20/1.jpg", MEMBER_A, PostInfo.Status.AVAILABLE));
