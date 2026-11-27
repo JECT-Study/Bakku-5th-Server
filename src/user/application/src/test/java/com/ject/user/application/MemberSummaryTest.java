@@ -14,6 +14,7 @@ import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MemberSummaryTest {
@@ -34,6 +35,19 @@ class MemberSummaryTest {
         assertEquals("바꾸", summary.nickname());
         assertEquals(3, summary.completedCount());
         assertFalse(summary.withdrawn());
+        assertEquals("GOODS_HUNTER", summary.mannerTier());
+    }
+
+    @Test
+    @DisplayName("교환 0회 회원은 매너 지표 구간 이름이 null이다")
+    void noExchangeMember() {
+        // given
+        Member member = Member.restore(1L, SocialProvider.KAKAO, "hash", new Nickname("바꾸"),
+                new BirthDate(LocalDate.of(2000, 1, 1)), null, MemberStatus.ACTIVE, null, 0, false, NOW, null, null,
+                NOW, null);
+
+        // when · then
+        assertNull(MemberSummary.from(member).mannerTier());
     }
 
     @Test

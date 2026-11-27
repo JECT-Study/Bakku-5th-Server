@@ -178,6 +178,15 @@ public class Member {
         this.nicknameChangedAt = now;
     }
 
+    /**
+     * 다른 사람에게 보이는 매너 지표 구간 이름 (F-06-1, 11/24). 숫자는 본인만 본다.
+     *
+     * @return 교환 0회면 지표 대신 안내 문구를 보여 주므로 null
+     */
+    public MannerTier mannerTier() {
+        return completedCount == 0 ? null : mannerScore.tier();
+    }
+
     public boolean canRejoin(Instant now) {
         return !now.isBefore(rejoinAvailableAt());
     }

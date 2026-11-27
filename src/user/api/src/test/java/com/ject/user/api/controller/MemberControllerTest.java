@@ -7,9 +7,11 @@ import com.ject.user.api.exception.UserExceptionHandler;
 import com.ject.user.api.ratelimit.IpRateLimiter;
 import com.ject.user.api.ratelimit.RateLimitInterceptor;
 import com.ject.user.application.dto.MarketingConsent;
+import com.ject.user.application.dto.MemberProfile;
 import com.ject.user.application.dto.MyInfo;
 import com.ject.user.application.dto.NicknameChange;
 import com.ject.user.application.dto.NicknameAvailability;
+import com.ject.user.application.service.MemberProfileService;
 import com.ject.user.application.service.MemberService;
 import com.ject.user.application.service.NicknameService;
 import com.ject.user.application.service.WithdrawalNoticeService;
@@ -55,7 +57,8 @@ class MemberControllerTest {
         ServiceTime serviceTime = new ServiceTime(clock);
         withdrawalService = new StubWithdrawalService();
         mockMvc = MockMvcBuilders.standaloneSetup(
-                        new MemberController(new StubNicknameService(), new StubMemberService(), withdrawalService,
+                        new MemberController(new StubNicknameService(), new StubMemberService(),
+                                new StubMemberProfileService(), withdrawalService,
                                 new WithdrawalNoticeService(memberId -> memberId == 7L ? 2 : 0),
                                 serviceTime))
                 .setControllerAdvice(new UserExceptionHandler())
@@ -219,14 +222,23 @@ class MemberControllerTest {
     }
 
     @Test
-    @DisplayName("MB-4 다른 회원 프로필은 isMe=false, 내 ID면 isMe=true")
+    @DisplayName("MB-4 다른 회원 프로필은 매너 지표를 숫자 없이 구간 이름으로 준다")
     void getProfile() throws Exception {
-        mockMvc.perform(get("/api/v1/members/202"))
+        mockMvc.perform(get("/api/v1/members/202").requestAttr(LoginMember.ATTRIBUTE, 7L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.userId").value(202))
-                .andExpect(jsonPath("$.data.isMe").value(false));
-        mockMvc.perform(get("/api/v1/members/101"))
-                .andExpect(jsonPath("$.data.isMe").value(true));
+                .andExpect(jsonPath("$.data.isMe").value(false))
+                .andExpect(jsonPath("$.data.mannerTier").value("GOODS_HUNTER"))
+                .andExpect(jsonPath("$.data.mannerScore").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("MB-4 교환 0회면 mannerTier=null")
+    void getProfile_noExchange() throws Exception {
+        mockMvc.perform(get("/api/v1/members/203").requestAttr(LoginMember.ATTRIBUTE, 7L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.completedCount").value(0))
+                .andExpect(jsonPath("$.data", hasEntry(equalTo("mannerTier"), nullValue())));
     }
 
     @Test
@@ -280,6 +292,27 @@ class MemberControllerTest {
                 throw new IllegalStateException("로그인한 회원 id가 넘어와야 한다");
             }
             return new NicknameChange(value, Instant.parse("2026-12-27T05:30:00Z"));
+        }
+    }
+
+    /**
+     * 202는 교환한 회원, 203은 교환 0회 회원. 로그인한 회원 id가 넘어오는지도 본다.
+     */
+    private static class StubMemberProfileService extends MemberProfileService {
+
+        StubMemberProfileService() {
+            super(null, null);
+        }
+
+        @Override
+        public MemberProfile getProfile(Long viewerId, Long userId) {
+            if (viewerId != 7L) {
+                throw new IllegalStateException("로그인한 회원 id가 넘어와야 한다");
+            }
+            if (userId == 203L) {
+                return new MemberProfile(userId, "첫교환", 0, false, null);
+            }
+            return new MemberProfile(userId, "하치와레러버", 5, false, "GOODS_HUNTER");
         }
     }
 
