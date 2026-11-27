@@ -78,10 +78,10 @@ class ExchangeLoginMemberControllerTest {
         userPort = new FakeUserPort();
         commandBus = new FakeCommandBus(new UpdateNewItemHandler(exchangeRepository, new FakeAppointmentRepository(exchangeRepository, NOW),
                 new FakePostLockRepository(), new FakeImagePort()),
-                new CreateExchangeHandler(exchangeRepository, postPort, userPort, new FakeImagePort()));
+                new CreateExchangeHandler(exchangeRepository, postPort, userPort, new FakeImagePort(), new FakeChatRoomPort()));
         queryBus = new FakeQueryBus(new GetExchangeHandler(exchangeRepository,
                 new FakeAppointmentRepository(exchangeRepository, NOW), postPort, userPort,
-                new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul")))));
+                new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul"))), new FakeChatRoomPort()));
         mockMvc = MockMvcBuilders.standaloneSetup(
                         new ExchangeController(commandBus, queryBus, IMAGE_URL_RESOLVER))
                 .setControllerAdvice(new ExchangeExceptionHandler())

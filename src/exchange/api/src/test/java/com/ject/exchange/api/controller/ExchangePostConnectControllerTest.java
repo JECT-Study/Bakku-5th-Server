@@ -93,9 +93,10 @@ class ExchangePostConnectControllerTest {
         FakeUserPort userPort = new FakeUserPort();
         FakeCommandBus commandBus = new FakeCommandBus(new UpdateNewItemHandler(exchangeRepository, appointmentRepository,
                 new FakePostLockRepository(), new FakeImagePort()),
-                new CreateExchangeHandler(exchangeRepository, postPort, userPort, new FakeImagePort()));
+                new CreateExchangeHandler(exchangeRepository, postPort, userPort, new FakeImagePort(), new FakeChatRoomPort()));
         FakeQueryBus queryBus = new FakeQueryBus(
-                new GetExchangeHandler(exchangeRepository, appointmentRepository, postPort, userPort, new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul")))));
+                new GetExchangeHandler(exchangeRepository, appointmentRepository, postPort, userPort,
+                        new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul"))), new FakeChatRoomPort()));
         mockMvc = MockMvcBuilders.standaloneSetup(new ExchangeController(commandBus, queryBus, IMAGE_URL_RESOLVER))
                 .setControllerAdvice(new ExchangeExceptionHandler())
                 .setCustomArgumentResolvers(new LoginMemberArgumentResolver())

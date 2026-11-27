@@ -302,7 +302,8 @@ class CancelAppointmentPostConnectTest {
     }
 
     private CreateExchangeHandler createHandler() {
-        return new CreateExchangeHandler(exchangeRepository, postPort, userPort, new FakeImagePort());
+        return new CreateExchangeHandler(exchangeRepository, postPort, userPort,
+                new FakeImagePort(), new FakeChatRoomPort());
     }
 
     private static CancelAppointmentCommand cancel(Long cancelerId) {

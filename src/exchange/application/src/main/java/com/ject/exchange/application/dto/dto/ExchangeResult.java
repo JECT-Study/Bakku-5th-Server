@@ -17,7 +17,7 @@ public record ExchangeResult(
         Participant owner,
         OfferType offerType,
         List<OfferedItemResult> offeredItems,
-        Long chatRoomId,                        // Todo: 채팅방 생성 전까지 null
+        Long chatRoomId,
         AppointmentButton appointmentButton,
         Instant createdAt
 ) {
@@ -28,10 +28,11 @@ public record ExchangeResult(
      * @param viewerId 조회하는 회원 ID
      * @param appointmentButton {@link AppointmentButton#of}로 고른 약속 버튼
      * @param newItemLocked 이 교환에 확정 약속이 있는지
+     * @param chatRoomId chat BC에서 조회한 실제 채팅방 ID. 아직 없으면 null
      */
     public static ExchangeResult of(Exchange exchange, Map<Long, PostInfo> posts, Map<Long, UserInfo> users,
                                     Set<Long> reservedHerePostIds, Long viewerId,
-                                    AppointmentButton appointmentButton, boolean newItemLocked) {
+                                    AppointmentButton appointmentButton, boolean newItemLocked, Long chatRoomId) {
         boolean newItemEditable = exchange.getOfferType() == OfferType.NEW
                 && exchange.getRequestUserId().equals(viewerId)
                 && exchange.getStatus() == ExchangeStatus.ACTIVE
@@ -79,10 +80,19 @@ public record ExchangeResult(
                 owner,
                 exchange.getOfferType(),
                 offeredItems,
-                null, // Todo: 채팅방 생성 전까지 null
+                chatRoomId,
                 appointmentButton,
                 exchange.getCreatedAt()
         );
+    }
+
+    /**
+     * 조회자 기준 교환 결과. chatRoomId를 모르는 호출부 호환용 (기존 테스트)
+     */
+    public static ExchangeResult of(Exchange exchange, Map<Long, PostInfo> posts, Map<Long, UserInfo> users,
+                                    Set<Long> reservedHerePostIds, Long viewerId,
+                                    AppointmentButton appointmentButton, boolean newItemLocked) {
+        return of(exchange, posts, users, reservedHerePostIds, viewerId, appointmentButton, newItemLocked, null);
     }
 
     /**

@@ -85,12 +85,13 @@ class ExchangeImageControllerTest {
         imagePort = new FakeImagePort();
         FakePostPort postPort = new FakePostPort();
         FakeUserPort userPort = new FakeUserPort();
+        FakeChatRoomPort chatRoomPort = new FakeChatRoomPort();
         FakeCommandBus commandBus = new FakeCommandBus(new UpdateNewItemHandler(exchangeRepository, new FakeAppointmentRepository(exchangeRepository, NOW),
                 new FakePostLockRepository(), imagePort),
-                new CreateExchangeHandler(exchangeRepository, postPort, userPort, imagePort));
+                new CreateExchangeHandler(exchangeRepository, postPort, userPort, imagePort, chatRoomPort));
         FakeQueryBus queryBus = new FakeQueryBus(new GetExchangeHandler(exchangeRepository,
                 new FakeAppointmentRepository(exchangeRepository, NOW), postPort, userPort,
-                new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul")))));
+                new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul"))), chatRoomPort));
         mockMvc = MockMvcBuilders.standaloneSetup(new ExchangeController(commandBus, queryBus, IMAGE_URL_RESOLVER))
                 .setControllerAdvice(new ExchangeExceptionHandler())
                 .setCustomArgumentResolvers(new LoginMemberArgumentResolver())
@@ -112,6 +113,7 @@ class ExchangeImageControllerTest {
         mockMvc.perform(createRequest(MEMBER_A, newItemBody(POST_P, List.of(K1, K2))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.chatRoomId").value(7_000L))
                 .andExpect(jsonPath("$.data.offeredItems[0].imageUrls", contains(
                         IMAGE_URL_PREFIX + "exchange/1000/0b1c2d3e-0001.jpg",
                         IMAGE_URL_PREFIX + "exchange/1000/0b1c2d3e-0002.jpg")));

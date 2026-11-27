@@ -41,7 +41,7 @@ class CreateExchangeHandlerLoginMemberTest {
         exchangeRepository = new FakeExchangeRepository();
         postPort = new FakePostPort();
         userPort = new FakeUserPort();
-        handler = new CreateExchangeHandler(exchangeRepository, postPort, userPort, new FakeImagePort());
+        handler = new CreateExchangeHandler(exchangeRepository, postPort, userPort, new FakeImagePort(), new FakeChatRoomPort());
 
         postPort.register(new PostInfo(POST_P, "치이카와 교환해요", null, MEMBER_B, PostInfo.Status.AVAILABLE));
         postPort.register(new PostInfo(POST_Q_OF_A, "우사기 미니 피규어", null, MEMBER_A, PostInfo.Status.AVAILABLE));

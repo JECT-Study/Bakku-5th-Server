@@ -52,7 +52,7 @@ class GetExchangeHandlerParticipantTest {
         postPort = new FakePostPort();
         userPort = new FakeUserPort();
         handler = new GetExchangeHandler(exchangeRepository, new FakeAppointmentRepository(exchangeRepository, NOW),
-                postPort, userPort, new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul"))));
+                postPort, userPort, new ServiceTime(Clock.fixed(NOW, ZoneId.of("Asia/Seoul"))), new FakeChatRoomPort());
 
         postPort.register(new PostInfo(POST_ID, "치이카와 교환해요", null, MEMBER_B, PostInfo.Status.AVAILABLE));
         exchangeRepository.preload(exchangeOf(MEMBER_A, MEMBER_B));
