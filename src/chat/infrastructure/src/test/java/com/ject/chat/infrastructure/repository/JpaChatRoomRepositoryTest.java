@@ -36,6 +36,8 @@ class JpaChatRoomRepositoryTest extends ChatPostgresTest {
         assertEquals(100L, restored.getRequesterId());
         assertEquals(2, restored.getParticipants().size());
         assertTrue(restored.isActiveForRequester());
+        assertTrue(restored.getParticipants().stream().allMatch(participant -> participant.isNotificationEnabled()
+                && participant.getLastReadMessageId() == null));
     }
 
     @Test

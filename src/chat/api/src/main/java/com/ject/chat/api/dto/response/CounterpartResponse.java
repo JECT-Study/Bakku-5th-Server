@@ -1,5 +1,6 @@
 package com.ject.chat.api.dto.response;
 
+import com.ject.chat.application.dto.CounterpartDetail;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "채팅방 상단 바의 상대 정보")
@@ -16,4 +17,8 @@ public record CounterpartResponse(
         @Schema(description = "상대가 나갔는지", example = "false")
         boolean left
 ) {
+
+    public static CounterpartResponse from(CounterpartDetail detail) {
+        return new CounterpartResponse(detail.userId(), detail.nickname(), detail.completedCount(), detail.left());
+    }
 }

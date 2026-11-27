@@ -1,6 +1,7 @@
 package com.ject.exchange.application.service.query;
 
 import com.ject.exchange.domain.domain.exchange.Exchange;
+import com.ject.exchange.domain.domain.exchange.ExchangeStatus;
 import com.ject.exchange.domain.repository.ExchangeRepository;
 
 import java.util.HashMap;
@@ -41,6 +42,13 @@ class FakeExchangeRepository implements ExchangeRepository {
     @Override
     public Optional<Long> findPostIdOf(Long id) {
         return Optional.ofNullable(store.get(id)).map(Exchange::getPostId);
+    }
+
+    @Override
+    public boolean existsCompletedByPostIdExcludingExchange(Long postId, Long excludedExchangeId) {
+        return store.values().stream().anyMatch(exchange -> exchange.getPostId().equals(postId)
+                && !exchange.getId().equals(excludedExchangeId)
+                && exchange.getStatus() == ExchangeStatus.COMPLETED);
     }
 
     /** 테스트 준비용 저장. 저장 횟수에 포함하지 않는다. */

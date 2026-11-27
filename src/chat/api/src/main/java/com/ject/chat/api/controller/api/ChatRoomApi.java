@@ -7,6 +7,7 @@ import com.ject.chat.api.dto.response.ChatRoomSummaryResponse;
 import com.ject.chat.api.dto.response.CursorPageResponse;
 import com.ject.chat.api.dto.response.LeaveChatRoomResponse;
 import com.ject.chat.api.dto.response.ReadMessagesResponse;
+import com.ject.common.web.auth.LoginMember;
 import com.ject.common.web.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -36,7 +37,8 @@ public interface ChatRoomApi {
 
     @Operation(summary = "CH-2 채팅방 상세", description = "채팅방 진입 시 입력창 상태, 상대 정보, 나가기 팝업 종류를 조회합니다.")
     @GetMapping("/chat-rooms/{chatRoomId}")
-    ApiResponse<ChatRoomResponse> getChatRoom(@PathVariable("chatRoomId") Long chatRoomId);
+    ApiResponse<ChatRoomResponse> getChatRoom(@Parameter(hidden = true) @LoginMember Long memberId,
+                                              @PathVariable("chatRoomId") Long chatRoomId);
 
     @Operation(summary = "CH-5 읽음 처리", description = "채팅방에 들어가거나, 방에 있는 동안 새 메시지를 받으면 호출합니다. 안 읽은 수 계산 기준만 바꾸며 상대에게 읽음 표시는 보여주지 않습니다. 저장된 값보다 작은 ID가 오면 무시합니다.")
     @PostMapping("/chat-rooms/{chatRoomId}/read")

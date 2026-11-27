@@ -41,14 +41,23 @@ public class ChatParticipantEntity extends BaseEntity {
     @Column(name = "left_at")
     private Instant leftAt;
 
+    @Column(name = "notification_enabled", nullable = false)
+    private boolean notificationEnabled;
+
+    @Column(name = "last_read_message_id")
+    private Long lastReadMessageId;
+
     protected ChatParticipantEntity() {}
 
     @Builder
-    public ChatParticipantEntity(Long id, ChatRoomEntity chatRoom, Long memberId, ChatParticipantRole role, Instant leftAt) {
+    public ChatParticipantEntity(Long id, ChatRoomEntity chatRoom, Long memberId, ChatParticipantRole role, Instant leftAt,
+                                  boolean notificationEnabled, Long lastReadMessageId) {
         this.id = id;
         this.chatRoom = chatRoom;
         this.memberId = memberId;
         this.role = role;
         this.leftAt = leftAt;
+        this.notificationEnabled = notificationEnabled;
+        this.lastReadMessageId = lastReadMessageId;
     }
 }

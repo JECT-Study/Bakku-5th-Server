@@ -16,7 +16,11 @@ import com.ject.chat.api.dto.response.CursorPageResponse;
 import com.ject.chat.api.dto.response.LastMessageResponse;
 import com.ject.chat.api.dto.response.LeaveChatRoomResponse;
 import com.ject.chat.api.dto.response.ReadMessagesResponse;
+import com.ject.chat.application.dto.ChatRoomDetailResult;
+import com.ject.chat.application.dto.query.GetChatRoomDetailQuery;
+import com.ject.common.core.cqrs.query.QueryBus;
 import com.ject.common.web.response.ApiResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -28,7 +32,10 @@ import static com.ject.chat.api.controller.ChatStubData.EXCHANGE_ID;
 import static com.ject.chat.api.controller.ChatStubData.at;
 
 @RestController
+@RequiredArgsConstructor
 public class ChatRoomController implements ChatRoomApi {
+
+    private final QueryBus queryBus;
 
     @Override
     public ApiResponse<CursorPageResponse<ChatRoomSummaryResponse>> getChatRooms(String cursor, Integer size) {
@@ -58,8 +65,9 @@ public class ChatRoomController implements ChatRoomApi {
     }
 
     @Override
-    public ApiResponse<ChatRoomResponse> getChatRoom(Long chatRoomId) {
-        return ApiResponse.success(chatRoom(chatRoomId, true));
+    public ApiResponse<ChatRoomResponse> getChatRoom(Long memberId, Long chatRoomId) {
+        ChatRoomDetailResult result = queryBus.send(new GetChatRoomDetailQuery(chatRoomId, memberId));
+        return ApiResponse.success(ChatRoomResponse.from(result));
     }
 
     @Override

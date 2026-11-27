@@ -1,5 +1,7 @@
 package com.ject.chat.domain.domain.chatroom;
 
+import com.ject.chat.domain.exception.ChatErrorCode;
+import com.ject.chat.domain.exception.ChatException;
 import lombok.Getter;
 
 import java.time.Instant;
@@ -63,6 +65,26 @@ public class ChatRoom {
      */
     public boolean isActiveForRequester() {
         return !requesterParticipant().hasLeft();
+    }
+
+    /**
+     * 조회 회원의 현재 참여자를 찾는다. 참여자가 아니거나 이미 나갔으면 CHAT_002
+     */
+    public ChatParticipant currentParticipantOf(Long memberId) {
+        return participants.stream()
+                .filter(participant -> participant.getMemberId().equals(memberId) && !participant.hasLeft())
+                .findFirst()
+                .orElseThrow(() -> new ChatException(ChatErrorCode.NOT_CHAT_PARTICIPANT));
+    }
+
+    /**
+     * 조회 회원의 상대 참여자를 찾는다. 상대는 나갔어도 반환한다 (상태로만 반영)
+     */
+    public ChatParticipant counterpartOf(Long memberId) {
+        return participants.stream()
+                .filter(participant -> !participant.getMemberId().equals(memberId))
+                .findFirst()
+                .orElseThrow(() -> new ChatException(ChatErrorCode.NOT_CHAT_PARTICIPANT));
     }
 
     private static void validateRequiredIds(Long exchangeId, Long postId, Long requesterId, Long ownerId) {
