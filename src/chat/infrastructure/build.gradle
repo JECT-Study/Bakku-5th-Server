@@ -2,6 +2,10 @@ dependencies {
     implementation project(':chat-domain')
     implementation project(':chat-application')
     implementation project(':common-jpa')
+    // 상대 회원 요약 · 차단 · 이용 제한을 user 계약(MemberSummaryQuery · BlockRelationQuery · MemberRestrictionQuery)으로 조회한다
+    implementation project(':user-application')
+    // 다른 교환 완료 · 약속 상태를 exchange 계약(ChatRoomExchangeQuery)으로 조회한다
+    implementation project(':exchange-application')
 
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 

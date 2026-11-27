@@ -18,4 +18,9 @@ public interface ExchangeRepository {
      * 구현은 교환을 영속성 컨텍스트에 올리지 않는 값 조회여야 한다
      */
     Optional<Long> findPostIdOf(Long id);
+
+    /**
+     * 같은 글의 다른 교환(제외할 교환 ID가 아닌) 중 완료(COMPLETED) 상태가 있는지
+     */
+    boolean existsCompletedByPostIdExcludingExchange(Long postId, Long excludedExchangeId);
 }

@@ -1,6 +1,7 @@
 package com.ject.exchange.infrastructure.repository;
 
 import com.ject.exchange.domain.domain.exchange.Exchange;
+import com.ject.exchange.domain.domain.exchange.ExchangeStatus;
 import com.ject.exchange.domain.repository.ExchangeRepository;
 import com.ject.exchange.infrastructure.entity.ExchangeEntity;
 import com.ject.exchange.infrastructure.entity.OfferedItemEntity;
@@ -76,5 +77,10 @@ public class JpaExchangeRepository implements ExchangeRepository {
     @Override
     public Optional<Long> findPostIdOf(Long id) {
         return exchangeEntityRepository.findPostIdById(id);
+    }
+
+    @Override
+    public boolean existsCompletedByPostIdExcludingExchange(Long postId, Long excludedExchangeId) {
+        return exchangeEntityRepository.existsByPostIdAndStatusAndIdNot(postId, ExchangeStatus.COMPLETED, excludedExchangeId);
     }
 }

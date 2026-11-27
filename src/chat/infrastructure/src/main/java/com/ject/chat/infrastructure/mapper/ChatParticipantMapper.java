@@ -22,6 +22,8 @@ public class ChatParticipantMapper {
                 .memberId(participant.getMemberId())
                 .role(participant.getRole())
                 .leftAt(participant.getLeftAt())
+                .notificationEnabled(participant.isNotificationEnabled())
+                .lastReadMessageId(participant.getLastReadMessageId())
                 .build();
     }
 
@@ -32,6 +34,8 @@ public class ChatParticipantMapper {
                 entity.getMemberId(),
                 entity.getRole(),
                 entity.getLeftAt(),
+                entity.isNotificationEnabled(),
+                entity.getLastReadMessageId(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );

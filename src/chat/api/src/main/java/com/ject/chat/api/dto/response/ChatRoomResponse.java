@@ -3,6 +3,7 @@ package com.ject.chat.api.dto.response;
 import com.ject.chat.api.dto.enums.InputDisabledReason;
 import com.ject.chat.api.dto.enums.LeaveImpact;
 import com.ject.chat.api.dto.enums.RoomStatus;
+import com.ject.chat.application.dto.ChatRoomDetailResult;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "채팅방 상세")
@@ -31,4 +32,17 @@ public record ChatRoomResponse(
         @Schema(description = "내가 마지막으로 읽은 메시지 ID. 없으면 null", example = "117")
         Long myLastReadMessageId
 ) {
+
+    public static ChatRoomResponse from(ChatRoomDetailResult result) {
+        return new ChatRoomResponse(
+                result.chatRoomId(),
+                result.exchangeId(),
+                EnumMapper.map(result.status(), RoomStatus.class),
+                EnumMapper.map(result.inputDisabledReason(), InputDisabledReason.class),
+                CounterpartResponse.from(result.counterpart()),
+                result.notificationEnabled(),
+                EnumMapper.map(result.leaveImpact(), LeaveImpact.class),
+                result.myLastReadMessageId()
+        );
+    }
 }
